@@ -7,11 +7,13 @@ EXPERIMENT:
 DATASET:
   source: ""
   n_classes: 2
-
+  one_hot: false
+  ratio: 0.2
 
 
 CLOUD:
+  path: "gesture_phase_0.2_models.pkl"
   models: []
 
-INM:
-  name: ""
+IIM:
+  name: "xgboost"

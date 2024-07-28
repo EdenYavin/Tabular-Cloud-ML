@@ -18,6 +18,6 @@ class CloudModels:
     def predict(self, X) -> np.ndarray:
         predictions = []
         for model in self.models:
-            predictions.append(model.predict(X))
+            predictions.append(model.predict_proba(X))
 
         return np.vstack(predictions)

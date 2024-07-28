@@ -58,7 +58,8 @@ class Dataset(object):
                 encrypted_data = self.encryptor.encode(samples)
 
                 predictions.append(self.cloud_models.predict(encrypted_data))
-                predictions = np.hstack(predictions)
+
+            predictions = np.hstack(predictions)
 
             examples.append(
                 np.hstack([

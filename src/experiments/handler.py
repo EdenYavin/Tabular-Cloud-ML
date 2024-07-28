@@ -18,39 +18,44 @@ class ExperimentHandler:
 
     def run_experiment(self):
         cloud_models = CloudModels(self.config[consts.CONFIG_CLOUD_MODEL_SECTION])
-        encryptor = Encryptor(self.config[consts.CONFIG_ENCRYPTOR_SECTION])
-        internal_model = InternalModel(self.config[consts.CONFIG_INN_SECTION])
+        encryptor = Encryptor()
+        internal_model = InternalModel(config=self.config[consts.CONFIG_INN_SECTION])
 
-        dataset = Dataset(
-            config=self.config[consts.CONFIG_DATASET_SECTION],
-            cloud_models=cloud_models,
-            encryptor=encryptor,
-            n_pred_vectors=self.n_pred_vectors,
-            n_noise_samples=self.n_noise_samples,
-        ).create()
+        reports = []
+        for dataset_name in self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_NAME_TOKEN]:
+            dataset = Dataset(
+                dataset_name=dataset_name,
+                config=self.config[consts.CONFIG_DATASET_SECTION],
+                cloud_models=cloud_models,
+                encryptor=encryptor,
+                n_pred_vectors=self.n_pred_vectors,
+                n_noise_samples=self.n_noise_samples,
+            ).create()
 
-        internal_model.fit(*dataset.train)
-        train_acc, train_f1 = internal_model.evaluate(*dataset.train)
-        test_acc, test_f1 = internal_model.evaluate(*dataset.test)
+            internal_model.fit(*dataset.train)
+            train_acc, train_f1 = internal_model.evaluate(*dataset.train)
+            test_acc, test_f1 = internal_model.evaluate(*dataset.test)
 
-        report = pd.DataFrame(columns=[
-            "dataset","train_size_ratio", "iim_model", "cloud_models", "train_accuracy", "train_f1", "test_accuracy", "test_f1",
-            "n_pred_vectors", "n_noise_sample", "train_size_ratio", "exp_name"
-        ])
+            report = pd.DataFrame(columns=[
+                "dataset","train_size_ratio", "iim_model", "cloud_models", "train_accuracy", "train_f1", "test_accuracy", "test_f1",
+                "n_pred_vectors", "n_noise_sample", "train_size_ratio", "exp_name"
+            ])
 
-        report["dataset"] = dataset.name
-        report["train_size_ratio"] = dataset.split_ratio
-        report["iim_model"] = internal_model.name
-        report["cloud_models"] = cloud_models.name
-        report["n_pred_vectors"] = self.n_pred_vectors
-        report["n_noise_sample"] = self.n_noise_samples
-        report["exp_name"] = self.experiment_name
-        report["train_accuracy"] = train_acc
-        report["train_f1"] = train_f1
-        report["test_accuracy"] = test_acc
-        report["test_f1"] = test_f1
+            report["dataset"] = dataset.name
+            report["train_size_ratio"] = dataset.split_ratio
+            report["iim_model"] = internal_model.name
+            report["cloud_models"] = cloud_models.name
+            report["n_pred_vectors"] = self.n_pred_vectors
+            report["n_noise_sample"] = self.n_noise_samples
+            report["exp_name"] = self.experiment_name
+            report["train_accuracy"] = train_acc
+            report["train_f1"] = train_f1
+            report["test_accuracy"] = test_acc
+            report["test_f1"] = test_f1
 
-        return report
+            reports.append(report)
+
+        return pd.concat(reports)
 
 
 

@@ -1,3 +1,5 @@
+import pandas as pd
+
 from src.utils.helpers import load_data
 import src.utils.constansts as consts
 from src.encryptor.model import Encryptor
@@ -9,7 +11,7 @@ import numpy as np
 
 class Dataset(object):
 
-    def __init__(self, config, cloud_models, encryptor, n_pred_vectors, n_noise_samples):
+    def __init__(self, dataset_name, config, cloud_models, encryptor, n_pred_vectors, n_noise_samples):
         self.config = config
         self.cloud_models: CloudModels = cloud_models
         self.encryptor: Encryptor = encryptor
@@ -18,7 +20,7 @@ class Dataset(object):
         self.train = []
         self.test = []
 
-        self.name = self.config[consts.CONFIG_DATASET_NAME_TOKEN]
+        self.name = dataset_name
         self.split_ratio = self.config[consts.CONFIG_DATASET_SPLIT_RATIO_TOKEN]
 
     def create(self):
@@ -43,16 +45,17 @@ class Dataset(object):
 
         print(f"CREATING THE META-DATASET FROM {self.name}")
         print(f"ORIGINAL DATASET SIZE {X.shape}")
-        print(f"ENCRYPTED DATA SIZE {self.encryptor.shape}")
 
-        for idx, row in tqdm(enumerate(X), total=len(X)):
+        X = pd.DataFrame(X)
 
-            samples, noise_labels = sample_noise(row=row, X=X,y=y, sample_n=self.n_noise_samples)
+        for idx, row in tqdm(X.iterrows(), total=len(X)):
+
+            samples, noise_labels = sample_noise(row=row, X=X,y=pd.Series(y), sample_n=self.n_noise_samples)
 
             predictions = []
 
             for _ in range(self.n_pred_vectors):
-                encrypted_data = self.encryptor(samples)
+                encrypted_data = self.encryptor.encode(samples)
 
                 predictions.append(self.cloud_models.predict(encrypted_data))
                 predictions = np.hstack(predictions)

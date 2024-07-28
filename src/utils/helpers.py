@@ -16,9 +16,9 @@ def one_hot_labels(num_classes: int, labels: np.ndarray) -> np.ndarray:
 
     return one_hot_matrix
 
-def sample_noise(row, X,y , sample_n=2):
+def sample_noise(row: pd.Series, X: pd.DataFrame, y: pd.Series, sample_n=9):
     if sample_n <= 0:
-        return row, pd.Series()
+        return row, np.array([])
 
     # Drop the row with the specified index
     df_dropped = X.drop(index=row.name)
@@ -30,15 +30,15 @@ def sample_noise(row, X,y , sample_n=2):
     concatenated_df = pd.concat([pd.DataFrame(row).T, sampled_rows])
 
     # Shuffle the concatenated DataFrame
-    shuffled_df = concatenated_df.sample(frac=1).reset_index(drop=True)
+    shuffled_df = concatenated_df.sample(frac=1)
 
     # Get the labels for the sampled rows including the original row
-    sampled_labels = y.loc[shuffled_df.index]
+    sampled_labels = y[shuffled_df.index.tolist()]
 
     # Replace the label for the original row with -1
     sampled_labels.loc[row.name] = -1
 
-    return shuffled_df, sampled_labels.reset_index(drop=True)
+    return shuffled_df, sampled_labels.values
 
 
 def load_tabular_models(file: str):

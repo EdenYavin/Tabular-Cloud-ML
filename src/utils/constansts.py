@@ -35,6 +35,8 @@ DATASETS_PATH = os.path.join(PROJECT_DIR, DATASETS_DIR)
 REPORT_NAME = 'report.csv'
 REPORT_PATH = os.path.join(OUTPUT_DIR_PATH, REPORT_NAME)
 
+DATA_CACHE_PATH = os.path.join(STORE_PATH, "dataset")
+os.makedirs(DATA_CACHE_PATH, exist_ok=True)
 
 # ---------------------
 # CLOUD MODELS SECTIONS
@@ -56,7 +58,7 @@ CONFIG_DATASET_SECTION = "DATASET"
 CONFIG_DATASET_NAME_TOKEN = "names"
 CONFIG_DATASET_ONEHOT_TOKEN = "one_hot"
 CONFIG_DATASET_SPLIT_RATIO_TOKEN = "ratio"
-
+CONFIG_DATASET_FORCE_CREATION_TOKEN = "force"
 # ---------------------
 # INTERNAL INFERENCE MODEL  SECTIONS
 # ---------------------

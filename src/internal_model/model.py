@@ -1,6 +1,8 @@
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
 from src.utils.constansts import CONFIG_IMM_NAME_TOKEN
+
 
 class TabularInternalModel(BaseEstimator, ClassifierMixin):
     def __init__(self, **kwargs):
@@ -19,4 +21,5 @@ class TabularInternalModel(BaseEstimator, ClassifierMixin):
         return self.model.predict_proba(X)
 
     def evaluate(self, X, y):
-        return self.model.score(X, y)
+        pred = self.predict(X)
+        return accuracy_score(y, pred), f1_score(y, pred, average='macro')

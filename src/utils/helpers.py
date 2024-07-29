@@ -2,7 +2,9 @@ import pickle
 import os
 import pandas as pd
 import numpy as np
-from src.utils.constansts import MODELS_PATH, DATASETS_PATH
+
+from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
+
 
 def one_hot_labels(num_classes: int, labels: np.ndarray) -> np.ndarray:
     if np.any(labels >= num_classes) or np.any(labels < 0):
@@ -15,6 +17,7 @@ def one_hot_labels(num_classes: int, labels: np.ndarray) -> np.ndarray:
     one_hot_matrix[np.arange(labels.size), labels] = 1
 
     return one_hot_matrix
+
 
 def sample_noise(row: pd.Series, X: pd.DataFrame, y: pd.Series, sample_n=9):
     if sample_n <= 0:
@@ -38,7 +41,7 @@ def sample_noise(row: pd.Series, X: pd.DataFrame, y: pd.Series, sample_n=9):
     # Replace the label for the original row with -1
     sampled_labels.loc[row.name] = -1
 
-    return shuffled_df, sampled_labels.values
+    return shuffled_df, sampled_labels.values.reshape(1, -1)
 
 
 def load_tabular_models(file: str):
@@ -53,3 +56,20 @@ def load_data(dataset_name: str, split_ratio: float):
 
     with open(path, "rb") as f:
         return pickle.load(f)
+
+
+def load_cache_file(dataset_name: str, split_ratio: float):
+    path = os.path.join(DATA_CACHE_PATH, f"{dataset_name}_{split_ratio}.pkl")
+    print(f"Loading cache for {dataset_name}_{split_ratio}...")
+    if not os.path.exists(path):
+        return None
+
+    with open(path, "rb") as f:
+        return pickle.load(f)
+
+
+def save_cache_file(dataset_name: str, split_ratio: float, data):
+    path = os.path.join(DATA_CACHE_PATH, f"{dataset_name}_{split_ratio}.pkl")
+    print(f"Saving cached data to {path}")
+    with open(path, "wb") as f:
+        pickle.dump(data, f)

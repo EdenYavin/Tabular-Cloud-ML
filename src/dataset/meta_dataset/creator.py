@@ -4,7 +4,7 @@ from src.utils.helpers import load_data
 import src.utils.constansts as consts
 from src.encryptor.model import Encryptor
 from src.cloud.models import CloudModels
-from src.utils.helpers import sample_noise, one_hot_labels
+from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file
 from tqdm import tqdm
 import numpy as np
 
@@ -17,13 +17,19 @@ class Dataset(object):
         self.encryptor: Encryptor = encryptor
         self.n_pred_vectors = n_pred_vectors
         self.n_noise_samples = n_noise_samples
-        self.train = []
-        self.test = []
 
         self.name = dataset_name
         self.split_ratio = self.config[consts.CONFIG_DATASET_SPLIT_RATIO_TOKEN]
 
-    def create(self):
+    def create(self) -> dict:
+
+        if (dataset := load_cache_file(dataset_name=self.name, split_ratio=self.split_ratio)
+            and
+            not self.config[consts.CONFIG_DATASET_FORCE_CREATION_TOKEN]
+        ):
+            print("Dataset was already processed before, loading cache")
+            return dataset
+
         X_train, y_train, X_test, y_test = load_data(dataset_name=self.name,
                                                      split_ratio=self.split_ratio
                                                      )
@@ -36,9 +42,17 @@ class Dataset(object):
         X_train = self._create(X_train, y_train)
         X_test = self._create(X_test, y_test)
 
-        self.train = [X_train, y_train]
-        self.test = [X_test, y_test]
-        return self
+        train = [X_train, y_train]
+        test = [X_test, y_test]
+
+        dataset = {
+            "train": train,
+            "test": test
+        }
+
+        save_cache_file(dataset_name=self.name, split_ratio=self.split_ratio, data=dataset)
+
+        return dataset
 
     def _create(self, X, y):
         examples = []
@@ -59,11 +73,11 @@ class Dataset(object):
 
                 predictions.append(self.cloud_models.predict(encrypted_data))
 
-            predictions = np.hstack(predictions)
+            predictions = np.vstack(predictions)
 
             examples.append(
                 np.hstack([
-                    samples,
+                    row.values.reshape(1, -1),
                     noise_labels,
                     predictions
                 ]

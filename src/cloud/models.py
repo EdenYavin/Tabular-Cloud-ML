@@ -20,4 +20,4 @@ class CloudModels:
         for model in self.models:
             predictions.append(model.predict_proba(X))
 
-        return np.vstack(predictions)
+        return np.hstack(predictions)

@@ -1,3 +1,4 @@
+
 from src.dataset.meta_dataset.creator import Dataset
 from src.cloud.models import CloudModels
 from src.encryptor.model import Encryptor
@@ -23,26 +24,30 @@ class ExperimentHandler:
 
         reports = []
         for dataset_name in self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_NAME_TOKEN]:
-            dataset = Dataset(
+
+            dataset_creator = Dataset(
                 dataset_name=dataset_name,
                 config=self.config[consts.CONFIG_DATASET_SECTION],
                 cloud_models=cloud_models,
                 encryptor=encryptor,
                 n_pred_vectors=self.n_pred_vectors,
                 n_noise_samples=self.n_noise_samples,
-            ).create()
+            )
+            dataset = dataset_creator.create()
 
-            internal_model.fit(*dataset.train)
-            train_acc, train_f1 = internal_model.evaluate(*dataset.train)
-            test_acc, test_f1 = internal_model.evaluate(*dataset.test)
+            internal_model.fit(
+                *dataset['train']
+            )
+            train_acc, train_f1 = internal_model.evaluate(*dataset['train'])
+            test_acc, test_f1 = internal_model.evaluate(*dataset['test'])
 
             report = pd.DataFrame(columns=[
                 "dataset","train_size_ratio", "iim_model", "cloud_models", "train_accuracy", "train_f1", "test_accuracy", "test_f1",
                 "n_pred_vectors", "n_noise_sample", "train_size_ratio", "exp_name"
             ])
 
-            report["dataset"] = dataset.name
-            report["train_size_ratio"] = dataset.split_ratio
+            report["dataset"] = dataset_name
+            report["train_size_ratio"] = dataset_creator.split_ratio
             report["iim_model"] = internal_model.name
             report["cloud_models"] = cloud_models.name
             report["n_pred_vectors"] = self.n_pred_vectors

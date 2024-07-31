@@ -23,12 +23,10 @@ class Dataset(object):
 
     def create(self) -> dict:
 
-        if (dataset := load_cache_file(dataset_name=self.name, split_ratio=self.split_ratio)
-            and
-            not self.config[consts.CONFIG_DATASET_FORCE_CREATION_TOKEN]
-        ):
-            print("Dataset was already processed before, loading cache")
-            return dataset
+        if dataset := load_cache_file(dataset_name=self.name, split_ratio=self.split_ratio):
+            if not self.config[consts.CONFIG_DATASET_FORCE_CREATION_TOKEN]:
+                print("Dataset was already processed before, loading cache")
+                return dataset
 
         X_train, y_train, X_test, y_test = load_data(dataset_name=self.name,
                                                      split_ratio=self.split_ratio

@@ -22,4 +22,4 @@ class TabularInternalModel(BaseEstimator, ClassifierMixin):
 
     def evaluate(self, X, y):
         pred = self.predict(X)
-        return accuracy_score(y, pred), f1_score(y, pred, average='macro')
+        return accuracy_score(y, pred), f1_score(y, pred, average='weighted')

@@ -1,18 +1,18 @@
 EXPERIMENT:
-  name: "w_emb_w_label"
+  name: "wo_emb_w_label"
   n_pred_vectors: 1
   n_noise_samples: 3
 
 
 DATASET:
-  names: ["gesture_phase"]
+  names: ["heloc"]
   one_hot: false
   ratio: 0.2
-  force: false
+  force: true
 
 
 CLOUD:
-  path: "gesture_phase_0.2_models.pkl"
+  path: "heloc_0.2_models.pkl"
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 
 IIM:

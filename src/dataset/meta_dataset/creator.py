@@ -11,7 +11,8 @@ import numpy as np
 
 class Dataset(object):
 
-    def __init__(self, dataset_name, config, cloud_models, encryptor, n_pred_vectors, n_noise_samples):
+    def __init__(self, dataset_name, config, cloud_models, encryptor, n_pred_vectors, n_noise_samples,
+                 use_embedding=True, use_noise_labels=True):
         self.config = config
         self.cloud_models: CloudModels = cloud_models
         self.encryptor: Encryptor = encryptor
@@ -20,6 +21,8 @@ class Dataset(object):
 
         self.name = dataset_name
         self.split_ratio = self.config[consts.CONFIG_DATASET_SPLIT_RATIO_TOKEN]
+        self.use_embedding = use_embedding
+        self.use_noise_labels = use_noise_labels
 
     def create(self) -> dict:
 
@@ -62,31 +65,22 @@ class Dataset(object):
 
         for idx, row in tqdm(X.iterrows(), total=len(X)):
 
-            samples, noise_labels = sample_noise(row=row, X=X,y=pd.Series(y), sample_n=self.n_noise_samples)
-
-            predictions = []
-
             for _ in range(self.n_pred_vectors):
+                example = []
+
+                # For each new pred vector we will sample new noise to be used. This will cause
+                # The prediction vector to be different each time
+                samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
                 encrypted_data = self.encryptor.encode(samples)
 
-                predictions.append(self.cloud_models.predict(encrypted_data))
+                predictions = self.cloud_models.predict(encrypted_data)
 
-            predictions = np.vstack(predictions)
+                example.append(predictions)
+                if self.use_embedding:
+                    example.append(row.values.reshape(1, -1))
+                if self.use_noise_labels:
+                    example.append(noise_labels)
 
-            examples.append(
-                np.hstack([
-                    row.values.reshape(1, -1),
-                    noise_labels,
-                    predictions
-                ]
-                )
-            )
+                examples.append(np.hstack(example))
 
         return np.vstack(examples)
-
-
-
-
-
-
-

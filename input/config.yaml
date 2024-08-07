@@ -1,6 +1,6 @@
 EXPERIMENT:
-  name: "wo_emb_w_label"
-  n_pred_vectors: 1
+  name: "w_emb_w_label"
+  n_pred_vectors: 5
   n_noise_samples: 3
 
 
@@ -12,7 +12,6 @@ DATASET:
 
 
 CLOUD:
-  path: "heloc_0.2_models.pkl"
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 
 IIM:

@@ -18,12 +18,17 @@ class ExperimentHandler:
         self.config = experiment_config
 
     def run_experiment(self):
-        cloud_models = CloudModels(self.config[consts.CONFIG_CLOUD_MODEL_SECTION])
         encryptor = Encryptor()
-        internal_model = InternalModel(config=self.config[consts.CONFIG_INN_SECTION])
 
         reports = []
         for dataset_name in self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_NAME_TOKEN]:
+
+            # Set the path to the specific cloud models
+            path = f"{dataset_name}_{self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_SPLIT_RATIO_TOKEN]}_models.pkl"
+            self.config[consts.CONFIG_CLOUD_MODEL_SECTION][consts.CONFIG_CLOUD_MODELS_PATH_TOKEN] = path
+
+            cloud_models = CloudModels(self.config[consts.CONFIG_CLOUD_MODEL_SECTION])
+            internal_model = InternalModel(config=self.config[consts.CONFIG_INN_SECTION])
 
             dataset_creator = Dataset(
                 dataset_name=dataset_name,
@@ -32,10 +37,13 @@ class ExperimentHandler:
                 encryptor=encryptor,
                 n_pred_vectors=self.n_pred_vectors,
                 n_noise_samples=self.n_noise_samples,
+                use_embedding=True if "w_emb" in self.experiment_name else False,
+                use_noise_labels=True if "w_label" in self.experiment_name else False
             )
             dataset = dataset_creator.create()
 
             print("Finished Creating the dataset")
+            print(f"##### META DATASET SIZE - {dataset['train'][0].shape}")
             print(f"Training the IIM {internal_model.name} Model")
             internal_model.fit(
                 *dataset['train']

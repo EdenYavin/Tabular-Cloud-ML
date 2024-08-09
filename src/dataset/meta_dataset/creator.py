@@ -1,3 +1,5 @@
+import copy
+
 import pandas as pd
 
 from src.utils.helpers import load_data
@@ -26,7 +28,10 @@ class Dataset(object):
 
     def create(self) -> dict:
 
-        if dataset := load_cache_file(dataset_name=self.name, split_ratio=self.split_ratio):
+        one_hot_flag = self.config[consts.CONFIG_DATASET_ONEHOT_TOKEN]
+        name = f"{self.name}_{'one_hot' if one_hot_flag else ''}"
+
+        if dataset := load_cache_file(dataset_name=name, split_ratio=self.split_ratio):
             if not self.config[consts.CONFIG_DATASET_FORCE_CREATION_TOKEN]:
                 print(f"Dataset {self.name} was already processed before, loading cache")
                 return dataset
@@ -35,13 +40,12 @@ class Dataset(object):
                                                      split_ratio=self.split_ratio
                                                      )
 
-        if self.config[consts.CONFIG_DATASET_ONEHOT_TOKEN]:
-            num_classes = int(np.unique(y_train))
-            y_train = one_hot_labels(labels=y_train, num_classes=num_classes)
-            y_test = one_hot_labels(labels=y_test, num_classes=num_classes)
+        X_train, y_train = self._create_train(X_train, y_train)
+        X_test = self._create_test(X_test, y_test)
 
-        X_train = self._create(X_train, y_train)
-        X_test = self._create(X_test, y_test)
+        if one_hot_flag:
+            num_classes = len(np.unique(y_train))
+            y_train = one_hot_labels(labels=y_train, num_classes=num_classes)
 
         train = [X_train, y_train]
         test = [X_test, y_test]
@@ -51,14 +55,16 @@ class Dataset(object):
             "test": test
         }
 
-        save_cache_file(dataset_name=self.name, split_ratio=self.split_ratio, data=dataset)
+        save_cache_file(dataset_name=name, split_ratio=self.split_ratio, data=dataset)
 
         return dataset
 
-    def _create(self, X, y):
+    def _create_train(self, X, y):
+
+        new_y = []
         examples = []
 
-        print(f"CREATING THE META-DATASET FROM {self.name}")
+        print(f"CREATING THE META-TRAINSET FROM {self.name}")
         print(f"ORIGINAL DATASET SIZE {X.shape}")
 
         X = pd.DataFrame(X)
@@ -66,6 +72,10 @@ class Dataset(object):
         for idx, row in tqdm(X.iterrows(), total=len(X)):
 
             for _ in range(self.n_pred_vectors):
+
+                # Because we are expanding the dataset to more samples we need to expand the labels as well
+                new_y.append(y[idx])
+
                 example = []
 
                 # For each new pred vector we will sample new noise to be used. This will cause
@@ -83,4 +93,36 @@ class Dataset(object):
 
                 examples.append(np.hstack(example))
 
+        return np.vstack(examples), np.array(new_y)
+
+
+    def _create_test(self, X, y):
+        examples = []
+
+        print(f"CREATING THE META-TESTSET FROM {self.name}")
+        print(f"ORIGINAL SIZE {X.shape}")
+
+        X = pd.DataFrame(X)
+
+        for idx, row in tqdm(X.iterrows(), total=len(X)):
+            # We can't touch the test set, i.e. expand it to more samples. So we do it only once
+
+            example = []
+
+            # For each new pred vector we will sample new noise to be used. This will cause
+            # The prediction vector to be different each time
+            samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
+            encrypted_data = self.encryptor.encode(samples)
+
+            predictions = self.cloud_models.predict(encrypted_data)
+
+            example.append(predictions)
+            if self.use_embedding:
+                example.append(row.values.reshape(1, -1))
+            if self.use_noise_labels:
+                example.append(noise_labels)
+
+            examples.append(np.hstack(example))
+
         return np.vstack(examples)
+

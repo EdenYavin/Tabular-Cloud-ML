@@ -1,17 +1,18 @@
+import numpy as np
 
 from src.dataset.meta_dataset.creator import Dataset
 from src.cloud.models import CloudModels
 from src.encryptor.model import Encryptor
-from src.internal_model.model import TabularInternalModel as InternalModel
+from src.internal_model.model import InternalInferenceModelFactory
 
 import src.utils.constansts as consts
 
 import pandas as pd
 
+
 class ExperimentHandler:
 
     def __init__(self, experiment_config: dict):
-
         self.experiment_name = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get("name")
         self.n_pred_vectors = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get("n_pred_vectors", 1)
         self.n_noise_samples = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get("n_noise_samples", 3)
@@ -22,13 +23,11 @@ class ExperimentHandler:
 
         reports = []
         for dataset_name in self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_NAME_TOKEN]:
-
             # Set the path to the specific cloud models
             path = f"{dataset_name}_{self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_SPLIT_RATIO_TOKEN]}_models.pkl"
             self.config[consts.CONFIG_CLOUD_MODEL_SECTION][consts.CONFIG_CLOUD_MODELS_PATH_TOKEN] = path
 
             cloud_models = CloudModels(self.config[consts.CONFIG_CLOUD_MODEL_SECTION])
-            internal_model = InternalModel(config=self.config[consts.CONFIG_INN_SECTION])
 
             dataset_creator = Dataset(
                 dataset_name=dataset_name,
@@ -44,6 +43,13 @@ class ExperimentHandler:
 
             print("Finished Creating the dataset")
             print(f"##### META DATASET SIZE - {dataset['train'][0].shape}")
+
+            internal_model = InternalInferenceModelFactory().get_model(config=self.config[consts.CONFIG_INN_SECTION],
+                                                                       num_classes=len(
+                                                                           np.unique(dataset['train'][1])
+                                                                       ),
+                                                                       )
+
             print(f"Training the IIM {internal_model.name} Model")
             internal_model.fit(
                 *dataset['train']
@@ -52,7 +58,8 @@ class ExperimentHandler:
             test_acc, test_f1 = internal_model.evaluate(*dataset['test'])
 
             report = pd.DataFrame(columns=[
-                "dataset","train_size_ratio", "iim_model", "cloud_models", "train_accuracy", "train_f1", "test_accuracy", "test_f1",
+                "dataset", "train_size_ratio", "iim_model", "cloud_models", "train_accuracy", "train_f1",
+                "test_accuracy", "test_f1",
                 "n_pred_vectors", "n_noise_sample", "exp_name"
             ])
 
@@ -71,7 +78,3 @@ class ExperimentHandler:
             reports.append(report)
 
         return pd.concat(reports)
-
-
-
-

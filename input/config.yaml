@@ -1,12 +1,12 @@
 EXPERIMENT:
   name: "w_emb_w_label"
-  n_pred_vectors: 5
+  n_pred_vectors: 2
   n_noise_samples: 3
 
 
 DATASET:
   names: ["heloc"]
-  one_hot: false
+  one_hot: true
   ratio: 0.2
   force: true
 
@@ -15,4 +15,4 @@ CLOUD:
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 
 IIM:
-  name: "xgboost"
+  name: "neural_net"

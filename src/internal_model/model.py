@@ -83,8 +83,9 @@ class NeuralNetInternalModel(BaseEstimator, ClassifierMixin):
         return self.model.predict_proba(X)
 
     def evaluate(self, X, y):
-        if y.shape[1] == 2:
+        if len(y.shape) == 2 and y.shape[1] == 2:
             y = np.argmax(y, axis=1)
+
         pred = self.predict(X)
         return accuracy_score(y, pred), f1_score(y, pred, average='weighted')
 

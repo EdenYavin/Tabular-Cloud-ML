@@ -8,7 +8,7 @@ DATASET:
   names: ["heloc"]
   one_hot: true
   ratio: 0.2
-  force: true
+  force: false
 
 
 CLOUD:

@@ -1,5 +1,3 @@
-import copy
-
 import pandas as pd
 
 from src.utils.helpers import load_data
@@ -9,6 +7,8 @@ from src.cloud.models import CloudModels
 from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file
 from tqdm import tqdm
 import numpy as np
+
+np.random.seed(42)
 
 
 class Dataset(object):
@@ -29,6 +29,7 @@ class Dataset(object):
     def create(self) -> dict:
 
         one_hot_flag = self.config[consts.CONFIG_DATASET_ONEHOT_TOKEN]
+        shuffle_flag = self.config[consts.CONFIG_DATASET_SHUFFLE_TOKEN]
         name = f"{self.name}_{'one_hot' if one_hot_flag else ''}"
 
         if dataset := load_cache_file(dataset_name=name, split_ratio=self.split_ratio):
@@ -46,6 +47,9 @@ class Dataset(object):
         if one_hot_flag:
             num_classes = len(np.unique(y_train))
             y_train = one_hot_labels(labels=y_train, num_classes=num_classes)
+
+        if shuffle_flag:
+            np.random.shuffle(X_train)
 
         train = [X_train, y_train]
         test = [X_test, y_test]
@@ -95,7 +99,6 @@ class Dataset(object):
 
         return np.vstack(examples), np.array(new_y)
 
-
     def _create_test(self, X, y):
         examples = []
 
@@ -125,4 +128,3 @@ class Dataset(object):
             examples.append(np.hstack(example))
 
         return np.vstack(examples)
-

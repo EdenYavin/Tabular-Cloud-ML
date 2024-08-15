@@ -1,7 +1,8 @@
 EXPERIMENT:
   name: "w_emb_w_label"
-  n_pred_vectors: 9
+  n_pred_vectors: 6
   n_noise_samples: 3
+  k_fold: 10
 
 
 DATASET:
@@ -9,11 +10,15 @@ DATASET:
   one_hot: true
   ratio: 0.2
   force: true
-  shuffle: false
+  shuffle: true
+  feature_eng: []
 
 
 CLOUD:
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 
 IIM:
-  name: "neural_net"
+  name: "dense"
+  epochs: 10
+  batch_size: 8
+  dropout_rate: 0.1

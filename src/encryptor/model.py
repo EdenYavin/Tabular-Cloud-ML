@@ -2,13 +2,15 @@ from keras.src.layers import Input, Dense,  Flatten
 from keras.src.layers import BatchNormalization, Activation, Conv2DTranspose
 from keras.src.models import Model
 import numpy as np
+from tensorflow.keras.layers import BatchNormalization, Concatenate, LeakyReLU
+
 
 class Encryptor:
     def __init__(self):
         self.model = None
 
     def build_generator(self, input_shape, output_shape):
-        return build_dense_generator(input_shape, output_shape)
+        return build_complex_generator(input_shape, output_shape)
 
     def encode(self, inputs) -> np.array:
         # Ensure inputs are in the correct shape (batch_size, height, width, channels)
@@ -20,6 +22,34 @@ class Encryptor:
             self.model = self.build_generator(input_shape, output_shape)
 
         return self.model(inputs).numpy()
+
+
+def build_complex_generator(input_shape, output_shape):
+    input_layer = Input(shape=(input_shape[0], input_shape[1]))
+    x = Flatten()(input_layer)
+
+    # First dense block
+    x1 = Dense(256)(x)
+    x1 = BatchNormalization()(x1)
+    x1 = LeakyReLU(alpha=0.2)(x1)
+
+    # Second dense block with skip connection
+    x2 = Dense(128)(x1)
+    x2 = BatchNormalization()(x2)
+    x2 = LeakyReLU(alpha=0.2)(x2)
+    x2 = Concatenate()([x2, x1])
+
+    # Third dense block with skip connection
+    x3 = Dense(64)(x2)
+    x3 = BatchNormalization()(x3)
+    x3 = LeakyReLU(alpha=0.2)(x3)
+    x3 = Concatenate()([x3, x2])
+
+    # Output layer
+    output_vector = Dense(output_shape[1], activation='tanh')(x3)
+
+    model = Model(inputs=input_layer, outputs=output_vector)
+    return model
 
 
 def build_dense_generator(input_shape, output_shape):

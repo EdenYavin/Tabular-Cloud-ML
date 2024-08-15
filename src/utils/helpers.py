@@ -2,9 +2,45 @@ import pickle
 import os
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+import pathlib
+from sklearn.model_selection import train_test_split
+
 
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
 
+
+def preprocess(X: pd.DataFrame):
+    # Identify categorical and numeric columns
+    categorical_cols = X.select_dtypes(include=['object', 'category']).columns.tolist()
+    numeric_cols = X.select_dtypes(include=['number']).columns.tolist()
+
+    # Initialize lists to store processed columns
+    processed_columns = []
+
+    # If there are categorical columns, apply one-hot encoding
+    if categorical_cols:
+        print("Encoding categorical columns...")
+        onehot_encoder = OneHotEncoder(categories='auto', sparse=False)
+        X_categorical = pd.DataFrame(onehot_encoder.fit_transform(X[categorical_cols]),
+                                     columns=onehot_encoder.get_feature_names_out(categorical_cols))
+        processed_columns.append(X_categorical)
+
+    # Apply standard scaling to the numeric columns
+    if numeric_cols:
+        print("Scaling numerical columns...")
+        scaler = StandardScaler()
+        X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)
+        processed_columns.append(X_numeric)
+
+    # Combine the processed columns
+    if processed_columns:
+        X_processed = pd.concat(processed_columns, axis=1)
+    else:
+        X_processed = X.copy()  # If there are no categorical or numeric columns, keep the original dataframe
+
+
+    return X_processed
 
 def one_hot_labels(num_classes: int, labels: np.ndarray) -> np.ndarray:
     if np.any(labels >= num_classes) or np.any(labels < 0):

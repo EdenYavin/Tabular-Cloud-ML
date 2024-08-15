@@ -13,42 +13,38 @@ np.random.seed(42)
 
 class Dataset(object):
 
-    def __init__(self, dataset_name, config, cloud_models, encryptor, n_pred_vectors, n_noise_samples,
-                 use_embedding=True, use_noise_labels=True):
-        self.config = config
+    def __init__(self, dataset_name, cloud_models, encryptor, n_pred_vectors, n_noise_samples,
+                 use_embedding=True, use_noise_labels=True, ratio=0.2, one_hot=False, shuffle=False, force=False):
+
         self.cloud_models: CloudModels = cloud_models
         self.encryptor: Encryptor = encryptor
         self.n_pred_vectors = n_pred_vectors
         self.n_noise_samples = n_noise_samples
-
+        self.shuffle = shuffle
+        self.one_hot = one_hot
         self.name = dataset_name
-        self.split_ratio = self.config[consts.CONFIG_DATASET_SPLIT_RATIO_TOKEN]
+        self.split_ratio = ratio
         self.use_embedding = use_embedding
         self.use_noise_labels = use_noise_labels
+        self.force_run = force
 
-    def create(self) -> dict:
+    def create(self, X_train, y_train, X_test, y_test) -> dict:
 
-        one_hot_flag = self.config[consts.CONFIG_DATASET_ONEHOT_TOKEN]
-        shuffle_flag = self.config[consts.CONFIG_DATASET_SHUFFLE_TOKEN]
-        name = f"{self.name}_{'one_hot' if one_hot_flag else ''}"
+        name = f"{self.name}_{'one_hot' if self.one_hot else ''}"
 
         if dataset := load_cache_file(dataset_name=name, split_ratio=self.split_ratio):
-            if not self.config[consts.CONFIG_DATASET_FORCE_CREATION_TOKEN]:
+            if not self.force_run:
                 print(f"Dataset {self.name} was already processed before, loading cache")
                 return dataset
-
-        X_train, y_train, X_test, y_test = load_data(dataset_name=self.name,
-                                                     split_ratio=self.split_ratio
-                                                     )
 
         X_train, y_train = self._create_train(X_train, y_train)
         X_test = self._create_test(X_test, y_test)
 
-        if one_hot_flag:
+        if self.one_hot:
             num_classes = len(np.unique(y_train))
             y_train = one_hot_labels(labels=y_train, num_classes=num_classes)
 
-        if shuffle_flag:
+        if self.shuffle:
             np.random.shuffle(X_train)
 
         train = [X_train, y_train]

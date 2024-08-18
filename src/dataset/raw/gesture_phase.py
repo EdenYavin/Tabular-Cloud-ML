@@ -2,21 +2,21 @@ from src.utils.helpers import preprocess
 import pandas as pd
 from src.dataset.raw.base import DATASET_DIR, RawDataset
 
-class HelocDataset(RawDataset):
-    name = 'heloc'
+class GesturePhaseDataset(RawDataset):
+    name = 'gesture_phase'
 
     def __init__(self, **kwargs):
 
         super().__init__(**kwargs)
-        DATASET_PATH = DATASET_DIR / HelocDataset.name /  f"dataset.csv"
+        DATASET_PATH = DATASET_DIR / GesturePhaseDataset.name /  f"dataset.csv"
         dataset = pd.read_csv(DATASET_PATH)
         self.X, self.y = self._preprocess(dataset)
         self.cloud_models = kwargs.get("cloud_models")
-        self.name = HelocDataset.name
+        self.name = GesturePhaseDataset.name
 
     def _preprocess(self, dataset):
-        X, y = dataset.iloc[:, 1:], dataset.iloc[:, 0]
-        y = y.replace({"Bad": 0, "Good": 1}).astype(int)
+        X, y = dataset.iloc[:, :-1], dataset.iloc[:, -1]
+        y = y.replace({"S":0,"D":1,"P":2, "R":3, "H":4}).astype(int)
         return preprocess(X), y
 
 

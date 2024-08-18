@@ -93,10 +93,13 @@ def load_data(dataset_name: str, split_ratio: float):
     with open(path, "rb") as f:
         return pickle.load(f)
 
+def save_data(dataset_name: str, split_ratio: float, data):
+    path = os.path.join(DATASETS_PATH, dataset_name, f"dataset_{split_ratio}.pkl")
+    with open(path, "wb") as f:
+        pickle.dump(data, f)
 
 def load_cache_file(dataset_name: str, split_ratio: float):
     path = os.path.join(DATA_CACHE_PATH, f"{dataset_name}_{split_ratio}.pkl")
-    print(f"Loading cache for {dataset_name}_{split_ratio}...")
     if not os.path.exists(path):
         return None
 

@@ -1,7 +1,6 @@
 import pandas as pd
 
-from src.utils.helpers import load_data
-import src.utils.constansts as consts
+from src.dataset.cloud_dataset.features_eng import FeatureReduction
 from src.encryptor.model import Encryptor
 from src.cloud.models import CloudModels
 from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file
@@ -14,7 +13,10 @@ np.random.seed(42)
 class Dataset(object):
 
     def __init__(self, dataset_name, cloud_models, encryptor, n_pred_vectors, n_noise_samples,
-                 use_embedding=True, use_noise_labels=True, ratio=0.2, one_hot=False, shuffle=False, force=False):
+                 use_embedding=True, use_noise_labels=True,use_predictions=False, ratio=0.2,
+                 one_hot=False, shuffle=False, force=False,
+                 feature_reduction_config=None
+                 ):
 
         self.cloud_models: CloudModels = cloud_models
         self.encryptor: Encryptor = encryptor
@@ -26,7 +28,9 @@ class Dataset(object):
         self.split_ratio = ratio
         self.use_embedding = use_embedding
         self.use_noise_labels = use_noise_labels
+        self.use_predictions = use_predictions
         self.force_run = force
+        self.feature_reduction: FeatureReduction = FeatureReduction(**feature_reduction_config)
 
     def create(self, X_train, y_train, X_test, y_test) -> dict:
 
@@ -36,6 +40,9 @@ class Dataset(object):
             if not self.force_run:
                 print(f"Dataset {self.name} was already processed before, loading cache")
                 return dataset
+
+        X_train = self.feature_reduction.fit_transform(X_train)
+        X_test = self.feature_reduction.transform(X_test)
 
         X_train, y_train = self._create_train(X_train, y_train)
         X_test = self._create_test(X_test, y_test)
@@ -64,12 +71,9 @@ class Dataset(object):
         new_y = []
         examples = []
 
-        print(f"CREATING THE META-TRAINSET FROM {self.name}")
-        print(f"ORIGINAL DATASET SIZE {X.shape}")
-
         X = pd.DataFrame(X)
 
-        for idx, row in tqdm(X.iterrows(), total=len(X)):
+        for idx, row in tqdm(X.iterrows(), total=len(X), leave=True, position=0):
 
             for _ in range(self.n_pred_vectors):
 
@@ -98,12 +102,9 @@ class Dataset(object):
     def _create_test(self, X, y):
         examples = []
 
-        print(f"CREATING THE META-TESTSET FROM {self.name}")
-        print(f"ORIGINAL SIZE {X.shape}")
-
         X = pd.DataFrame(X)
 
-        for idx, row in tqdm(X.iterrows(), total=len(X)):
+        for idx, row in tqdm(X.iterrows(), total=len(X), leave=True, position=0):
             # We can't touch the test set, i.e. expand it to more samples. So we do it only once
 
             example = []
@@ -115,7 +116,8 @@ class Dataset(object):
 
             predictions = self.cloud_models.predict(encrypted_data)
 
-            example.append(predictions)
+            if self.use_predictions:
+                example.append(predictions)
             if self.use_embedding:
                 example.append(row.values.reshape(1, -1))
             if self.use_noise_labels:

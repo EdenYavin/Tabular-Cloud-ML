@@ -2,15 +2,22 @@ from keras.src.layers import Input, Dense,  Flatten
 from keras.src.layers import BatchNormalization, Activation, Conv2DTranspose
 from keras.src.models import Model
 import numpy as np
-from tensorflow.keras.layers import BatchNormalization, Concatenate, LeakyReLU
+from keras.src.layers import Concatenate, LeakyReLU
 
 
 class Encryptor:
-    def __init__(self):
+    def __init__(self, output_shape=None, **kwargs):
         self.model = None
+        self.generator_type = kwargs.get('name')
+        self.output_shape = output_shape
 
     def build_generator(self, input_shape, output_shape):
-        return build_complex_generator(input_shape, output_shape)
+        generators = {
+            "dc": build_dc_generator,
+            "dense_complex": build_dense_complex_generator,
+            "dense": build_dense_generator,
+        }
+        return generators[self.generator_type](input_shape, output_shape)
 
     def encode(self, inputs) -> np.array:
         # Ensure inputs are in the correct shape (batch_size, height, width, channels)
@@ -18,13 +25,13 @@ class Encryptor:
         inputs = np.expand_dims(inputs, axis=0)  # Add the batch dimension
         if self.model is None:
             input_shape = inputs.shape[1:]  # Exclude batch size
-            output_shape = (1, inputs.shape[2])  # Output shape should be (1, width)
+            output_shape = self.output_shape or (1, inputs.shape[2])  # Output shape should be (1, width)
             self.model = self.build_generator(input_shape, output_shape)
 
         return self.model(inputs).numpy()
 
 
-def build_complex_generator(input_shape, output_shape):
+def build_dense_complex_generator(input_shape, output_shape):
     input_layer = Input(shape=(input_shape[0], input_shape[1]))
     x = Flatten()(input_layer)
 
@@ -58,9 +65,9 @@ def build_dense_generator(input_shape, output_shape):
     x = Flatten()(input_layer)  # Flatten the 2D input into 1D
 
     # Adding Dense layers
-    x = Dense(256, activation='relu')(x)
-    x = Dense(128, activation='relu')(x)
-    x = Dense(64, activation='relu')(x)
+    x = Dense(256, activation='leaky_relu')(x)
+    x = Dense(128, activation='leaky_relu')(x)
+    x = Dense(64, activation='leaky_relu')(x)
 
     output_vector = Dense(output_shape[1], activation='tanh')(
         x)  # Output vector length matches the specified output shape

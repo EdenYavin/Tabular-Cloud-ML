@@ -1,38 +1,29 @@
+from abc import abstractmethod
+
+import keras
 import numpy as np
 from lazypredict.Supervised import CLASSIFIERS
 from sklearn.metrics import accuracy_score, f1_score
 
-from src.utils.helpers import load_tabular_models
-from src.utils.constansts import CONFIG_CLOUD_MODELS_TOKEN, CONFIG_CLOUD_MODELS_PATH_TOKEN
-from collections import Counter
-from mlxtend.classifier import EnsembleVoteClassifier
+from keras.src.models import Sequential
+from keras.src.layers import Dense, Dropout, Input, Attention, Concatenate, Lambda, Conv1D, Flatten, MaxPooling1D
 
+from src.utils.constansts import CONFIG_CLOUD_MODELS_TOKEN, CONFIG_CLOUD_MODELS_PATH_TOKEN
+from mlxtend.classifier import EnsembleVoteClassifier
 
 
 class CloudModels:
     """
     This is a mockup of a models that are trained on the organization data and are deployed on the cloud
     """
-
     def __init__(self, config: dict):
         models_names = config[CONFIG_CLOUD_MODELS_TOKEN]
-        # path = config[CONFIG_CLOUD_MODELS_PATH_TOKEN]
         self.cloud_models = models_names
-        self.name = "-".join(models_names)
+        self.models = None
 
-        models = []
-        for name_and_model in CLASSIFIERS:
-            name, model = name_and_model
-            if name in models_names:
-                models.append(model())
-
-        self.models = EnsembleVoteClassifier(models)
-        # self.models = [model[1] for model in load_tabular_models(path) if
-        #                model[0] in models_names]  # Use default models
-
-    def predict(self, X) -> np.ndarray:
-
-        return self.models.predict_proba(X)
+    @abstractmethod
+    def predict(self, X):
+        pass
 
     def evaluate(self, X, y) -> tuple:
         """Evaluate using majority voting over predictions from multiple models.
@@ -41,12 +32,103 @@ class CloudModels:
             tuple: accuracy and F1 score of the ensemble model.
         """
 
-        majority_vote = self.models.predict(X)
+        predictions = self.models.predict(X)
         # Calculate accuracy and F1 score
-        accuracy = accuracy_score(y, majority_vote)
-        f1 = f1_score(y, majority_vote, average='weighted')
+        accuracy = accuracy_score(y, predictions)
+        f1 = f1_score(y, predictions, average='weighted')
 
         return accuracy, f1
 
     def fit(self, X_train, y_train):
         self.models.fit(X_train, y_train)
+
+
+
+class NeuralNetCloudModels(CloudModels):
+    name = "neural_network"
+
+    def __init__(self, config: dict):
+        super().__init__(config)
+        self.models = self.get_model(2)
+
+    def get_model(self, num_classes):
+        # Build the model
+        model = Sequential()
+        model.add(Dense(units=128, activation='leaky_relu'))
+        model.add(Dropout(0.3))
+        model.add(Dense(units=64, activation='leaky_relu'))
+        model.add(Dense(units=num_classes, activation='softmax'))
+        # Dynamic input shape
+
+        # Compile the model with F1 Score
+        model.compile(optimizer='adam',
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy'])
+
+        return model
+
+    def fit(self, X_train, y_train):
+        y_train = keras.utils.to_categorical(y_train)
+        self.models.fit(X_train, y_train, epochs=10, batch_size=8)
+
+    def predict(self, X):
+        return self.models.predict(X)
+
+    def evaluate(self, X, y):
+        predictions = np.argmax(self.models.predict(X), axis=1)
+        # Calculate accuracy and F1 score
+        accuracy = accuracy_score(y, predictions)
+        f1 = f1_score(y, predictions, average='weighted')
+
+        return accuracy, f1
+
+
+class TabularCloudModels(CloudModels):
+    name = "tabular"
+
+    def __init__(self, config: dict):
+        super().__init__(config)
+        models = []
+        for name_and_model in CLASSIFIERS:
+            name, model = name_and_model
+            if name in self.cloud_models:
+                try:
+                    models.append(model(verbose=0))
+                except TypeError:
+                    models.append(model())
+
+        self.models = EnsembleVoteClassifier(models)
+
+    def predict(self, X):
+        predictions = []
+        for model in self.models.clfs_:
+            predictions.append(model.predict_proba(X))
+
+        return np.hstack(predictions)
+
+class EnsembleCloudModels(CloudModels):
+    """
+    This is a mockup of a models that are trained on the organization data and are deployed on the cloud
+    """
+    name = "ensemble"
+
+    def __init__(self, config: dict):
+
+        super().__init__(config)
+        self.name = "-".join(self.cloud_models)
+
+        models = []
+        for name_and_model in CLASSIFIERS:
+            name, model = name_and_model
+            if name in self.cloud_models:
+                try:
+                    models.append(model(verbose=0))
+                except TypeError:
+                    models.append(model())
+
+        self.models = EnsembleVoteClassifier(models)
+
+
+    def predict(self, X) -> np.ndarray:
+        return self.models.predict_proba(X)
+

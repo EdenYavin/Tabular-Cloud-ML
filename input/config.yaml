@@ -1,24 +1,31 @@
 EXPERIMENT:
-  name: "w_emb_w_label"
-  n_pred_vectors: 6
+  name: "w_emb_w_label_w_pred"
+  n_pred_vectors: 2
   n_noise_samples: 3
-  k_fold: 10
+  k_fold: 5
 
 
 DATASET:
-  names: ["heloc"]
+  names: ["adult"]
   one_hot: true
-  ratio: 0.2
+  ratio: 0.01
   force: true
-  shuffle: true
-  feature_eng: []
+  shuffle: false
+  baseline: "neural_network" # neural_network / xgboost
+  feature_reduction:
+#    method: "guassian"
+    n_components: 10
 
 
 CLOUD:
+  name: "tabular" # tabular / ensemble / neural_network
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 
 IIM:
-  name: "dense"
+  name: "neural_network" # xgboost / neural_network
   epochs: 10
   batch_size: 8
-  dropout_rate: 0.1
+  dropout_rate: 0.3
+
+ENCRYPTOR:
+  name: "dense_complex" # dc / dense_complex / dense

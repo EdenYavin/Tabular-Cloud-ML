@@ -14,16 +14,15 @@ from src.utils.constansts import CONFIG_IMM_NAME_TOKEN
 
 
 models = {
-    "catboost": CatBoostClassifier(),
-    "xgboost": XGBClassifier(),
+    "catboost": CatBoostClassifier,
+    "xgboost": XGBClassifier,
 }
 
 
 class TabularInternalModel(BaseEstimator, ClassifierMixin):
     def __init__(self, **kwargs):
         self.name = kwargs.get("name", "xgboost")
-        self.model = kwargs.get("model", models['xgboost'])
-        print(f"{self.name} IIM Model Loaded")
+        self.model = kwargs.get("model", models['xgboost'])()
 
     def fit(self, X, y):
         self.model.fit(X, y)
@@ -59,7 +58,7 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
 
 
     def evaluate(self, X, y):
-        if len(y.shape) == 2 and y.shape[1] == 2:
+        if len(y.shape) == 2:
             y = np.argmax(y, axis=1)
 
         pred = self.predict(X)

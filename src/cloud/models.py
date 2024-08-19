@@ -6,9 +6,9 @@ from lazypredict.Supervised import CLASSIFIERS
 from sklearn.metrics import accuracy_score, f1_score
 
 from keras.src.models import Sequential
-from keras.src.layers import Dense, Dropout, Input, Attention, Concatenate, Lambda, Conv1D, Flatten, MaxPooling1D
+from keras.src.layers import Dense, Dropout
 
-from src.utils.constansts import CONFIG_CLOUD_MODELS_TOKEN, CONFIG_CLOUD_MODELS_PATH_TOKEN
+from src.utils.constansts import CONFIG_CLOUD_MODELS_TOKEN
 from mlxtend.classifier import EnsembleVoteClassifier
 
 
@@ -16,8 +16,9 @@ class CloudModels:
     """
     This is a mockup of a models that are trained on the organization data and are deployed on the cloud
     """
-    def __init__(self, config: dict):
-        models_names = config[CONFIG_CLOUD_MODELS_TOKEN]
+    name: str
+    def __init__(self, **kwargs):
+        models_names = kwargs.get(CONFIG_CLOUD_MODELS_TOKEN)
         self.cloud_models = models_names
         self.models = None
 
@@ -47,9 +48,10 @@ class CloudModels:
 class NeuralNetCloudModels(CloudModels):
     name = "neural_network"
 
-    def __init__(self, config: dict):
-        super().__init__(config)
-        self.models = self.get_model(2)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        num_classes = kwargs.get("num_classes", 2)
+        self.models = self.get_model(num_classes)
 
     def get_model(self, num_classes):
         # Build the model
@@ -86,8 +88,8 @@ class NeuralNetCloudModels(CloudModels):
 class TabularCloudModels(CloudModels):
     name = "tabular"
 
-    def __init__(self, config: dict):
-        super().__init__(config)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         models = []
         for name_and_model in CLASSIFIERS:
             name, model = name_and_model
@@ -112,9 +114,9 @@ class EnsembleCloudModels(CloudModels):
     """
     name = "ensemble"
 
-    def __init__(self, config: dict):
+    def __init__(self, **kwargs):
 
-        super().__init__(config)
+        super().__init__(**kwargs)
         self.name = "-".join(self.cloud_models)
 
         models = []

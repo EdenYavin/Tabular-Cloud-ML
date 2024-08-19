@@ -23,11 +23,17 @@ class ExperimentHandler:
 
     def run_experiment(self):
 
-        for dataset_name in self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_NAME_TOKEN]:
+        # Create a final report with average metrics
+        final_report = pd.DataFrame()
+
+        datasets = self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_NAME_TOKEN]
+
+        for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
             raw_dataset: RawDataset = DATASETS[dataset_name](**self.config[consts.CONFIG_DATASET_SECTION])
 
             X_train, X_test, X_sample, y_train, y_test, y_sample = raw_dataset.get_split()
             print(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
+            num_classes = len(np.unique(y_train))
 
             encryptor = Encryptor(
                 output_shape=(1, X_train.shape[1]),
@@ -36,7 +42,8 @@ class ExperimentHandler:
 
             print("#### TRAINING CLOUD MODELS ####")
             cloud_models: CloudModels = CLOUD_MODELS[self.config[consts.CONFIG_CLOUD_MODEL_SECTION]['name']](
-                self.config[consts.CONFIG_CLOUD_MODEL_SECTION]
+                **self.config[consts.CONFIG_CLOUD_MODEL_SECTION],
+                num_classes = num_classes
             )
             cloud_models.fit(X_train, y_train)
 
@@ -70,9 +77,7 @@ class ExperimentHandler:
 
             internal_model = InternalInferenceModelFactory().get_model(
                 **self.config[consts.CONFIG_INN_SECTION],
-                num_classes=len(
-                    np.unique(dataset['train'][1])
-                ),
+                num_classes=num_classes,
                 input_shape=dataset['train'][0].shape[1],  # Only give the number of features
             )
 
@@ -90,27 +95,34 @@ class ExperimentHandler:
                   IIM: {test_acc}, {test_f1}\n
                   """)
 
-            # Create a final report with average metrics
-            final_report = pd.DataFrame()
+            final_report = pd.concat(
+                [
+                    final_report,
+                    pd.DataFrame(
+                        {
+                            "exp_name": [self.experiment_name],
+                            "dataset": [dataset_name],
+                            "train_size_ratio": [dataset_creator.split_ratio],
+                            "n_pred_vectors": [self.n_pred_vectors],
+                            "n_noise_sample": [self.n_noise_samples],
+                            "iim_model": [internal_model.name],
+                            "encryptor": [encryptor.generator_type],
+                            "cloud_model": [cloud_models.name],
+                            "iim_train_acc": [train_acc],
+                            "iim_train_f1": [train_f1],
+                            "iim_test_acc": [test_acc],
+                            "iim_test_f1": [test_f1],
+                            "baseline_acc": [baseline_acc],
+                            "baseline_f1": [baseline_f1],
+                            "cloud_acc": [cloud_acc],
+                            "cloud_f1": [cloud_f1],
 
-            final_report["dataset"] = [dataset_name]
-            final_report["train_size_ratio"] = [dataset_creator.split_ratio]
-            final_report["iim_model"] = [internal_model.name]
-            final_report['encryptor'] = [encryptor.generator_type]
-            final_report["cloud_models"] = [cloud_models.name]
-            final_report["n_pred_vectors"] = [self.n_pred_vectors]
-            final_report["n_noise_sample"] = [self.n_noise_samples]
-            final_report["exp_name"] = [self.experiment_name]
-            final_report["iim_train_accuracy"] = [train_acc]
-            final_report["iim_train_f1"] = [train_f1]
-            final_report["iim_test_accuracy"] = [test_acc]
-            final_report["iim_test_f1"] = [test_f1]
-            final_report["baseline_test_accuracy"] = [baseline_acc]
-            final_report["baseline_test_f1"] = [baseline_acc]
-            final_report["cloud_test_accuracy"] = [cloud_acc]
-            final_report["cloud_test_f1"] = [cloud_f1]
+                        }
+                    )
+                ])
 
-            return final_report
+
+        return final_report
 
 
     def run_k_fold_experiment(self):
@@ -216,7 +228,7 @@ class ExperimentHandler:
             final_report["dataset"] = [dataset_name]
             final_report["train_size_ratio"] = [dataset_creator.split_ratio]
             final_report["iim_model"] = [internal_model.name]
-            # final_report["cloud_models"] = [cloud_models.name]
+            final_report["cloud_models"] = [cloud_models.name]
             final_report["n_pred_vectors"] = [self.n_pred_vectors]
             final_report["n_noise_sample"] = [self.n_noise_samples]
             final_report["exp_name"] = [self.experiment_name]

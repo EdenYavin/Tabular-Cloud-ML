@@ -6,9 +6,9 @@ EXPERIMENT:
 
 
 DATASET:
-  names: ["adult"]
-  one_hot: true
-  ratio: 0.01
+  names: ["gesture_phase", "adult", "heloc"]
+  one_hot: false
+  ratio: 0.05
   force: true
   shuffle: false
   baseline: "neural_network" # neural_network / xgboost
@@ -18,11 +18,11 @@ DATASET:
 
 
 CLOUD:
-  name: "tabular" # tabular / ensemble / neural_network
+  name: "ensemble" # tabular / ensemble / neural_network
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 
 IIM:
-  name: "neural_network" # xgboost / neural_network
+  name: "dense" # xgboost / dense
   epochs: 10
   batch_size: 8
   dropout_rate: 0.3

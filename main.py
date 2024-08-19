@@ -3,11 +3,18 @@ import src.utils.constansts as consts
 from src.experiments.handler import ExperimentHandler
 import pandas as pd
 import os
+import tensorflow as tf
+
 
 def main():
 
     with open(consts.CONFIG_PATH, 'r') as f:
         config = yaml.safe_load(f)
+
+    # Use GPU only when using Decon
+    if config['ENCRYPTOR']['name'] != 'dc':
+        # Hide GPU from visible devices
+        tf.config.set_visible_devices([], 'GPU')
 
     experiment_handler = ExperimentHandler(config)
 

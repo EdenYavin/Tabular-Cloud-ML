@@ -72,7 +72,7 @@ CONFIG_IMM_NAME_TOKEN = "name"
 # ENCODER SECTIONS
 # ---------------------
 CONFIG_ENCRYPTOR_SECTION = "ENCRYPTOR"
-
+GPU_MODELS = ['dc', 'resnet', 'efficientnet']
 # ---------------------
 # EXPERIMENT SECTIONS
 # ---------------------

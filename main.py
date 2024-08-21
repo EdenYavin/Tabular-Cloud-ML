@@ -12,7 +12,7 @@ def main():
         config = yaml.safe_load(f)
 
     # Use GPU only when using Decon
-    if config['ENCRYPTOR']['name'] != 'dc':
+    if config['ENCRYPTOR']['name'] not in consts.GPU_MODELS:
         # Hide GPU from visible devices
         tf.config.set_visible_devices([], 'GPU')
 

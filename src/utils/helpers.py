@@ -2,9 +2,7 @@ import pickle
 import os
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-import pathlib
-from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 
 
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
@@ -24,13 +22,18 @@ def preprocess(X: pd.DataFrame):
         onehot_encoder = OneHotEncoder(categories='auto', sparse=False)
         X_categorical = pd.DataFrame(onehot_encoder.fit_transform(X[categorical_cols]),
                                      columns=onehot_encoder.get_feature_names_out(categorical_cols))
+        # label_encoder = LabelEncoder()
+        # X_categorical = pd.DataFrame()
+        # for col in categorical_cols:
+        #     X_categorical[col] = label_encoder.fit_transform(X[col])
+
         processed_columns.append(X_categorical)
 
     # Apply standard scaling to the numeric columns
     if numeric_cols:
         print("Scaling numerical columns...")
         scaler = StandardScaler()
-        X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)
+        X_numeric = X[numeric_cols]#X[numeric_cols] #pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)
         processed_columns.append(X_numeric)
 
     # Combine the processed columns
@@ -57,7 +60,7 @@ def one_hot_labels(num_classes: int, labels: np.ndarray) -> np.ndarray:
 
 def sample_noise(row: pd.Series, X: pd.DataFrame, y: pd.Series, sample_n=9):
     if sample_n <= 0:
-        return row, np.array([])
+        return pd.DataFrame(row).T, np.array([])
 
     # Drop the row with the specified index
     df_dropped = X.drop(index=row.name)

@@ -89,10 +89,11 @@ class Dataset(object):
 
                 predictions = self.cloud_models.predict(encrypted_data)
 
-                example.append(predictions)
+                if self.use_predictions:
+                    example.append(predictions)
                 if self.use_embedding:
                     example.append(row.values.reshape(1, -1))
-                if self.use_noise_labels:
+                if self.use_noise_labels and noise_labels:
                     example.append(noise_labels)
 
                 examples.append(np.hstack(example))
@@ -120,7 +121,7 @@ class Dataset(object):
                 example.append(predictions)
             if self.use_embedding:
                 example.append(row.values.reshape(1, -1))
-            if self.use_noise_labels:
+            if self.use_noise_labels and noise_labels:
                 example.append(noise_labels)
 
             examples.append(np.hstack(example))

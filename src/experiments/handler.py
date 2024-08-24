@@ -1,7 +1,7 @@
 import numpy as np
-from tensorflow.core.config.flags import config
 from tqdm import tqdm
 
+from src.utils.helpers import preprocess
 from src.dataset.cloud_dataset.creator import Dataset
 from src.cloud import CloudModels, CLOUD_MODELS
 from src.encryptor.model import Encryptor

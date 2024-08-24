@@ -1,12 +1,12 @@
 EXPERIMENT:
   name: "wo_emb_wo_label_w_pred"
   n_pred_vectors: 1
-  n_noise_samples: [0,1,2,3,4,5]
+  n_noise_samples: [0,1,2,3,4,5,6,7,8,9]
   k_fold: 5
 
 
 DATASET:
-  names: ["heloc"]
+  names: ["gesture_phase", "adult"]
   one_hot: true
   ratio: 0.2
   force: true
@@ -18,15 +18,15 @@ DATASET:
 
 
 CLOUD:
-  name: "resnet_embedding" # tabular / ensemble / dense / image / resnet_embedding
+  name: "tabular" # tabular / ensemble / dense / image / resnet_embedding
   epochs: 10
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 
 IIM:
-  name: "neural_network" # xgboost / dense
+  name: "dense" # xgboost / dense
   epochs: 10
   batch_size: 8
   dropout_rate: 0.3
 
 ENCRYPTOR:
-  name: "resnet" # dc / dense_complex / dense / resnet / efficientnet
+  name: "dense_complex" # dc / dense_complex / dense / resnet / efficientnet

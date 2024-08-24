@@ -17,6 +17,6 @@ class HelocDataset(RawDataset):
     def _preprocess(self, dataset):
         X, y = dataset.iloc[:, 1:], dataset.iloc[:, 0]
         y = y.replace({"Bad": 0, "Good": 1}).astype(int)
-        return preprocess(X), y
+        return preprocess(X, cloud_dataset=True), y
 
 

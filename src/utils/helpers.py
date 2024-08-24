@@ -8,7 +8,14 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
 
 
-def preprocess(X: pd.DataFrame):
+def preprocess(X: pd.DataFrame, cloud_dataset=False):
+    """
+    The function will preprocess the data:
+    1. Categorical features will be label encoded (Boy->1, Girl ->2)
+    2. Numerical features will be scaled if the data is intended to be used for baseline. For cloud data set, no scaling will be preformed.
+
+    Return pd.Dataframe
+    """
     # Identify categorical and numeric columns
     categorical_cols = X.select_dtypes(include=['object', 'category']).columns.tolist()
     numeric_cols = X.select_dtypes(include=['number']).columns.tolist()
@@ -19,13 +26,13 @@ def preprocess(X: pd.DataFrame):
     # If there are categorical columns, apply one-hot encoding
     if categorical_cols:
         print("Encoding categorical columns...")
-        onehot_encoder = OneHotEncoder(categories='auto', sparse=False)
-        X_categorical = pd.DataFrame(onehot_encoder.fit_transform(X[categorical_cols]),
-                                     columns=onehot_encoder.get_feature_names_out(categorical_cols))
-        # label_encoder = LabelEncoder()
-        # X_categorical = pd.DataFrame()
-        # for col in categorical_cols:
-        #     X_categorical[col] = label_encoder.fit_transform(X[col])
+        # onehot_encoder = OneHotEncoder(categories='auto', sparse=False)
+        # X_categorical = pd.DataFrame(onehot_encoder.fit_transform(X[categorical_cols]),
+        #                              columns=onehot_encoder.get_feature_names_out(categorical_cols))
+        label_encoder = LabelEncoder()
+        X_categorical = pd.DataFrame()
+        for col in categorical_cols:
+            X_categorical[col] = label_encoder.fit_transform(X[col])
 
         processed_columns.append(X_categorical)
 
@@ -33,7 +40,11 @@ def preprocess(X: pd.DataFrame):
     if numeric_cols:
         print("Scaling numerical columns...")
         scaler = StandardScaler()
-        X_numeric = X[numeric_cols]#X[numeric_cols] #pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)
+        if cloud_dataset:
+            X_numeric = X[numeric_cols]
+        else:
+            X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)
+
         processed_columns.append(X_numeric)
 
     # Combine the processed columns

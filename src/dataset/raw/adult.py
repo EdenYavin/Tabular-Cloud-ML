@@ -17,6 +17,6 @@ class AdultDataset(RawDataset):
     def _preprocess(self, dataset):
         X, y = dataset.iloc[:, :-1], dataset.iloc[:, -1]
         y = y.replace({"<=50K": 0, "<=50K.":0, ">50K": 1, ">50K.": 1}).astype(int)
-        return preprocess(X), y
+        return preprocess(X, cloud_dataset=True), y
 
 

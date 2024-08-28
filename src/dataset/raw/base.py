@@ -31,6 +31,7 @@ class RawDataset:
             return load_data(self.name, self.sample_split)
 
         except FileNotFoundError:
+            # The cloud train-test split is 90% train and 10% test
             X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.1, stratify=self.y,
                                                                 random_state=42)
 

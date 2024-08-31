@@ -1,9 +1,13 @@
-from src.cloud.models import CloudModels, NeuralNetCloudModels, TabularCloudModels, EnsembleCloudModels, ImageCloudModels, ResNetEmbeddingCloudModel
+from src.cloud.base import CloudModels
+from src.cloud.vision import EfficientNetB2CloudModels, ResNetEmbeddingCloudModel
+from src.cloud.tabular import EnsembleCloudModels, TabularCloudModels, NeuralNetCloudModels
+from src.cloud.llm import TabularLLMCloudModel
 
 CLOUD_MODELS = {
     NeuralNetCloudModels.name: NeuralNetCloudModels,
     TabularCloudModels.name: TabularCloudModels,
     EnsembleCloudModels.name: EnsembleCloudModels,
-    ImageCloudModels.name: ImageCloudModels,
-    ResNetEmbeddingCloudModel.name: ResNetEmbeddingCloudModel
+    EfficientNetB2CloudModels.name: EfficientNetB2CloudModels,
+    ResNetEmbeddingCloudModel.name: ResNetEmbeddingCloudModel,
+    TabularLLMCloudModel.name: TabularLLMCloudModel,
 }

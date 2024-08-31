@@ -4,10 +4,10 @@ from src.utils.helpers import load_data, save_data
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from xgboost import XGBClassifier
-from keras.src.layers import Dense, Dropout, Input, Attention, Concatenate, Lambda, Conv1D, Flatten, MaxPooling1D
+from keras.src.layers import Dense, Dropout, Input
 from keras.src.models import Model
 from keras.src.utils import to_categorical
-from src.utils.constansts import DATASETS_PATH, XGBOOST_BASELINE, NEURAL_NET_BASELINE
+from src.utils.constansts import DATASETS_PATH, XGBOOST_BASELINE, CONFIG_DATASET_PANDAS_DF_TRANSFORM_TOKEN
 import pathlib
 
 DATASET_DIR = pathlib.Path(DATASETS_PATH)
@@ -19,8 +19,9 @@ class RawDataset:
         self.X, self.y = None, None
         self.sample_split = kwargs.get("ratio")
         self.baseline_model = kwargs.get("baseline")
+        self.use_pd_df = kwargs.get(CONFIG_DATASET_PANDAS_DF_TRANSFORM_TOKEN, False)
         self.name = None
-
+        self.metadata = {}
 
 
     def get_dataset(self):
@@ -38,12 +39,14 @@ class RawDataset:
             _, X_sample, _, y_sample = train_test_split(X_train, y_train, test_size=self.sample_split, stratify=y_train,
                                                         random_state=42)
 
-            X_train = X_train.values
-            X_test = X_test.values
-            X_sample = X_sample.values
-            y_train = y_train.values
-            y_test = y_test.values
-            y_sample = y_sample.values
+
+            if not self.use_pd_df:
+                X_train = X_train.values
+                X_test = X_test.values
+                X_sample = X_sample.values
+                y_train = y_train.values
+                y_test = y_test.values
+                y_sample = y_sample.values
 
             save_data(self.name, self.sample_split,
                       [X_train, X_test, X_sample, y_train, y_test,  y_sample])

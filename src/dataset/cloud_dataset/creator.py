@@ -1,8 +1,8 @@
 import pandas as pd
 
-from src.dataset.cloud_dataset.features_eng import FeatureReduction
+
 from src.encryptor.model import Encryptor
-from src.cloud.models import CloudModels
+from src.cloud.base import CloudModels
 from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file
 from tqdm import tqdm
 import numpy as np
@@ -14,15 +14,13 @@ class Dataset(object):
 
     def __init__(self, dataset_name, cloud_models, encryptor, n_pred_vectors, n_noise_samples,
                  use_embedding=True, use_noise_labels=True,use_predictions=False, ratio=0.2,
-                 one_hot=False, shuffle=False, force=False,
-                 feature_reduction_config=None
+                 one_hot=False, force=False, raw_metadata = None
                  ):
 
         self.cloud_models: CloudModels = cloud_models
         self.encryptor: Encryptor = encryptor
         self.n_pred_vectors = n_pred_vectors
         self.n_noise_samples = n_noise_samples
-        self.shuffle = shuffle
         self.one_hot = one_hot
         self.name = dataset_name
         self.split_ratio = ratio
@@ -30,7 +28,7 @@ class Dataset(object):
         self.use_noise_labels = use_noise_labels
         self.use_predictions = use_predictions
         self.force_run = force
-        self.feature_reduction: FeatureReduction = FeatureReduction(**feature_reduction_config)
+        self.raw_metadata = raw_metadata
 
     def create(self, X_train, y_train, X_test, y_test) -> dict:
 
@@ -41,8 +39,6 @@ class Dataset(object):
                 print(f"Dataset {self.name} was already processed before, loading cache")
                 return dataset
 
-        X_train = self.feature_reduction.fit_transform(X_train)
-        X_test = self.feature_reduction.transform(X_test)
 
         X_train, y_train = self._create_train(X_train, y_train)
         X_test = self._create_test(X_test, y_test)
@@ -51,8 +47,6 @@ class Dataset(object):
             num_classes = len(np.unique(y_train))
             y_train = one_hot_labels(labels=y_train, num_classes=num_classes)
 
-        if self.shuffle:
-            np.random.shuffle(X_train)
 
         train = [X_train, y_train]
         test = [X_test, y_test]
@@ -87,7 +81,7 @@ class Dataset(object):
                 samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
                 encrypted_data = self.encryptor.encode(samples)
 
-                predictions = self.cloud_models.predict(encrypted_data)
+                predictions = self.cloud_models.predict(encrypted_data, **self.raw_metadata)
 
                 if self.use_predictions:
                     example.append(predictions)
@@ -115,7 +109,7 @@ class Dataset(object):
             samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
             encrypted_data = self.encryptor.encode(samples)
 
-            predictions = self.cloud_models.predict(encrypted_data)
+            predictions = self.cloud_models.predict(encrypted_data, **self.raw_metadata)
 
             if self.use_predictions:
                 example.append(predictions)

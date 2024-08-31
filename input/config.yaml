@@ -6,24 +6,24 @@ EXPERIMENT:
 
 
 DATASET:
-  names: ["gesture_phase", "adult", "heloc"]
-  one_hot: true
+  names: ["heloc"]#["gesture_phase", "adult", "heloc"]
+  one_hot: false
   ratio: 0.2
   force: true
-  shuffle: false
-  baseline: "neural_network" # neural_network / xgboost
-  feature_reduction:
-#    method: "guassian"
-    n_components: 10
+  baseline: "xgboost" # neural_network / xgboost
+  pd_dataframe: true
+#  feature_reduction:
+##    method: "guassian"
+#    n_components: 10
 
 
 CLOUD:
-  name: "resnet_embedding" # tabular / ensemble / dense / image / resnet_embedding
+  name: "tabular_llm" # tabular / ensemble / dense / efficientnet / resnet_embedding / tabular_llm
   epochs: 10
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 
 IIM:
-  name: "dense" # xgboost / dense
+  name: "xgboost" # xgboost / dense
   epochs: 10
   batch_size: 8
   dropout_rate: 0.3

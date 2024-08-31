@@ -13,6 +13,8 @@ class HelocDataset(RawDataset):
         self.X, self.y = self._preprocess(dataset)
         self.cloud_models = kwargs.get("cloud_models")
         self.name = HelocDataset.name
+        self.metadata["labels"] = ["Bad", "Good"]
+        self.metadata['targe_column'] = "RiskPerformance"
 
     def _preprocess(self, dataset):
         X, y = dataset.iloc[:, 1:], dataset.iloc[:, 0]

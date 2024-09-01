@@ -1,3 +1,4 @@
+import pathlib
 import pickle
 import os
 import pandas as pd
@@ -6,6 +7,11 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 
 
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
+
+
+def load_prompt(path: str) -> str:
+    with open(path, 'r') as f:
+        return f.read()
 
 
 def preprocess(X: pd.DataFrame, cloud_dataset=False):

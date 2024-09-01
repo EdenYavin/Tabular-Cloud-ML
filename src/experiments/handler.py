@@ -54,7 +54,7 @@ class ExperimentHandler:
                         **self.config[consts.CONFIG_CLOUD_MODEL_SECTION],
                         num_classes = num_classes
                     )
-                    cloud_models.fit(X_train, y_train)
+                    cloud_models.fit(X_train, y_train, **raw_dataset.metadata)
 
                     print("#### GETTING CLOUD MODELS PREDICTION ####")
                     cloud_acc, cloud_f1 = cloud_models.evaluate(X_test, y_test)
@@ -79,7 +79,6 @@ class ExperimentHandler:
                         one_hot=self.config[consts.CONFIG_DATASET_SECTION]['one_hot'],
                         ratio=self.config[consts.CONFIG_DATASET_SECTION]['ratio'],
                         force=self.config[consts.CONFIG_DATASET_SECTION]['force'],
-                        raw_metadata=raw_dataset.metadata
                     )
                     dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
 

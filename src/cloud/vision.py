@@ -41,7 +41,7 @@ class EfficientNetB2CloudModels(CloudModels):
         super().__init__(**kwargs)
         self.models = self.get_model()
 
-    def fit(self, X_train, y_train):
+    def fit(self, X_train, y_train, **kwargs):
         pass
 
     def get_model(self):
@@ -49,7 +49,7 @@ class EfficientNetB2CloudModels(CloudModels):
         model = EfficientNetB2(weights='imagenet')
         return model
 
-    def predict(self, X, **kwargs):
+    def predict(self, X):
         # Ensure the input is properly preprocessed for ResNet50
         X = preprocess_input(X)
         predictions = self.models.predict(X, verbose=None)

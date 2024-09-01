@@ -8,7 +8,7 @@ EXPERIMENT:
 DATASET:
   names: ["heloc"]#["gesture_phase", "adult", "heloc"]
   one_hot: false
-  ratio: 0.2
+  ratio: 0.05
   force: true
   baseline: "xgboost" # neural_network / xgboost
   pd_dataframe: true
@@ -18,7 +18,7 @@ DATASET:
 
 
 CLOUD:
-  name: "tabular_llm" # tabular / ensemble / dense / efficientnet / resnet_embedding / tabular_llm
+  name: "gpt" # tabular / ensemble / dense / efficientnet / resnet_embedding / gpt
   epochs: 10
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 

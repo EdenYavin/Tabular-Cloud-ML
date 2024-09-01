@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from src.utils.helpers import load_data, save_data
 from sklearn.metrics import accuracy_score, f1_score
@@ -29,7 +30,17 @@ class RawDataset:
 
     def get_split(self):
         try:
-            return load_data(self.name, self.sample_split)
+            X_train, X_test, X_sample, y_train, y_test,  y_sample =  load_data(self.name, self.sample_split)
+
+            if not self.use_pd_df and type(X_train) is pd.DataFrame:
+                X_train = X_train.values
+                X_test = X_test.values
+                X_sample = X_sample.values
+                y_train = y_train.values
+                y_test = y_test.values
+                y_sample = y_sample.values
+
+            return X_train, X_test, X_sample, y_train, y_test, y_sample
 
         except FileNotFoundError:
             # The cloud train-test split is 90% train and 10% test

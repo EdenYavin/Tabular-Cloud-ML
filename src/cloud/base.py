@@ -16,7 +16,7 @@ class CloudModels:
         self.models = None
 
     @abstractmethod
-    def predict(self, X, **kwargs):
+    def predict(self, X):
         pass
 
     def evaluate(self, X, y) -> tuple:
@@ -33,7 +33,7 @@ class CloudModels:
 
         return accuracy, f1
 
-    def fit(self, X_train, y_train):
+    def fit(self, X_train, y_train, **kwargs):
         self.models.fit(X_train, y_train)
 
 

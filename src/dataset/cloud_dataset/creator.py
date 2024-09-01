@@ -81,7 +81,7 @@ class Dataset(object):
                 samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
                 encrypted_data = self.encryptor.encode(samples)
 
-                predictions = self.cloud_models.predict(encrypted_data, **self.raw_metadata)
+                predictions = self.cloud_models.predict(encrypted_data)
 
                 if self.use_predictions:
                     example.append(predictions)
@@ -109,7 +109,7 @@ class Dataset(object):
             samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
             encrypted_data = self.encryptor.encode(samples)
 
-            predictions = self.cloud_models.predict(encrypted_data, **self.raw_metadata)
+            predictions = self.cloud_models.predict(encrypted_data)
 
             if self.use_predictions:
                 example.append(predictions)

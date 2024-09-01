@@ -36,11 +36,11 @@ class NeuralNetCloudModels(CloudModels):
         return model
 
 
-    def fit(self, X_train, y_train):
+    def fit(self, X_train, y_train, **kwargs):
         y_train = keras.utils.to_categorical(y_train)
         self.models.fit(X_train, y_train, epochs=self.epochs, batch_size=8)
 
-    def predict(self, X, **kwargs):
+    def predict(self, X):
         return self.models.predict(X, verbose=None)
 
     def evaluate(self, X, y):

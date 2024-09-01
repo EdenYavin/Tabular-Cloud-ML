@@ -14,6 +14,9 @@ OUTPUT_DIR = 'output'
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR, OUTPUT_DIR)
 os.makedirs(OUTPUT_DIR_PATH, exist_ok=True)
 
+PROMPTS_DIR = 'prompts'
+PROMPTS_DIR_PATH = os.path.join(PROJECT_DIR, PROMPTS_DIR)
+os.makedirs(PROMPTS_DIR, exist_ok=True)
 
 INPUT_DIR = "input"
 INPUT_PATH = os.path.join(PROJECT_DIR, INPUT_DIR)
@@ -80,3 +83,10 @@ GPU_MODELS = ['dc', 'resnet', 'efficientnet']
 # ---------------------
 CONFIG_EXPERIMENT_SECTION = "EXPERIMENT"
 K_FOLDS_TOKEN = "k_fold"
+
+
+# ---------------------
+# PROMPTS SECTIONS
+# ---------------------
+SYSTEM_PREDICTION_PROMPT = os.path.join(PROMPTS_DIR_PATH, "system_prediction_prompt.txt")
+USER_PREDICTION_PROMPT = os.path.join(PROMPTS_DIR_PATH, "user_prediction_prompt.txt")

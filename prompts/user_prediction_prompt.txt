@@ -1,14 +1,21 @@
-Below is a sample of the data (X) and a list of possible labels. Please analyze the data and determine which label is the most appropriate based on the features provided.
+## Dataset Description:
+{dataset_description}
 
-Data Sample (X):
+------------------------------------------------------------
+
+## Task
+Below is a sample of the data (X) and a list of possible labels. Please analyze the data and determine which label is the most appropriate based on the features provided.
+ Your prediction should be an integer which is one of the labels provided
+
+### Data Sample (X):
 
     {sample}
 
-Possible Labels:
+### Possible Labels:
 
 	{labels}
 
-Task:
-Based on the above features, select the label that best corresponds to the given data. If possible, briefly explain your reasoning.
 
-Your prediction should be one of the following: [Label 1, Label 2, Label 3, …, Label K].
+Based on the above features, select the label that best corresponds to the given data. Your prediction MUST ONLY be an integer from the possible labels.
+
+

@@ -1,7 +1,7 @@
 from src.cloud.base import CloudModels
 from src.cloud.vision import EfficientNetB2CloudModels, ResNetEmbeddingCloudModel
 from src.cloud.tabular import EnsembleCloudModels, TabularCloudModels, NeuralNetCloudModels
-from src.cloud.llm import TabularLLMCloudModel, ChatGPTCloudModel
+from src.cloud.llm import BertCloudModel
 
 CLOUD_MODELS = {
     NeuralNetCloudModels.name: NeuralNetCloudModels,
@@ -9,6 +9,5 @@ CLOUD_MODELS = {
     EnsembleCloudModels.name: EnsembleCloudModels,
     EfficientNetB2CloudModels.name: EfficientNetB2CloudModels,
     ResNetEmbeddingCloudModel.name: ResNetEmbeddingCloudModel,
-    TabularLLMCloudModel.name: TabularLLMCloudModel,
-    ChatGPTCloudModel.name: ChatGPTCloudModel,
+    BertCloudModel.name: BertCloudModel,
 }

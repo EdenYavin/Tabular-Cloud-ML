@@ -25,11 +25,11 @@ class ResNetEmbeddingCloudModel:
         """Predict using the ResNet model to get embeddings."""
         return self.model.predict(X, verbose=None)
 
-    def fit(self, X_train, y_train):
+    def fit(self, X_train, y_train, **kwargs):
         # This model does not require fitting as it's using pretrained ResNet
         pass
 
-    def evaluate(self, X, y):
+    def evaluate(self, X, y, **kwargs):
         """Evaluate the model by using a downstream classifier after getting embeddings."""
         return -1, -1
 

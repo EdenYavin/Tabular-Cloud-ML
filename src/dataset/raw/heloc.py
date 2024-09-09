@@ -15,6 +15,7 @@ class HelocDataset(RawDataset):
         self.name = HelocDataset.name
         self.metadata["labels"] = ["Bad", "Good"]
         self.metadata['targe_column'] = "RiskPerformance"
+        self.metadata['description'] = "The HELOC dataset from FICO. Each entry in the dataset is a line of credit, typically offered by a bank as a percentage of home equity (the difference between the current market value of a home and its purchase price). The task is a binary classification task."
 
     def _preprocess(self, dataset):
         X, y = dataset.iloc[:, 1:], dataset.iloc[:, 0]

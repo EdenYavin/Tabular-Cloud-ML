@@ -24,13 +24,18 @@ class RawDataset:
         self.name = None
         self.metadata = {}
 
+    def get_n_classes(self):
+        return len(np.unique(self.y))
+
+    def get_number_of_features(self):
+        return self.X.shape[1]
 
     def get_dataset(self):
         return self.X, self.y
 
     def get_split(self):
         try:
-            X_train, X_test, X_sample, y_train, y_test,  y_sample =  load_data(self.name, self.sample_split)
+            X_train, X_test, X_sample, y_train, y_test, y_sample =  load_data(self.name, self.sample_split)
 
             if not self.use_pd_df and type(X_train) is pd.DataFrame:
                 X_train = X_train.values
@@ -91,7 +96,7 @@ class RawDataset:
             clf.fit(X_train, y_train, epochs=10, batch_size=8)
             preds = np.argmax(clf.predict(X_test), axis=1)
 
-        return accuracy_score(y_test, preds), f1_score(y_test, preds, average='weighted')
+        return accuracy_score(y_test, preds), -1# f1_score(y_test, preds, average='weighted')
 
 
     def _get_model(self, X_train, y_train):

@@ -35,8 +35,15 @@ class ExperimentHandler:
 
         datasets = self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_NAME_TOKEN]
 
+
         for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
             raw_dataset: RawDataset = DATASETS[dataset_name](**self.config[consts.CONFIG_DATASET_SECTION])
+
+            encryptor = Encryptor(
+                output_shape=(1, raw_dataset.get_number_of_features()),
+                **self.config[consts.CONFIG_ENCRYPTOR_SECTION],
+            )
+
             for n_noise_samples in self.n_noise_samples:
                 for n_pred_vectors in self.n_pred_vectors:
 
@@ -44,10 +51,6 @@ class ExperimentHandler:
                     print(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
                     num_classes = len(np.unique(y_train))
 
-                    encryptor = Encryptor(
-                        output_shape=(1, X_train.shape[1]),
-                        **self.config[consts.CONFIG_ENCRYPTOR_SECTION],
-                    )
 
                     print("#### TRAINING CLOUD MODELS ####")
                     cloud_models: CloudModels = CLOUD_MODELS[self.config[consts.CONFIG_CLOUD_MODEL_SECTION]['name']](

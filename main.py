@@ -1,3 +1,7 @@
+# import azure_authentication_client
+# azure_authentication_client.patch_http_headers()
+
+
 import yaml
 import src.utils.constansts as consts
 from src.experiments.handler import ExperimentHandler

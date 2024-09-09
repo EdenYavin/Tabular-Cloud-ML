@@ -1,5 +1,5 @@
 
-from lazypredict.Supervised import CLASSIFIERS
+from lazypredict.supervised import CLASSIFIERS
 from keras.src.models import Sequential
 from keras.src.layers import Dense, Dropout
 from mlxtend.classifier import EnsembleVoteClassifier

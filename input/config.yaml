@@ -1,12 +1,12 @@
 EXPERIMENT:
   name: "w_emb_wo_label_w_pred"
   n_pred_vectors: 1
-  n_noise_samples: 0
+  n_noise_samples: 1
   k_fold: 5
 
 
 DATASET:
-  names: ["heloc"]#["gesture_phase", "adult", "heloc"]
+  names: ["gesture_phase", "adult", "heloc"]
   one_hot: false
   ratio: 0.05
   force: true
@@ -18,7 +18,7 @@ DATASET:
 
 
 CLOUD:
-  name: "gpt" # tabular / ensemble / dense / efficientnet / resnet_embedding / gpt
+  name: "bert" # tabular / ensemble / dense / efficientnet / resnet_embedding / gpt / ollama/ bert
   epochs: 10
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 
@@ -29,4 +29,4 @@ IIM:
   dropout_rate: 0.3
 
 ENCRYPTOR:
-  name: "resnet" # dc / dense_complex / dense / resnet / efficientnet
+  name: "dense_complex" # dc / dense_complex / dense / resnet / efficientnet

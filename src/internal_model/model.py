@@ -4,9 +4,8 @@ from keras import Sequential
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
-from catboost import CatBoostClassifier
 from keras.src.models import Model
-from keras.src.layers import Dense, Dropout, Input, Attention, Concatenate, Lambda, Conv1D, Flatten, MaxPooling1D
+from keras.src.layers import Dense, Dropout, Input, Attention, Conv1D, Flatten, MaxPooling1D
 from keras.src.metrics import F1Score
 import numpy as np
 
@@ -14,7 +13,6 @@ from src.utils.constansts import CONFIG_IMM_NAME_TOKEN
 
 
 models = {
-    "catboost": CatBoostClassifier,
     "xgboost": XGBClassifier,
 }
 

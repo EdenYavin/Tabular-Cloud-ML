@@ -47,7 +47,9 @@ os.makedirs(DATA_CACHE_PATH, exist_ok=True)
 CONFIG_CLOUD_MODEL_SECTION = "CLOUD"
 CONFIG_CLOUD_MODELS_TOKEN = "models"
 CONFIG_CLOUD_MODELS_PATH_TOKEN = "path"
-
+LLM_CACHE_DIR = "llm_cache"
+LLM_CACHE_PATH = os.path.join(STORE_PATH, LLM_CACHE_DIR)
+os.makedirs(LLM_CACHE_PATH, exist_ok=True)
 
 # ---------------------
 # INTERNAL MODEL SECTIONS

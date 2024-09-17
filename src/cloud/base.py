@@ -13,7 +13,7 @@ class CloudModels:
     def __init__(self, **kwargs):
         models_names = kwargs.get(CONFIG_CLOUD_MODELS_TOKEN)
         self.cloud_models = models_names
-        self.models = None
+        self.model = None
 
     @abstractmethod
     def predict(self, X):
@@ -26,7 +26,7 @@ class CloudModels:
             tuple: accuracy and F1 score of the ensemble model.
         """
 
-        predictions = self.models.predict(X)
+        predictions = self.model.predict(X)
         # Calculate accuracy and F1 score
         accuracy = accuracy_score(y, predictions)
         f1 = f1_score(y, predictions, average='weighted')
@@ -34,7 +34,7 @@ class CloudModels:
         return accuracy, f1
 
     def fit(self, X_train, y_train, **kwargs):
-        self.models.fit(X_train, y_train)
+        self.model.fit(X_train, y_train)
 
 
 

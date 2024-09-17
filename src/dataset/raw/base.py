@@ -96,8 +96,14 @@ class RawDataset:
             clf.fit(X_train, y_train, epochs=10, batch_size=8)
             preds = np.argmax(clf.predict(X_test), axis=1)
 
-        return accuracy_score(y_test, preds), -1# f1_score(y_test, preds, average='weighted')
+        acc = accuracy_score(y_test, preds)
+        try:
+            f1 = f1_score(y_test, preds, average='weighted')
+        except Exception:
+            f1 = -1
 
+        return acc, f1
+    
 
     def _get_model(self, X_train, y_train):
         inputs = Input(shape=(X_train.shape[1],))  # Dynamic input shape

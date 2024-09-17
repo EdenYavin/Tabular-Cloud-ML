@@ -2,7 +2,7 @@ import pickle, os
 from src.utils.constansts import LLM_CACHE_PATH
 
 class Cache:
-    def __init__(self, cache_file='cache.pkl', flush_every=1):
+    def __init__(self, cache_file='cache.pkl', flush_every=100):
         self.cache_file = os.path.join(LLM_CACHE_PATH, cache_file)
         self.cache = {}
         self.load()

@@ -5,6 +5,7 @@
 import yaml
 import src.utils.constansts as consts
 from src.experiments.handler import ExperimentHandler
+from src.experiments.k_fold_handler import KFoldExperimentHandler
 import pandas as pd
 import os
 import tensorflow as tf
@@ -20,8 +21,10 @@ def main():
         # Hide GPU from visible devices
         tf.config.set_visible_devices([], 'GPU')
 
-    experiment_handler = ExperimentHandler(config)
-
+    if config["EXPERIMENT"]["k_fold"] == 1:
+        experiment_handler = ExperimentHandler(config)
+    else:
+        experiment_handler = KFoldExperimentHandler(config)
     new_report_lines = experiment_handler.run_experiment()
     report = pd.DataFrame()
 

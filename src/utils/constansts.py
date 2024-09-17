@@ -50,6 +50,8 @@ CONFIG_CLOUD_MODELS_PATH_TOKEN = "path"
 LLM_CACHE_DIR = "llm_cache"
 LLM_CACHE_PATH = os.path.join(STORE_PATH, LLM_CACHE_DIR)
 os.makedirs(LLM_CACHE_PATH, exist_ok=True)
+LLM_PRED_VECTOR_TYPE_CONFIG_TOKEN = 'logits'
+LLM_TOP_K_CONFIG_TOKEN = "top_k"
 
 # ---------------------
 # INTERNAL MODEL SECTIONS

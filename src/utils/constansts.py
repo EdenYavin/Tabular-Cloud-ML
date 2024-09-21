@@ -24,6 +24,9 @@ os.makedirs(INPUT_PATH, exist_ok=True)
 CONFIG_FILE_NAME = "config.yaml"
 CONFIG_PATH = os.path.join(INPUT_PATH, CONFIG_FILE_NAME)
 
+CANVAS_FILE = "canvas.JPEG"
+CANVAS_PATH = os.path.join(INPUT_PATH, CANVAS_FILE)
+
 STORE_DIR = "store"
 STORE_PATH = os.path.join(PROJECT_DIR, STORE_DIR)
 os.makedirs(STORE_PATH, exist_ok=True)

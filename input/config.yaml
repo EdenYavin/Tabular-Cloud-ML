@@ -1,21 +1,21 @@
 EXPERIMENT:
   name: "w_emb_wo_label_w_pred"
   n_pred_vectors: 1
-  n_noise_samples: 1
-  k_fold: 5
+  n_noise_samples: 0
+  k_fold: 1
 
 
 DATASET:
-  names: ["heloc"]#["gesture_phase", "adult", "heloc"]
+  names: ["bank_marketing", "gesture_phase", "adult", "heloc"]
   one_hot: false
-  ratio: 0.05
+  ratio: 0.1
   force: true
   baseline: "xgboost" # neural_network / xgboost
   pd_dataframe: true
 
 
 CLOUD:
-  name: "masked_llm" # tabular / ensemble / dense / efficientnet / resnet_embedding / casual_llm / masked_llm
+  name: "patch" # tabular / ensemble / dense / efficientnet / resnet_embedding / casual_llm / masked_llm / patch
   epochs: 10
   top_k: 100000
   logits: false # True - Use LLM logits, False - Use llm's vocab probability
@@ -28,4 +28,4 @@ IIM:
   dropout_rate: 0.3
 
 ENCRYPTOR:
-  name: "dense_complex" # dc / dense_complex / dense / resnet / efficientnet
+  name: "efficientnet" # dc / dense_complex / dense / resnet / efficientnet

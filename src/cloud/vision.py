@@ -3,9 +3,14 @@ from keras.api.applications.resnet50 import preprocess_input, decode_predictions
 from keras.api.applications.vgg16 import preprocess_input, decode_predictions
 from keras import Model
 from keras.src.layers import GlobalAveragePooling2D, AveragePooling2D
+import numpy as np
+from PIL import Image
+import cv2
 
 
 from src.cloud.base import CloudModels
+from src.utils.constansts import CANVAS_PATH
+
 
 class ResNetEmbeddingCloudModel:
     name = "resnet_embedding"
@@ -57,3 +62,42 @@ class EfficientNetB2CloudModels(CloudModels):
 
     def evaluate(self, X, y):
         return -1, -1
+
+
+
+class ImagePatchEfficientCloudModel(EfficientNetB2CloudModels):
+
+    name = "patch"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.canvas = self.get_canvas()
+        self.model = EfficientNetB2(weights='imagenet')
+
+    def get_canvas(self):
+        # Load the image from the input path
+        image = Image.open(CANVAS_PATH)
+        # Convert the image to a NumPy array
+        canvas = np.array(image)
+
+        canvas_resized = cv2.resize(canvas, (260, 260))
+
+        return canvas_resized
+
+
+    def predict(self, matrix_input):
+
+        matrix_input_resized = cv2.resize(matrix_input[0], (260, 260))
+
+        patch_canvas = np.clip(self.canvas + matrix_input_resized, 0, 255)
+
+        # Preprocess the image for EfficientNet
+        preprocessed_image = preprocess_input(patch_canvas)
+
+        # Expand dimensions to match the input shape of the model
+        input_tensor = np.expand_dims(preprocessed_image, axis=0)
+
+        # Get predictions
+        predictions = self.model.predict(input_tensor)
+
+        return predictions

@@ -107,7 +107,7 @@ def build_dense_generator(input_shape, output_shape):
     x = Dense(128, activation='leaky_relu')(x)
     x = Dense(64, activation='leaky_relu')(x)
 
-    output_vector = Dense(output_shape[1], activation='tanh')(
+    output_vector = Dense(output_shape[1], activation='linear')(
         x)  # Output vector length matches the specified output shape
 
     model = Model(inputs=input_layer, outputs=output_vector)

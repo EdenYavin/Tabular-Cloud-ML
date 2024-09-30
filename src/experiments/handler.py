@@ -44,28 +44,23 @@ class ExperimentHandler:
                 **self.config[consts.CONFIG_ENCRYPTOR_SECTION],
             )
 
+            X_train, X_test, X_sample, y_train, y_test, y_sample = raw_dataset.get_split()
+            print(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
+
+            cloud_models: CloudModels = CLOUD_MODELS[self.config[consts.CONFIG_CLOUD_MODEL_SECTION]['name']](
+                **self.config[consts.CONFIG_CLOUD_MODEL_SECTION],
+                num_classes=raw_dataset.get_n_classes()
+            )
+            cloud_models.fit(X_train, y_train, **raw_dataset.metadata)
+
+            print("#### GETTING DATASET FULL BASELINE####")
+            cloud_acc, cloud_f1 = raw_dataset.get_cloud_model_baseline(X_train, X_test, y_train, y_test)
+
+            print("#### GETTING BASELINE PREDICTION ####")
+            baseline_acc, baseline_f1 = raw_dataset.get_baseline(X_sample, X_test, y_sample, y_test)
+
             for n_noise_samples in self.n_noise_samples:
                 for n_pred_vectors in self.n_pred_vectors:
-
-                    X_train, X_test, X_sample, y_train, y_test, y_sample = raw_dataset.get_split()
-                    print(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
-                    num_classes = len(np.unique(y_train))
-
-
-                    print("#### TRAINING CLOUD MODELS ####")
-                    cloud_models: CloudModels = CLOUD_MODELS[self.config[consts.CONFIG_CLOUD_MODEL_SECTION]['name']](
-                        **self.config[consts.CONFIG_CLOUD_MODEL_SECTION],
-                        num_classes = num_classes
-                    )
-                    cloud_models.fit(X_train, y_train, **raw_dataset.metadata)
-
-                    print("#### GETTING CLOUD MODELS PREDICTION ####")
-                    cloud_acc, cloud_f1 = cloud_models.evaluate(X_test, y_test)
-
-
-                    print("#### GETTING BASELINE PREDICTION ####")
-                    baseline_acc, baseline_f1 = raw_dataset.get_baseline(X_sample, X_test, y_sample, y_test)
-
 
                     print(f"CREATING THE CLOUD-TRAINSET FROM {dataset_name},"
                           f" WITH {n_noise_samples} NOISE SAMPLES AND {n_pred_vectors} PREDICTION VECTORS")
@@ -90,7 +85,7 @@ class ExperimentHandler:
 
                     internal_model = InternalInferenceModelFactory().get_model(
                         **self.config[consts.CONFIG_INN_SECTION],
-                        num_classes=num_classes,
+                        num_classes=raw_dataset.get_n_classes(),
                         input_shape=dataset['train'][0].shape[1],  # Only give the number of features
                     )
 

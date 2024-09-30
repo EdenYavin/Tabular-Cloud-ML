@@ -83,6 +83,18 @@ class RawDataset:
             yield X_train.values, X_test.values, X_sample.values, y_sample.values, y_train.values, y_test.values
 
 
+    def get_cloud_model_baseline(self, X_train, X_test, y_train, y_test):
+        clf = XGBClassifier()
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+        acc = accuracy_score(y_test, y_pred)
+        try:
+            f1 = f1_score(y_test, y_pred, average='weighted')
+        except Exception:
+            f1 = -1
+
+        return acc, f1
+
 
     def get_baseline(self, X_train, X_test, y_train, y_test):
 

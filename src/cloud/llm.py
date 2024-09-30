@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModelForMaskedLM
+from transformers import AutoModelForSequenceClassification, AutoModelForCausalLM, AutoTokenizer, AutoModelForMaskedLM
 import torch
 from torch.nn import functional as F
 
@@ -8,6 +8,53 @@ from src.cloud.base import CloudModels
 
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+
+
+class SequenceClassificationLLMCloudModel(CloudModels):
+    name = "sequence_classification_llm"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.model_name = "distilbert-base-uncased-finetuned-sst-2-english"
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name).to("cpu")
+        self.labels = None
+        self.output_logits = kwargs.get(consts.LLM_PRED_VECTOR_TYPE_CONFIG_TOKEN, True)
+        self.top_k = kwargs.get(consts.LLM_TOP_K_CONFIG_TOKEN, 30000)
+        self.cache = Cache(cache_file="sequence_classification_llm.cache")
+
+    def get_probabilities(self, context):
+        logits = self.get_logits(context)
+        probabilities = F.softmax(logits, dim=-1)
+        return probabilities
+
+    def get_logits(self, context):
+        inputs = self.tokenizer.encode(context, return_tensors='pt').to("cpu")
+        with torch.no_grad():
+            outputs = self.model(inputs)
+        return outputs.logits
+
+    def predict(self, X):
+        predictions = []
+        for x in X:
+            x = [round(elem, 10) for elem in x]
+            context = ",".join([str(i) for i in x])
+            if self.output_logits:
+                outputs = self.get_logits(context)
+            else:
+                outputs = self.get_probabilities(context)
+            outputs = outputs.cpu()
+            top_k = min(self.top_k, outputs.shape[1])
+            top_k_values, top_k_indices = torch.topk(outputs, top_k, largest=True, sorted=True)
+            top_k_values = top_k_values.numpy()[0]
+            predictions.append(top_k_values)
+        return predictions
+
+    def fit(self, X_train, y_train, **kwargs):
+        self.labels = kwargs.get("labels")
+
+    def evaluate(self, X, y) -> tuple:
+        return -1, -1
 
 
 class CasualLLMCloudModel(CloudModels):
@@ -123,9 +170,9 @@ class MaskedLLMCloudModel(CloudModels):
 
         predictions = []
         for x in X:
-            x = [round(elem,5) for elem in x]
-
-            context = ",".join([str(i) for i in x])
+            x = [round(elem,2) for elem in x]
+            x.append("[MASK]")
+            context = str(x)
 
             if self.output_logits:
                 outputs = self.get_logits(context)

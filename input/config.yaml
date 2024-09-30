@@ -2,11 +2,11 @@ EXPERIMENT:
   name: "w_emb_wo_label_w_pred"
   n_pred_vectors: 1
   n_noise_samples: 0
-  k_fold: 1
+  k_fold: 5
 
 
 DATASET:
-  names: ["bank_marketing", "gesture_phase", "adult", "heloc"]
+  names: ["students_dropout"]#,"bank_marketing", "gesture_phase", "adult", "heloc"]
   one_hot: false
   ratio: 0.1
   force: true
@@ -15,9 +15,9 @@ DATASET:
 
 
 CLOUD:
-  name: "patch" # tabular / ensemble / dense / efficientnet / resnet_embedding / casual_llm / masked_llm / patch
+  name: "masked_llm" # tabular / ensemble / dense / efficientnet / resnet_embedding / casual_llm / masked_llm / sequence_classification_llm / patch
   epochs: 10
-  top_k: 100000
+  top_k: 1000
   logits: false # True - Use LLM logits, False - Use llm's vocab probability
   models: ['RandomForestClassifier', 'BernoulliNB', 'CalibratedClassifierCV', 'LinearDiscriminantAnalysis', 'LogisticRegression', 'AdaBoostClassifier', 'ExtraTreesClassifier', 'XGBClassifier', 'LGBMClassifier']
 
@@ -28,4 +28,4 @@ IIM:
   dropout_rate: 0.3
 
 ENCRYPTOR:
-  name: "efficientnet" # dc / dense_complex / dense / resnet / efficientnet
+  name: "dense" # dc / dense_complex / dense / resnet / efficientnet

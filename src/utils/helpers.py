@@ -1,17 +1,51 @@
-import pathlib
+
 import pickle
 import os
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
+
 
 
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
 
 
-def load_prompt(path: str) -> str:
-    with open(path, 'r') as f:
-        return f.read()
+def expand_matrix_to_img_size(matrix, target_shape):
+    """
+    Expand a given matrix to the target shape by adding zeros around it.
+
+    Parameters:
+    matrix (np.ndarray): The input matrix to be expanded.
+    target_shape (tuple): The desired shape of the output matrix (rows, cols).
+
+    Returns:
+    np.ndarray: The expanded matrix with the target shape.
+    """
+
+    original_shape = matrix.shape
+    if len(original_shape) != 2 or len(target_shape) != 2:
+        raise ValueError("Both input matrix and target shape must be 2-dimensional")
+
+    if original_shape[0] > target_shape[0] or original_shape[1] > target_shape[1]:
+        raise ValueError("Target shape must be larger than or equal to the original shape in both dimensions")
+
+    # Calculate the padding for each dimension
+    pad_height = target_shape[0] - original_shape[0]
+    pad_width = target_shape[1] - original_shape[1]
+
+    # Calculate padding values for top, bottom, left, and right
+    pad_top = pad_height // 2
+    pad_bottom = pad_height - pad_top
+    pad_left = pad_width // 2
+    pad_right = pad_width - pad_left
+
+    # Apply padding
+    padded_matrix = np.pad(matrix, ((pad_top, pad_bottom), (pad_left, pad_right)), mode='constant', constant_values=0)
+
+    # Stack the matrix 3 times to create 3 channels
+    expanded_matrix = np.stack([padded_matrix] * 3, axis=-1)
+
+    return expanded_matrix
 
 
 def preprocess(X: pd.DataFrame, cloud_dataset=False):
@@ -45,9 +79,9 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
     # Apply standard scaling to the numeric columns
     if numeric_cols:
         print("Scaling numerical columns...")
-        scaler = StandardScaler()
+        scaler = MinMaxScaler()
         if cloud_dataset:
-            X_numeric = X[numeric_cols]
+            X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)#X[numeric_cols]
         else:
             X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)
 
@@ -77,7 +111,7 @@ def one_hot_labels(num_classes: int, labels: np.ndarray) -> np.ndarray:
 
 def sample_noise(row: pd.Series, X: pd.DataFrame, y: pd.Series, sample_n=9):
     if sample_n <= 0:
-        return pd.DataFrame(row).T, np.array([])
+        return pd.DataFrame(row).T.values.reshape(1, -1), np.array([])
 
     # Drop the row with the specified index
     df_dropped = X.drop(index=row.name)
@@ -132,3 +166,7 @@ def save_cache_file(dataset_name: str, split_ratio: float, data):
     print(f"Saving cached data to {path}")
     with open(path, "wb") as f:
         pickle.dump(data, f)
+
+def load_prompt(path: str) -> str:
+    with open(path, 'r') as f:
+        return f.read()

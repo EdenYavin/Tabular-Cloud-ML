@@ -10,6 +10,8 @@ class StudentsDropout(RawDataset):
         super().__init__(**kwargs)
         DATASET_PATH = DATASET_DIR / StudentsDropout.name /  f"dataset.csv"
         dataset = pd.read_csv(DATASET_PATH)
+        if "Unnamed: 0" in dataset.columns:
+            dataset.drop(columns=["Unnamed: 0"], inplace=True)
         self.X, self.y = self._preprocess(dataset)
         self.cloud_models = kwargs.get("cloud_models")
         self.name = StudentsDropout.name

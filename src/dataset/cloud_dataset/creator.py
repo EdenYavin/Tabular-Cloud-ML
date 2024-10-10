@@ -1,24 +1,22 @@
 import pandas as pd
-
-
-from src.encryptor.model import Encryptor
-from src.cloud.base import CloudModels
-from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file
 from tqdm import tqdm
 import numpy as np
 
-np.random.seed(42)
+from src.encryptor import BaseEncryptor
+from src.cloud.base import CloudModels
+from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file, expand_matrix_to_img_size
+
 
 
 class Dataset(object):
 
-    def __init__(self, dataset_name, cloud_models, encryptor, n_pred_vectors, n_noise_samples,
+    def __init__(self, dataset_name, cloud_models, encryptor, embeddings_model, n_pred_vectors, n_noise_samples,
                  use_embedding=True, use_noise_labels=True,use_predictions=False, ratio=0.2,
                  one_hot=False, force=False, raw_metadata = None
                  ):
 
         self.cloud_models: CloudModels = cloud_models
-        self.encryptor: Encryptor = encryptor
+        self.encryptor: BaseEncryptor = encryptor
         self.n_pred_vectors = n_pred_vectors
         self.n_noise_samples = n_noise_samples
         self.one_hot = one_hot
@@ -29,6 +27,7 @@ class Dataset(object):
         self.use_predictions = use_predictions
         self.force_run = force
         self.raw_metadata = raw_metadata
+        self.embeddings_model = embeddings_model
 
     def create(self, X_train, y_train, X_test, y_test) -> dict:
 
@@ -46,6 +45,7 @@ class Dataset(object):
         if self.one_hot:
             num_classes = len(np.unique(y_train))
             y_train = one_hot_labels(labels=y_train, num_classes=num_classes)
+            y_test = one_hot_labels(labels=y_test, num_classes=num_classes)
 
 
         train = [X_train, y_train]
@@ -79,7 +79,11 @@ class Dataset(object):
                 # For each new pred vector we will sample new noise to be used. This will cause
                 # The prediction vector to be different each time
                 samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
-                encrypted_data = self.encryptor.encode(samples)
+                image = expand_matrix_to_img_size(samples, self.embeddings_model.input_shape)
+
+                embedding = self.embeddings_model(image)
+
+                encrypted_data = self.encryptor.encode(embedding)
 
                 predictions = self.cloud_models.predict(encrypted_data)
 
@@ -87,7 +91,7 @@ class Dataset(object):
                     example.append(predictions)
                 if self.use_embedding:
                     example.append(row.values.reshape(1, -1))
-                if self.use_noise_labels and noise_labels:
+                if self.use_noise_labels and noise_labels.shape[0] > 0:
                     example.append(noise_labels)
 
                 examples.append(np.hstack(example))
@@ -100,14 +104,18 @@ class Dataset(object):
         X = pd.DataFrame(X)
 
         for idx, row in tqdm(X.iterrows(), total=len(X), leave=True, position=0):
-            # We can't touch the test set, i.e. expand it to more samples. So we do it only once
 
+            # We can't touch the test set, i.e. expand it to more samples. So we do it only once
             example = []
 
             # For each new pred vector we will sample new noise to be used. This will cause
             # The prediction vector to be different each time
             samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
-            encrypted_data = self.encryptor.encode(samples)
+            image = expand_matrix_to_img_size(samples, self.embeddings_model.input_shape)
+
+            embedding = self.embeddings_model(image)
+
+            encrypted_data = self.encryptor.encode(embedding)
 
             predictions = self.cloud_models.predict(encrypted_data)
 
@@ -115,7 +123,7 @@ class Dataset(object):
                 example.append(predictions)
             if self.use_embedding:
                 example.append(row.values.reshape(1, -1))
-            if self.use_noise_labels and noise_labels:
+            if self.use_noise_labels and noise_labels.shape[0] > 0:
                 example.append(noise_labels)
 
             examples.append(np.hstack(example))

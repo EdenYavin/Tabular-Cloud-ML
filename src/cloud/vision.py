@@ -13,7 +13,7 @@ from src.utils.constansts import CANVAS_PATH
 
 
 class ResNetEmbeddingCloudModel:
-    name = "resnet_embedding"
+    name = "resnet"
 
     def __init__(self, **kwargs):
         self.output_shape = kwargs.get('output_shape', 2048)  # Default embedding size for ResNet50

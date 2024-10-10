@@ -85,6 +85,8 @@ CONFIG_IMM_NAME_TOKEN = "name"
 # ---------------------
 CONFIG_ENCRYPTOR_SECTION = "ENCRYPTOR"
 GPU_MODELS = ['dc', 'resnet', 'efficientnet']
+CONFIG_ENCRYPTOR_NAME_TOKEN = "name"
+
 # ---------------------
 # EXPERIMENT SECTIONS
 # ---------------------

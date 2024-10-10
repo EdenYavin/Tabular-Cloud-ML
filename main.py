@@ -9,7 +9,9 @@ from src.experiments.k_fold_handler import KFoldExperimentHandler
 import pandas as pd
 import os
 import tensorflow as tf
+import numpy as np
 
+np.random.seed(42)
 
 def main():
 

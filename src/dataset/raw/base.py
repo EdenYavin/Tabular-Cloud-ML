@@ -52,9 +52,13 @@ class RawDataset:
             X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.1, stratify=self.y,
                                                                 random_state=42)
 
-            _, X_sample, _, y_sample = train_test_split(X_train, y_train, test_size=self.sample_split, stratify=y_train,
-                                                        random_state=42)
+            if self.sample_split == 1:
+                # Use the entire Train set as the sample
+                X_sample, y_sample = X_train, y_train
 
+            else:
+                _, X_sample, _, y_sample = train_test_split(X_train, y_train, test_size=self.sample_split, stratify=y_train,
+                                                        random_state=42)
 
             if not self.use_pd_df:
                 X_train = X_train.values

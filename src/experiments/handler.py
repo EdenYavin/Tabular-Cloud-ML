@@ -3,9 +3,9 @@ from tqdm import tqdm
 
 from src.dataset.cloud_dataset.creator import Dataset
 from src.cloud import CloudModels, CLOUD_MODELS
-from src.encryptor.model import Encryptor
+from src.encryptor import BaseEncryptor, EncryptorFactory
 from src.internal_model.model import InternalInferenceModelFactory
-
+from src.embeddings.model import TabularEmbedding, ImageEmbedding
 import src.utils.constansts as consts
 from src.dataset.raw import DATASETS, RawDataset
 import pandas as pd
@@ -39,8 +39,9 @@ class ExperimentHandler:
         for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
             raw_dataset: RawDataset = DATASETS[dataset_name](**self.config[consts.CONFIG_DATASET_SECTION])
 
-            encryptor = Encryptor(
-                output_shape=(1, raw_dataset.get_number_of_features()),
+            embedding_model = ImageEmbedding()
+            encryptor: BaseEncryptor = EncryptorFactory().get_model(
+                output_shape=(1, *embedding_model.output_shape),
                 **self.config[consts.CONFIG_ENCRYPTOR_SECTION],
             )
 
@@ -69,6 +70,7 @@ class ExperimentHandler:
                         dataset_name=dataset_name,
                         cloud_models=cloud_models,
                         encryptor=encryptor,
+                        embeddings_model=embedding_model,
                         n_pred_vectors=n_pred_vectors,
                         n_noise_samples=n_noise_samples,
                         use_embedding=True if "w_emb" in self.experiment_name else False,
@@ -114,7 +116,7 @@ class ExperimentHandler:
                                     "n_pred_vectors": [n_pred_vectors],
                                     "n_noise_sample": [n_noise_samples],
                                     "iim_model": [internal_model.name],
-                                    "encryptor": [encryptor.generator_type],
+                                    "encryptor": [encryptor.name],
                                     "cloud_model": [cloud_models.name],
                                     "iim_train_acc": [train_acc],
                                     "iim_train_f1": [train_f1],

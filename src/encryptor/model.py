@@ -5,162 +5,122 @@ import numpy as np
 from keras.src.layers import Concatenate, LeakyReLU
 from keras.src.layers import Reshape, Conv2D
 from keras.src.layers import UpSampling2D
+from keras.src.applications.resnet import preprocess_input, ResNet50
 
 
-class Encryptor:
-    def __init__(self, output_shape=None, **kwargs):
+class BaseEncryptor:
+
+    name: str
+
+    def __init__(self, output_shape=None):
         self.model = None
-        self.generator_type = kwargs.get('name')
         self.output_shape = output_shape
 
     def build_generator(self, input_shape, output_shape):
-        generators = {
-            "dc": build_dc_generator,
-            "dense_complex": build_dense_complex_generator,
-            "dense": build_dense_generator,
-            "resnet": build_resnet_generator,  # Add the new generator
-            "efficientnet": build_efficientnet_generator,
-
-        }
-        return generators[self.generator_type](input_shape, output_shape)
+        raise NotImplementedError("Subclasses should implement this method")
 
     def encode(self, inputs) -> np.array:
-        # Ensure inputs are in the correct shape (batch_size, height, width, channels)
-
-        inputs = np.expand_dims(inputs, axis=0)  # Add the batch dimension
+        inputs = np.expand_dims(inputs, axis=0)
         if self.model is None:
-            input_shape = inputs.shape[1:]  # Exclude batch size
-            output_shape = self.output_shape or (1, inputs.shape[2])  # Output shape should be (1, width)
+            input_shape = inputs.shape[1:]
+            output_shape = self.output_shape or (1, inputs.shape[2])
             self.model = self.build_generator(input_shape, output_shape)
-
         return self.model(inputs).numpy()
 
+class DCEncryptor(BaseEncryptor):
+
+    name = "dc"
+
+    def build_generator(self, input_shape, output_shape):
+        input_layer = Input(shape=(input_shape[0], input_shape[1], 1))
+        x = Conv2DTranspose(512, kernel_size=4, strides=2, padding="same")(input_layer)
+        x = BatchNormalization()(x)
+        x = Activation("relu")(x)
+
+        x = Conv2DTranspose(256, kernel_size=4, strides=2, padding="same")(x)
+        x = BatchNormalization()(x)
+        x = Activation("relu")(x)
+
+        x = Conv2DTranspose(128, kernel_size=4, strides=2, padding="same")(x)
+        x = BatchNormalization()(x)
+        x = Activation("relu")(x)
+
+        x = Conv2DTranspose(64, kernel_size=4, strides=2, padding="same")(x)
+        x = BatchNormalization()(x)
+        x = Activation("relu")(x)
+
+        x = Conv2DTranspose(1, kernel_size=4, strides=2, padding="same")(x)
+        x = BatchNormalization()(x)
+        x = Activation("relu")(x)
+
+        x = Flatten()(x)
+        output_vector = Dense(output_shape[1])(x)
+        return Model(inputs=input_layer, outputs=output_vector)
 
 
-def build_resnet_generator(input_shape, output_shape):
-    input_layer = Input(shape=(input_shape[0], input_shape[1]))  # Dynamic input shape
+class DenseEncryptor(BaseEncryptor):
 
-    x = Flatten()(input_layer)  # Flatten the input
+    name = "dense"
 
-    # Dense layers to upscale the input to a larger vector
-    x = Dense(256 * 56 * 56)(x)
-    x = BatchNormalization()(x)
-    x = LeakyReLU(alpha=0.2)(x)
+    def build_generator(self, input_shape, output_shape):
+        input_layer = Input(shape=(input_shape[0], input_shape[1]))
+        x = Flatten()(input_layer)
 
-    # Reshape to a small 2D image shape that can be progressively upsampled
-    x = Reshape((56, 56, 256))(x)
+        x = Dense(256, activation='leaky_relu')(x)
+        x = Dense(128, activation='leaky_relu')(x)
+        x = Dense(64, activation='leaky_relu')(x)
 
-    # Upsample to 112x112
-    x = UpSampling2D(size=(2, 2))(x)
-    x = Conv2D(128, kernel_size=3, padding='same')(x)
-    x = BatchNormalization()(x)
-    x = LeakyReLU(alpha=0.2)(x)
+        output_vector = Dense(output_shape[1], activation='linear')(x)
+        return Model(inputs=input_layer, outputs=output_vector)
 
-    # Upsample to 224x224
-    x = UpSampling2D(size=(2, 2))(x)
-    x = Conv2D(64, kernel_size=3, padding='same')(x)
-    x = BatchNormalization()(x)
-    x = LeakyReLU(alpha=0.2)(x)
+class ResNetEncryptor(BaseEncryptor):
 
-    # Final Conv2D layer to create the 3-channel output image
-    output_image = Conv2D(3, kernel_size=3, activation='tanh', padding='same')(x)
+    name = "resnet"
 
-    model = Model(inputs=input_layer, outputs=output_image)
-    return model
+    def build_generator(self, input_shape, output_shape):
 
+        input_layer = Input(shape=input_shape)
+        x = Flatten()(input_layer)
 
-def build_dense_complex_generator(input_shape, output_shape):
-    input_layer = Input(shape=(input_shape[0], input_shape[1]))
-    x = Flatten()(input_layer)
+        x = Dense(7*7*256, use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = LeakyReLU()(x)
 
-    # First dense block
-    x1 = Dense(256)(x)
-    x1 = BatchNormalization()(x1)
-    x1 = LeakyReLU(alpha=0.2)(x1)
+        x = Reshape((7, 7, 256))(x)
+        x = Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = LeakyReLU()(x)
 
-    # Second dense block with skip connection
-    x2 = Dense(128)(x1)
-    x2 = BatchNormalization()(x2)
-    x2 = LeakyReLU(alpha=0.2)(x2)
-    x2 = Concatenate()([x2, x1])
+        x = Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = LeakyReLU()(x)
 
-    # Third dense block with skip connection
-    x3 = Dense(64)(x2)
-    x3 = BatchNormalization()(x3)
-    x3 = LeakyReLU(alpha=0.2)(x3)
-    x3 = Concatenate()([x3, x2])
+        x = Conv2DTranspose(32, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = LeakyReLU()(x)
 
-    # Output layer
-    output_vector = Dense(output_shape[1], activation='tanh')(x3)
+        x = Conv2DTranspose(16, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = LeakyReLU()(x)
 
-    model = Model(inputs=input_layer, outputs=output_vector)
-    return model
+        output_image = Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
+        assert output_image.shape == (None, 224, 224, 3)
 
+        return Model(inputs=input_layer, outputs=output_image)
 
-def build_dense_generator(input_shape, output_shape):
-    input_layer = Input(shape=(input_shape[0], input_shape[1]))  # Input shape is dynamic
+class EfficientNetEncryptor(BaseEncryptor):
 
-    x = Flatten()(input_layer)  # Flatten the 2D input into 1D
+    name = "efficientnet"
 
-    # Adding Dense layers
-    x = Dense(256, activation='leaky_relu')(x)
-    x = Dense(128, activation='leaky_relu')(x)
-    x = Dense(64, activation='leaky_relu')(x)
+    def build_generator(self, input_shape, output_shape):
+        output_shape = (260, 260, 3)
+        input_layer = Input(shape=(input_shape[0], input_shape[1]))
+        x = Flatten()(input_layer)
 
-    output_vector = Dense(output_shape[1], activation='linear')(
-        x)  # Output vector length matches the specified output shape
+        x = Dense(1024, activation='relu')(x)
+        x = Dense(512, activation='relu')(x)
+        x = Dense(256, activation='relu')(x)
 
-    model = Model(inputs=input_layer, outputs=output_vector)
-    return model
-
-def build_dc_generator(input_shape, output_shape):
-    input_layer = Input(shape=(input_shape[0], input_shape[1], 1))  # Add channel dimension to input shape
-
-    x = Conv2DTranspose(512, kernel_size=4, strides=2, padding="same")(input_layer)
-    x = BatchNormalization()(x)
-    x = Activation("relu")(x)
-
-    x = Conv2DTranspose(256, kernel_size=4, strides=2, padding="same")(x)
-    x = BatchNormalization()(x)
-    x = Activation("relu")(x)
-
-    x = Conv2DTranspose(128, kernel_size=4, strides=2, padding="same")(x)
-    x = BatchNormalization()(x)
-    x = Activation("relu")(x)
-
-    x = Conv2DTranspose(64, kernel_size=4, strides=2, padding="same")(x)
-    x = BatchNormalization()(x)
-    x = Activation("relu")(x)
-
-    x = Conv2DTranspose(1, kernel_size=4, strides=2, padding="same")(x)
-    x = BatchNormalization()(x)
-    x = Activation("relu")(x)
-
-    # Flatten the output and reduce to 1D array matching the width of the input
-    x = Flatten()(x)
-
-    output_vector = Dense(output_shape[1])(x)  # Output vector length matches the width of the input
-
-    model = Model(inputs=input_layer, outputs=output_vector)
-    return model
-
-
-def build_efficientnet_generator(input_shape, output_shape):
-    """Builds a generator model compatible with EfficientNetB2."""
-    output_shape = (260, 260, 3)
-    input_layer = Input(shape=(input_shape[0], input_shape[1]))  # Assuming input shape as (height, width)
-    x = Flatten()(input_layer)
-
-    # Dense layers with activations
-    x = Dense(1024, activation='relu')(x)
-    x = Dense(512, activation='relu')(x)
-    x = Dense(256, activation='relu')(x)
-
-    # Final dense layer to match the flattened EfficientNetB2 shape
-    x = Dense(np.prod(output_shape))(x)
-
-    # Reshape the output to (260, 260, 3) for EfficientNetB2
-    output_vector = Reshape(output_shape)(x)
-
-    model = Model(inputs=input_layer, outputs=output_vector)
-    return model
+        x = Dense(np.prod(output_shape))(x)
+        output_vector = Reshape(output_shape)(x)
+        return Model(inputs=input_layer, outputs=output_vector)

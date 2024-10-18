@@ -10,7 +10,7 @@ from keras.src.metrics import F1Score
 import numpy as np
 
 from src.utils.constansts import CONFIG_IMM_NAME_TOKEN
-
+from src.utils.config import config
 
 models = {
     "xgboost": XGBClassifier,
@@ -182,7 +182,7 @@ class InternalInferenceModelFactory:
     @staticmethod
     def get_model(**kwargs) -> Union[NeuralNetworkInternalModel, TabularInternalModel]:
 
-        name = kwargs.get(CONFIG_IMM_NAME_TOKEN)
+        name = config.iim_config.name
         model = models.get(name)
 
         if model:

@@ -1,11 +1,7 @@
-# import azure_authentication_client
-# azure_authentication_client.patch_http_headers()
-
-
-import yaml
 import src.utils.constansts as consts
 from src.experiments.handler import ExperimentHandler
 from src.experiments.k_fold_handler import KFoldExperimentHandler
+from src.utils.config import config
 import pandas as pd
 import os
 import tensorflow as tf
@@ -15,15 +11,13 @@ np.random.seed(42)
 
 def main():
 
-    with open(consts.CONFIG_PATH, 'r') as f:
-        config = yaml.safe_load(f)
 
     # Use GPU only when using Decon
-    if config['ENCRYPTOR']['name'] not in consts.GPU_MODELS:
+    if config.encoder_config.name not in consts.GPU_MODELS:
         # Hide GPU from visible devices
         tf.config.set_visible_devices([], 'GPU')
 
-    if config["EXPERIMENT"]["k_fold"] == 1:
+    if config.experiment_config.k_folds == 1:
         experiment_handler = ExperimentHandler(config)
     else:
         experiment_handler = KFoldExperimentHandler(config)

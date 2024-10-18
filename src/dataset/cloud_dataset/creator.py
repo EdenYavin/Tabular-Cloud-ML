@@ -5,28 +5,25 @@ import numpy as np
 from src.encryptor import BaseEncryptor
 from src.cloud.base import CloudModels
 from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file, expand_matrix_to_img_size
-
+from src.utils.config import config
 
 
 class Dataset(object):
 
-    def __init__(self, dataset_name, cloud_models, encryptor, embeddings_model, n_pred_vectors, n_noise_samples,
-                 use_embedding=True, use_noise_labels=True,use_predictions=False, ratio=0.2,
-                 one_hot=False, force=False, raw_metadata = None
-                 ):
+    def __init__(self, dataset_name, cloud_models, encryptor, embeddings_model, metadata = None):
 
         self.cloud_models: CloudModels = cloud_models
         self.encryptor: BaseEncryptor = encryptor
-        self.n_pred_vectors = n_pred_vectors
-        self.n_noise_samples = n_noise_samples
-        self.one_hot = one_hot
+        self.n_pred_vectors = config.experiment_config.n_pred_vectors
+        self.n_noise_samples = config.experiment_config.n_noise_samples
+        self.one_hot = config.dataset_config.one_hot
         self.name = dataset_name
-        self.split_ratio = ratio
-        self.use_embedding = use_embedding
-        self.use_noise_labels = use_noise_labels
-        self.use_predictions = use_predictions
-        self.force_run = force
-        self.raw_metadata = raw_metadata
+        self.split_ratio = config.dataset_config.split_ratio
+        self.use_embedding = True
+        self.use_noise_labels = config.experiment_config.use_labels
+        self.use_predictions = config.experiment_config.use_preds
+        self.force_run = config.dataset_config.force_to_create_again
+        self.raw_metadata = metadata
         self.embeddings_model = embeddings_model
 
     def create(self, X_train, y_train, X_test, y_test) -> dict:
@@ -79,9 +76,8 @@ class Dataset(object):
                 # For each new pred vector we will sample new noise to be used. This will cause
                 # The prediction vector to be different each time
                 samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
-                image = expand_matrix_to_img_size(samples, self.embeddings_model.input_shape)
 
-                embedding = self.embeddings_model(image)
+                embedding = self.embeddings_model(samples)
 
                 encrypted_data = self.encryptor.encode(embedding)
 
@@ -111,9 +107,8 @@ class Dataset(object):
             # For each new pred vector we will sample new noise to be used. This will cause
             # The prediction vector to be different each time
             samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
-            image = expand_matrix_to_img_size(samples, self.embeddings_model.input_shape)
 
-            embedding = self.embeddings_model(image)
+            embedding = self.embeddings_model(samples)
 
             encrypted_data = self.encryptor.encode(embedding)
 

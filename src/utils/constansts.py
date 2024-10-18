@@ -1,5 +1,37 @@
 import os
 import sys
+import enum
+
+class EMBEDDING_TYPES(str, enum.Enum):
+    STRING = "string"
+    IMAGE = "image"
+    DIGIT_TO_IMAGE_TO_EMBEDDING = "digit_to_image_to_embedding"
+
+
+class ENCODERS_TYPES(str, enum.Enum):
+    RESNET = "resnet"
+    DENSE = "dense"
+    EFFICIENT = "efficientnet"
+    DCONV = "dc"
+
+class IIM_MODELS(str, enum.Enum):
+    NEURAL_NET = "dense"
+    XGBOOST = "xgboost"
+
+
+class CLOUD_MODELS(str, enum.Enum):
+    ENSEMBLE_OF_TABULAR_MODELS = "ensemble"
+    NEURAL_NET_DENSE_LAYERS = "dense"
+    EFFICIENTNET = "efficientnet"
+    RESNET = "resnet"
+
+class DATASETS(str, enum.Enum):
+    HELOC = "heloc"
+    ADULT = "adult"
+    STUDENTS_DROPOUT = "students_dropout"
+    BANK_MARKETING = "bank_marketing"
+    GESTURE_PHASE = "gesture_phase"
+
 
 WINDOWS_OS_STR = "nt"
 IS_WINDOWS_OS = (os.name == WINDOWS_OS_STR)

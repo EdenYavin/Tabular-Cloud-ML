@@ -8,19 +8,26 @@ from xgboost import XGBClassifier
 from keras.src.layers import Dense, Dropout, Input
 from keras.src.models import Model
 from keras.src.utils import to_categorical
-from src.utils.constansts import DATASETS_PATH, XGBOOST_BASELINE, CONFIG_DATASET_PANDAS_DF_TRANSFORM_TOKEN
 import pathlib
+from src.utils.constansts import DATASETS_PATH, XGBOOST_BASELINE, CONFIG_DATASET_PANDAS_DF_TRANSFORM_TOKEN
+from src.utils.config import config
 
 DATASET_DIR = pathlib.Path(DATASETS_PATH)
+
+
+class DataSplitter:
+
+    def __init__(self):
+        self.split_ratio = config.dataset_config.split_ratio
 
 
 class RawDataset:
     def __init__(self, **kwargs):
 
         self.X, self.y = None, None
-        self.sample_split = kwargs.get("ratio")
-        self.baseline_model = kwargs.get("baseline")
-        self.use_pd_df = kwargs.get(CONFIG_DATASET_PANDAS_DF_TRANSFORM_TOKEN, False)
+        self.sample_split = config.dataset_config.split_ratio
+        self.baseline_model = config.dataset_config.baseline_model
+        self.use_pd_df = config.dataset_config.use_pd_df
         self.name = None
         self.metadata = {}
 
@@ -33,8 +40,14 @@ class RawDataset:
     def get_dataset(self):
         return self.X, self.y
 
-    def get_split(self):
+    def get_split(self, force_new_split=False):
+
         try:
+
+            if not force_new_split:
+                # Do not load cached split
+                raise FileNotFoundError()
+
             X_train, X_test, X_sample, y_train, y_test, y_sample =  load_data(self.name, self.sample_split)
 
             if not self.use_pd_df and type(X_train) is pd.DataFrame:

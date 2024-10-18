@@ -6,7 +6,7 @@ from mlxtend.classifier import EnsembleVoteClassifier
 import keras
 import numpy as np
 from sklearn.metrics import accuracy_score, f1_score
-
+from src.utils.config import config
 from src.cloud.base import CloudModels
 
 
@@ -16,7 +16,7 @@ class NeuralNetCloudModels(CloudModels):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         num_classes = kwargs.get("num_classes", 2)
-        self.epochs = kwargs.get("epochs", 10)
+        self.epochs = config.neural_net_config.epochs
         self.models = self.get_model(num_classes)
 
     def get_model(self, num_classes):

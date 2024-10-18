@@ -4,11 +4,30 @@ import os
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
-
-
-
+from PIL import Image, ImageDraw, ImageFont
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
 
+
+
+def create_image_from_number(number, image_size=(224, 224), font_size=80):
+    img = Image.new('RGB', image_size, color='white')  # White background
+    draw = ImageDraw.Draw(img)
+
+    # Set the font size and draw the number in the center of the image
+    try:
+        font = ImageFont.truetype("arial.ttf", font_size)  # Adjust font path if necessary
+    except IOError:
+        font = ImageFont.load_default()
+
+    text = str(number)
+    text_bbox = draw.textbbox((0, 0), text, font=font)  # Use textbbox to get bounding box of the text
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]
+    position = ((image_size[0] - text_width) // 2, (image_size[1] - text_height) // 2)
+
+    draw.text(position, text, fill="black", font=font)
+
+    return img
 
 def expand_matrix_to_img_size(matrix, target_shape):
     """
@@ -80,10 +99,11 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
     if numeric_cols:
         print("Scaling numerical columns...")
         scaler = MinMaxScaler()
-        if cloud_dataset:
-            X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)#X[numeric_cols]
-        else:
-            X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)
+        X_numeric = X[numeric_cols]
+        # if cloud_dataset:
+        #     X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)#X[numeric_cols]
+        # else:
+        #     X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols)
 
         processed_columns.append(X_numeric)
 

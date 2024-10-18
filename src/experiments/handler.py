@@ -1,24 +1,22 @@
-import numpy as np
 from tqdm import tqdm
+import pandas as pd
 
 from src.dataset.cloud_dataset.creator import Dataset
 from src.cloud import CloudModels, CLOUD_MODELS
 from src.encryptor import BaseEncryptor, EncryptorFactory
 from src.internal_model.model import InternalInferenceModelFactory
-from src.embeddings.model import TabularEmbedding, ImageEmbedding
-import src.utils.constansts as consts
+from src.embeddings.model import NumericalTableEmbeddings, ImageEmbedding
 from src.dataset.raw import DATASETS, RawDataset
-import pandas as pd
+from src.utils.config import config
 
 
 class ExperimentHandler:
 
     def __init__(self, experiment_config: dict):
-        self.experiment_name = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get("name")
-        self.n_pred_vectors = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get("n_pred_vectors", 1)
-        self.n_noise_samples = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get("n_noise_samples", 3)
-        self.k_folds = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get(consts.K_FOLDS_TOKEN, 10)
-        self.config = experiment_config
+        self.experiment_name = config.experiment_config.name
+        self.n_pred_vectors = config.experiment_config.n_pred_vectors
+        self.n_noise_samples = config.experiment_config.n_noise_samples
+        self.k_folds = config.experiment_config.k_folds
 
     def run_experiment(self):
 
@@ -33,23 +31,21 @@ class ExperimentHandler:
         # Create a final report with average metrics
         final_report = pd.DataFrame()
 
-        datasets = self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_NAME_TOKEN]
+        datasets = config.dataset_config.names
 
 
         for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
-            raw_dataset: RawDataset = DATASETS[dataset_name](**self.config[consts.CONFIG_DATASET_SECTION])
+            raw_dataset: RawDataset = DATASETS[dataset_name]()
 
-            embedding_model = ImageEmbedding()
+            embedding_model = NumericalTableEmbeddings()
             encryptor: BaseEncryptor = EncryptorFactory().get_model(
                 output_shape=(1, *embedding_model.output_shape),
-                **self.config[consts.CONFIG_ENCRYPTOR_SECTION],
             )
 
-            X_train, X_test, X_sample, y_train, y_test, y_sample = raw_dataset.get_split()
+            X_train, X_test, X_sample, y_train, y_test, y_sample = raw_dataset.get_split(force_new_split=False)
             print(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
 
-            cloud_models: CloudModels = CLOUD_MODELS[self.config[consts.CONFIG_CLOUD_MODEL_SECTION]['name']](
-                **self.config[consts.CONFIG_CLOUD_MODEL_SECTION],
+            cloud_models: CloudModels = CLOUD_MODELS[config.cloud_config.name](
                 num_classes=raw_dataset.get_n_classes()
             )
             cloud_models.fit(X_train, y_train, **raw_dataset.metadata)
@@ -71,22 +67,13 @@ class ExperimentHandler:
                         cloud_models=cloud_models,
                         encryptor=encryptor,
                         embeddings_model=embedding_model,
-                        n_pred_vectors=n_pred_vectors,
-                        n_noise_samples=n_noise_samples,
-                        use_embedding=True if "w_emb" in self.experiment_name else False,
-                        use_noise_labels=True if "w_label" in self.experiment_name else False,
-                        use_predictions=True if "w_pred" in self.experiment_name else False,
-                        one_hot=self.config[consts.CONFIG_DATASET_SECTION]['one_hot'],
-                        ratio=self.config[consts.CONFIG_DATASET_SECTION]['ratio'],
-                        force=self.config[consts.CONFIG_DATASET_SECTION]['force'],
+                        metadata=raw_dataset.metadata
                     )
                     dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
-
                     print("Finished Creating the dataset")
                     print(f"##### CLOUD DATASET SIZE - {dataset['train'][0].shape} ###########")
 
                     internal_model = InternalInferenceModelFactory().get_model(
-                        **self.config[consts.CONFIG_INN_SECTION],
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=dataset['train'][0].shape[1],  # Only give the number of features
                     )

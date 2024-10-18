@@ -21,6 +21,12 @@ class HelocDataset(RawDataset):
 
     def _preprocess(self, dataset):
         X, y = dataset.iloc[:, 1:], dataset.iloc[:, 0]
+
+        # Remove the bug in the dataset where the entire row has -9 values
+        mask = ~(X == -9).all(axis=1)
+        X = X[mask]
+        y = y[mask]
+
         y = y.replace({"Bad": 0, "Good": 1}).astype(int)
         return preprocess(X, cloud_dataset=True), y
 

@@ -12,7 +12,7 @@ from src.utils.config import config
 
 class ExperimentHandler:
 
-    def __init__(self, experiment_config: dict):
+    def __init__(self):
         self.experiment_name = config.experiment_config.name
         self.n_pred_vectors = config.experiment_config.n_pred_vectors
         self.n_noise_samples = config.experiment_config.n_noise_samples
@@ -67,6 +67,8 @@ class ExperimentHandler:
                         cloud_models=cloud_models,
                         encryptor=encryptor,
                         embeddings_model=embedding_model,
+                        n_noise_samples=n_noise_samples,
+                        n_pred_vectors=n_pred_vectors,
                         metadata=raw_dataset.metadata
                     )
                     dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)

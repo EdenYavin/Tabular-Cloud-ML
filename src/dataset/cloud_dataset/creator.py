@@ -10,12 +10,13 @@ from src.utils.config import config
 
 class Dataset(object):
 
-    def __init__(self, dataset_name, cloud_models, encryptor, embeddings_model, metadata = None):
+    def __init__(self, dataset_name, cloud_models, encryptor, embeddings_model,
+                 n_pred_vectors, n_noise_samples, metadata = None):
 
         self.cloud_models: CloudModels = cloud_models
         self.encryptor: BaseEncryptor = encryptor
-        self.n_pred_vectors = config.experiment_config.n_pred_vectors
-        self.n_noise_samples = config.experiment_config.n_noise_samples
+        self.n_pred_vectors = n_pred_vectors
+        self.n_noise_samples = n_noise_samples
         self.one_hot = config.dataset_config.one_hot
         self.name = dataset_name
         self.split_ratio = config.dataset_config.split_ratio

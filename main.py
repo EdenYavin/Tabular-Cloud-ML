@@ -18,9 +18,9 @@ def main():
         tf.config.set_visible_devices([], 'GPU')
 
     if config.experiment_config.k_folds == 1:
-        experiment_handler = ExperimentHandler(config)
+        experiment_handler = ExperimentHandler()
     else:
-        experiment_handler = KFoldExperimentHandler(config)
+        experiment_handler = KFoldExperimentHandler()
     new_report_lines = experiment_handler.run_experiment()
     report = pd.DataFrame()
 

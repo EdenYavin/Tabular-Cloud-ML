@@ -1,8 +1,8 @@
 import numpy as np
 from tqdm import tqdm
 
-from src.embeddings.model import ImageEmbedding
-from src.utils.helpers import preprocess
+from src.embeddings.model import NumericalTableEmbeddings
+
 from src.dataset.cloud_dataset.creator import Dataset
 from src.cloud import CloudModels, CLOUD_MODELS
 from src.encryptor import BaseEncryptor, EncryptorFactory
@@ -10,17 +10,18 @@ from src.internal_model.model import InternalInferenceModelFactory
 
 import src.utils.constansts as consts
 from src.dataset.raw import DATASETS, RawDataset
+from src.utils.config import config
 import pandas as pd
 
 
 class KFoldExperimentHandler:
 
-    def __init__(self, experiment_config: dict):
-        self.experiment_name = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get("name")
-        self.n_pred_vectors = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get("n_pred_vectors", 1)
-        self.n_noise_samples = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get("n_noise_samples", 3)
-        self.k_folds = experiment_config[consts.CONFIG_EXPERIMENT_SECTION].get(consts.K_FOLDS_TOKEN, 10)
-        self.config = experiment_config
+    def __init__(self):
+        self.experiment_name = config.experiment_config.name
+        self.n_pred_vectors = config.experiment_config.n_pred_vectors
+        self.n_noise_samples = config.experiment_config.n_noise_samples
+        self.k_folds = config.experiment_config.k_folds
+
 
     def run_experiment(self):
 
@@ -31,20 +32,20 @@ class KFoldExperimentHandler:
             self.n_pred_vectors = [self.n_pred_vectors]
 
         reports = []
+        datasets = config.dataset_config.names
 
-        for dataset_name in tqdm(self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_NAME_TOKEN], total=len(self.config[consts.CONFIG_DATASET_SECTION][consts.CONFIG_DATASET_NAME_TOKEN]), desc="Datasets Progress", unit="dataset"):
-            raw_dataset: RawDataset = DATASETS[dataset_name](**self.config[consts.CONFIG_DATASET_SECTION])
+        for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
+            raw_dataset: RawDataset = DATASETS[dataset_name]()
 
             progress = tqdm(total=self.k_folds, desc="K-Folds", unit="Fold")
 
-            cloud_models: CloudModels = CLOUD_MODELS[self.config[consts.CONFIG_CLOUD_MODEL_SECTION]['name']](
-                **self.config[consts.CONFIG_CLOUD_MODEL_SECTION],
+            cloud_models: CloudModels = CLOUD_MODELS[config.cloud_config.name](
                 num_classes=raw_dataset.get_n_classes()
             )
-            embedding_model = ImageEmbedding()
+
+            embedding_model = NumericalTableEmbeddings()
             encryptor: BaseEncryptor = EncryptorFactory().get_model(
                 output_shape=(1, *embedding_model.output_shape),
-                **self.config[consts.CONFIG_ENCRYPTOR_SECTION],
             )
 
             # Initialize lists to store metrics across folds
@@ -71,22 +72,16 @@ class KFoldExperimentHandler:
                             dataset_name=dataset_name,
                             cloud_models=cloud_models,
                             encryptor=encryptor,
-                            n_pred_vectors=n_pred_vectors,
-                            n_noise_samples=n_noise_samples,
                             embeddings_model=embedding_model,
-                            use_embedding=True if "w_emb" in self.experiment_name else False,
-                            use_noise_labels=True if "w_label" in self.experiment_name else False,
-                            use_predictions=True if "w_pred" in self.experiment_name else False,
-                            one_hot=self.config[consts.CONFIG_DATASET_SECTION]['one_hot'],
-                            ratio=self.config[consts.CONFIG_DATASET_SECTION]['ratio'],
-                            force=self.config[consts.CONFIG_DATASET_SECTION]['force'],
+                            n_noise_samples=n_noise_samples,
+                            n_pred_vectors=n_pred_vectors,
+                            metadata=raw_dataset.metadata
                         )
                         dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
 
                         internal_model = InternalInferenceModelFactory().get_model(
-                            **self.config[consts.CONFIG_INN_SECTION],
-                            num_classes=len(np.unique(dataset['train'][1])),
-                            input_shape=dataset['train'][0].shape[1],
+                            num_classes=raw_dataset.get_n_classes(),
+                            input_shape=dataset['train'][0].shape[1],  # Only give the number of features
                         )
 
                         internal_model.fit(*dataset['train'])
@@ -103,6 +98,8 @@ class KFoldExperimentHandler:
                         test_acc_scores.append(test_acc)
                         test_f1_scores.append(test_f1)
 
+                progress.update(1)
+
             # Create a final report with average metrics
             average_cloud_acc = np.mean(cloud_acc_scores)
             average_cloud_f1 = np.mean(cloud_f1_scores)
@@ -117,11 +114,11 @@ class KFoldExperimentHandler:
                 {
                     "exp_name": [self.experiment_name],
                     "dataset": [dataset_name],
-                    "train_size_ratio": [dataset_creator.split_ratio],
+                    "train_size_ratio": [config.dataset_config.split_ratio],
                     "n_pred_vectors": [self.n_pred_vectors],
                     "n_noise_sample": [self.n_noise_samples],
-                    "iim_model": [internal_model.name],
-                    "encryptor": [encryptor.generator_type],
+                    "iim_model": [config.iim_config.name],
+                    "encryptor": [config.encoder_config.name],
                     "cloud_model": [cloud_models.name],
                     "iim_train_acc": [average_train_acc],
                     "iim_train_f1": [average_train_f1],
@@ -136,7 +133,5 @@ class KFoldExperimentHandler:
 
             reports.append(final_report)
 
-            reports.append(final_report)
-            progress.update(1)
 
         return pd.concat(reports)

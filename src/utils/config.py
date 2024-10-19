@@ -11,7 +11,7 @@ class Config(BaseModel):
 
     class DatasetConfig(BaseModel):
         names: list = [DATASETS.HELOC]
-        split_ratio : float = 1
+        split_ratio : float = 0.2
         one_hot: bool = True
         force_to_create_again: bool = Field(description="Flag to indicate if dataset should be created again", default=True)
         baseline_model: str = "neural_network" # xgboost / neural_network
@@ -34,7 +34,7 @@ class Config(BaseModel):
         use_labels: bool = True
         use_preds: bool = True
         n_pred_vectors: int = Field(description="Number of prediction vectors to query from the cloud models", default=1)
-        n_noise_samples: int = Field(description="Number samples to sample from the dataset and use as noise", default=0)
+        n_noise_samples: int = Field(description="Number samples to sample from the dataset and use as noise", default=2)
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
 
     experiment_config: ExperimentConfig = ExperimentConfig()

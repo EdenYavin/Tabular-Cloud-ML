@@ -118,7 +118,7 @@ class Dataset(object):
             if self.use_predictions:
                 example.append(predictions)
             if self.use_embedding:
-                example.append(row.values.reshape(1, -1))
+                example.append(embedding.reshape(1, -1))  # Shape - (1,|Embedding| * Number of noise samples)
             if self.use_noise_labels and noise_labels.shape[0] > 0:
                 example.append(noise_labels)
 

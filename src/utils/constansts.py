@@ -5,11 +5,12 @@ import enum
 class EMBEDDING_TYPES(str, enum.Enum):
     STRING = "string"
     IMAGE = "image"
-    DIGIT_TO_IMAGE_TO_EMBEDDING = "digit_to_image_to_embedding"
+    DIGIT_TO_IMAGE_TO_EMBEDDING = "numerical_table_embedding"
+    IDENTITY = "identity_embedding"
 
 
 class ENCODERS_TYPES(str, enum.Enum):
-    RESNET = "resnet"
+    tabular_dc = "tabular_dc"
     DENSE = "dense"
     EFFICIENT = "efficientnet"
     DCONV = "dc"
@@ -24,6 +25,7 @@ class CLOUD_MODELS(str, enum.Enum):
     NEURAL_NET_DENSE_LAYERS = "dense"
     EFFICIENTNET = "efficientnet"
     RESNET = "resnet"
+    VGG16 = "vgg16"
 
 class DATASETS(str, enum.Enum):
     HELOC = "heloc"

@@ -6,7 +6,7 @@ from src.encryptor import BaseEncryptor
 from src.cloud.base import CloudModels
 from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file, expand_matrix_to_img_size
 from src.utils.config import config
-
+from src.utils.cache import ExperimentDataCache
 
 class Dataset(object):
 
@@ -27,6 +27,7 @@ class Dataset(object):
         self.raw_metadata = metadata
         self.embeddings_model = embeddings_model
 
+
     def create(self, X_train, y_train, X_test, y_test) -> dict:
 
         name = f"{self.name}_{'one_hot' if self.one_hot else ''}"
@@ -35,7 +36,6 @@ class Dataset(object):
             if not self.force_run:
                 print(f"Dataset {self.name} was already processed before, loading cache")
                 return dataset
-
 
         X_train, y_train = self._create_train(X_train, y_train)
         X_test = self._create_test(X_test, y_test)
@@ -85,11 +85,11 @@ class Dataset(object):
                 predictions = self.cloud_models.predict(encrypted_data)
 
                 if self.use_predictions:
-                    example.append(predictions)
+                    example.append(predictions) # Shape - |CMLS|
                 if self.use_embedding:
-                    example.append(row.values.reshape(1, -1))
+                    example.append(embedding.reshape(1,-1)) # Shape - (1,|Embedding| * Number of noise samples)
                 if self.use_noise_labels and noise_labels.shape[0] > 0:
-                    example.append(noise_labels)
+                    example.append(noise_labels) # Shape - |V| * Number of noise samples
 
                 examples.append(np.hstack(example))
 

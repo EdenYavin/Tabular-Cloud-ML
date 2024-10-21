@@ -36,11 +36,11 @@ class ExperimentDataCache:
     This class will be tasked with caching the dataset after the pipeline, and with smart fetching.
     """
 
-    def __init__(self, config: dict):
-        self.dataset_name = config.get(consts.CONFIG_DATASET_NAME_TOKEN)
-        self.split_ratio =  config.get(consts.CONFIG_DATASET_SPLIT_RATIO_TOKEN)
-        self.one_hot = config.get(consts.CONFIG_DATASET_ONEHOT_TOKEN)
-        self.cache = {}
+    def __init__(self, dataset_name, split_ratio, one_hot):
+        self.dataset_name = dataset_name
+        self.split_ratio =  split_ratio
+        self.one_hot = one_hot
+        self.cache = self.load()
 
     def save(self):
 
@@ -55,8 +55,11 @@ class ExperimentDataCache:
         file_name = f"{self.dataset_name}_{self.one_hot}.pkl"
         cache_file_name = os.path.join(DATA_CACHE_PATH, file_name)
 
+        if not os.path.exists(cache_file_name):
+            return {}
+
         with open(cache_file_name, 'rb') as f:
-            self.cache = pickle.load(f)
+            return pickle.load(f)
 
     def get(self, key):
 

@@ -2,10 +2,9 @@ from keras.src.layers import Input, Dense,  Flatten
 from keras.src.layers import BatchNormalization, Activation, Conv2DTranspose
 from keras.src.models import Model
 import numpy as np
-from keras.src.layers import Concatenate, LeakyReLU
-from keras.src.layers import Reshape, Conv2D
-from keras.src.layers import UpSampling2D
-from keras.src.applications.resnet import preprocess_input, ResNet50
+from keras.src.layers import LeakyReLU
+from keras.src.layers import Reshape
+
 
 
 class BaseEncryptor:
@@ -27,9 +26,9 @@ class BaseEncryptor:
             self.model = self.build_generator(input_shape, output_shape)
         return self.model(inputs).numpy()
 
-class DCEncryptor(BaseEncryptor):
+class TabularDCEncryptor(BaseEncryptor):
 
-    name = "dc"
+    name = "tabular_dc"
 
     def build_generator(self, input_shape, output_shape):
         input_layer = Input(shape=(input_shape[0], input_shape[1], 1))
@@ -73,9 +72,9 @@ class DenseEncryptor(BaseEncryptor):
         output_vector = Dense(output_shape[1], activation='linear')(x)
         return Model(inputs=input_layer, outputs=output_vector)
 
-class ResNetEncryptor(BaseEncryptor):
+class DCEncryptor(BaseEncryptor):
 
-    name = "resnet"
+    name = "dc"
 
     def build_generator(self, input_shape, output_shape):
 
@@ -104,7 +103,7 @@ class ResNetEncryptor(BaseEncryptor):
         x = LeakyReLU()(x)
 
         output_image = Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
-        assert output_image.shape == (None, 224, 224, 3)
+        # assert output_image.shape[1:] == (224, 224, 3)
 
         return Model(inputs=input_layer, outputs=output_image)
 

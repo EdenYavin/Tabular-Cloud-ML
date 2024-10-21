@@ -5,7 +5,7 @@ from src.dataset.cloud_dataset.creator import Dataset
 from src.cloud import CloudModels, CLOUD_MODELS
 from src.encryptor import BaseEncryptor, EncryptorFactory
 from src.internal_model.model import InternalInferenceModelFactory
-from src.embeddings.model import NumericalTableEmbeddings, ImageEmbedding
+from src.embeddings import EmbeddingsFactory
 from src.dataset.raw import DATASETS, RawDataset
 from src.utils.config import config
 
@@ -37,7 +37,7 @@ class ExperimentHandler:
         for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
             raw_dataset: RawDataset = DATASETS[dataset_name]()
 
-            embedding_model = NumericalTableEmbeddings()
+            embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X)
             encryptor: BaseEncryptor = EncryptorFactory().get_model(
                 output_shape=(1, *embedding_model.output_shape),
             )

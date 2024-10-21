@@ -139,10 +139,10 @@ class RawDataset:
 
         # Define the hidden layers
         x = Dense(units=128, activation='leaky_relu')(inputs)
-        x = Dropout(0.3)(x)
+        x = Dropout(config.neural_net_config.dropout)(x)
 
-        x = Dense(units=64, activation='leaky_relu')(x)
-        x = Dropout(0.3)(x)
+        # x = Dense(units=64, activation='leaky_relu')(x)
+        # x = Dropout(0.3)(x)
 
         # Define the output layer
         outputs = Dense(units=len(np.unique(y_train)), activation='softmax')(x)

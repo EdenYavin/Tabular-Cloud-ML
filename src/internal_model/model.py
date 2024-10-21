@@ -128,8 +128,8 @@ class DenseInternalModel(NeuralNetworkInternalModel):
         x = Dense(units=128, activation='leaky_relu')(inputs)
         x = Dropout(self.dropout_rate)(x)
 
-        x = Dense(units=64, activation='leaky_relu')(x)
-        x = Dropout(self.dropout_rate)(x)
+        # x = Dense(units=64, activation='leaky_relu')(x)
+        # x = Dropout(self.dropout_rate)(x)
 
         # Define the output layer
         outputs = Dense(units=num_classes, activation='softmax')(x)

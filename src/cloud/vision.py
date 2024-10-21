@@ -1,6 +1,6 @@
 from keras.api.applications import ResNet50V2, VGG16, EfficientNetB2
 from keras.api.applications.resnet50 import preprocess_input, decode_predictions
-from keras.api.applications.vgg16 import preprocess_input, decode_predictions
+from keras.api.applications.vgg16 import preprocess_input as vgg_preprocess, decode_predictions
 from keras import Model
 from keras.src.layers import GlobalAveragePooling2D, AveragePooling2D
 import numpy as np
@@ -63,6 +63,30 @@ class EfficientNetB2CloudModels(CloudModels):
     def evaluate(self, X, y):
         return -1, -1
 
+
+class VGG16CloudModel(CloudModels):
+    name = "vgg16"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.models = self.get_model()
+
+    def fit(self, X_train, y_train, **kwargs):
+        pass
+
+    def get_model(self):
+        # Load the pretrained VGG16 model with ImageNet weights
+        model = VGG16(weights='imagenet')
+        return model
+
+    def predict(self, X):
+        # Ensure the input is properly preprocessed for VGG16
+        X = vgg_preprocess(X)
+        predictions = self.models.predict(X, verbose=None)
+        return predictions
+
+    def evaluate(self, X, y):
+        return -1, -1
 
 
 class ImagePatchEfficientCloudModel(EfficientNetB2CloudModels):

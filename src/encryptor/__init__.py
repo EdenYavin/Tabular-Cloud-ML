@@ -1,5 +1,5 @@
 from src.utils.config import config
-from src.encryptor.model import DCEncryptor, DenseEncryptor, ResNetEncryptor, EfficientNetEncryptor, BaseEncryptor
+from src.encryptor.model import DCEncryptor, DenseEncryptor, EfficientNetEncryptor, BaseEncryptor, TabularDCEncryptor
 
 
 class EncryptorFactory:
@@ -7,7 +7,7 @@ class EncryptorFactory:
     ENCRYPTORS = {
         DCEncryptor.name: DCEncryptor,
         DenseEncryptor.name: DenseEncryptor,
-        ResNetEncryptor.name: ResNetEncryptor,
+        TabularDCEncryptor.name: TabularDCEncryptor,
         EfficientNetEncryptor.name: EfficientNetEncryptor
     }
 

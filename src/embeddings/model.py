@@ -35,7 +35,7 @@ class ImageEmbedding(nn.Module):
 
     name = "image_embedding"
 
-    def __init__(self, base_model='resnet50'):
+    def __init__(self, base_model=config.embedding_config.base_model):
         super(ImageEmbedding, self).__init__()
 
         # Load a pre-trained ResNet model

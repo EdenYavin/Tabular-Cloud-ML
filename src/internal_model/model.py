@@ -9,7 +9,7 @@ from keras.src.layers import Dense, Dropout, Input, Attention, Conv1D, Flatten, 
 from keras.src.metrics import F1Score
 import numpy as np
 
-from src.utils.constansts import CONFIG_IMM_NAME_TOKEN
+
 from src.utils.config import config
 
 models = {
@@ -115,7 +115,7 @@ class AttentionNeuralNetInternalModel(NeuralNetworkInternalModel):
 class DenseInternalModel(NeuralNetworkInternalModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.name = "dense"
+        self.name = "neural_network"
         num_classes = kwargs.get("num_classes")
         input_shape = kwargs.get("input_shape")
         self.model = self.get_model(num_classes=num_classes, input_shape=input_shape)

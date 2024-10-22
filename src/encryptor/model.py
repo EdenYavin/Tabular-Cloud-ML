@@ -32,13 +32,13 @@ class TabularDCEncryptor(BaseEncryptor):
 
     def build_generator(self, input_shape, output_shape):
         input_layer = Input(shape=(input_shape[0], input_shape[1], 1))
-        x = Conv2DTranspose(512, kernel_size=4, strides=2, padding="same")(input_layer)
-        x = BatchNormalization()(x)
-        x = Activation("relu")(x)
+        # x = Conv2DTranspose(512, kernel_size=4, strides=2, padding="same")(input_layer)
+        # x = BatchNormalization()(x)
+        # x = Activation("relu")(x)
 
-        x = Conv2DTranspose(256, kernel_size=4, strides=2, padding="same")(x)
-        x = BatchNormalization()(x)
-        x = Activation("relu")(x)
+        # x = Conv2DTranspose(256, kernel_size=4, strides=2, padding="same")(x)
+        # x = BatchNormalization()(x)
+        # x = Activation("relu")(x)
 
         x = Conv2DTranspose(128, kernel_size=4, strides=2, padding="same")(x)
         x = BatchNormalization()(x)

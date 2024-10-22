@@ -16,7 +16,7 @@ class ENCODERS_TYPES(str, enum.Enum):
     DCONV = "dc"
 
 class IIM_MODELS(str, enum.Enum):
-    NEURAL_NET = "dense"
+    NEURAL_NET = "neural_network"
     XGBOOST = "xgboost"
 
 

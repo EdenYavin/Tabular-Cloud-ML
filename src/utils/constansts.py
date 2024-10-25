@@ -3,10 +3,10 @@ import sys
 import enum
 
 class EMBEDDING_TYPES(str, enum.Enum):
-    STRING = "string"
-    IMAGE = "image"
+    STRING = "w2v_embedding"
+    IMAGE = "image_embedding"
     DIGIT_TO_IMAGE_TO_EMBEDDING = "numerical_table_embedding"
-    IDENTITY = "identity_embedding"
+    DNN = "dnn_embedding"
 
 
 class ENCODERS_TYPES(str, enum.Enum):
@@ -105,6 +105,9 @@ CONFIG_DATASET_SHUFFLE_TOKEN = "shuffle"
 CONFIG_DATASET_SPLIT_RATIO_TOKEN = "ratio"
 CONFIG_DATASET_FORCE_CREATION_TOKEN = "force"
 CONFIG_DATASET_PANDAS_DF_TRANSFORM_TOKEN = "pd_dataframe"
+DB_EMBEDDING_TOKEN = "embedding"
+DB_RAW_FEATURES_TOKEN = "X"
+DB_LABEL_TOKEN = "y"
 XGBOOST_BASELINE = "xgboost"
 NEURAL_NET_BASELINE = "neural_network"
 

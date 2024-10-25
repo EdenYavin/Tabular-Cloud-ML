@@ -1,11 +1,12 @@
 from typing import Union
 
 from keras import Sequential
+from keras.src.callbacks import LearningRateScheduler
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
 from keras.src.models import Model
-from keras.src.layers import Dense, Dropout, Input, Attention, Conv1D, Flatten, MaxPooling1D
+from keras.src.layers import Dense, Dropout, Input, Attention, Conv1D, Flatten, MaxPooling1D, BatchNormalization
 from keras.src.metrics import F1Score
 import numpy as np
 
@@ -41,14 +42,14 @@ class TabularInternalModel(BaseEstimator, ClassifierMixin):
 class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
 
     def __init__(self, **kwargs):
-        self.batch_size = kwargs.get("batch_size", 8)
-        self.dropout_rate = kwargs.get("dropout_rate", 0.5)
-        self.epochs = kwargs.get("epochs", 10)
-        self.features_split = kwargs.get("features_split")
+        self.batch_size = config.neural_net_config.batch_size
+        self.dropout_rate = config.neural_net_config.dropout
+        self.epochs = config.neural_net_config.epochs
         self.model: Model = None
 
     def fit(self, X, y):
-        self.model.fit(X, y, epochs=self.epochs, batch_size=self.batch_size)
+        lr_scheduler = LearningRateScheduler(lambda epoch: 0.0001 * (0.9 ** epoch))
+        self.model.fit(X, y, epochs=self.epochs, batch_size=self.batch_size, callbacks=[lr_scheduler])
 
     def predict(self, X):
         prediction = self.model.predict(X)
@@ -125,11 +126,9 @@ class DenseInternalModel(NeuralNetworkInternalModel):
         inputs = Input(shape=(input_shape,))  # Dynamic input shape
 
         # Define the hidden layers
-        x = Dense(units=128, activation='leaky_relu')(inputs)
+        x = BatchNormalization()(inputs)
+        x = Dense(units=128, activation='leaky_relu')(x)
         x = Dropout(self.dropout_rate)(x)
-
-        # x = Dense(units=64, activation='leaky_relu')(x)
-        # x = Dropout(self.dropout_rate)(x)
 
         # Define the output layer
         outputs = Dense(units=num_classes, activation='softmax')(x)
@@ -140,7 +139,8 @@ class DenseInternalModel(NeuralNetworkInternalModel):
         # Compile the model with F1 Score
         model.compile(optimizer='adam',
                       loss='categorical_crossentropy',
-                      metrics=['accuracy', F1Score()])
+                      metrics=['accuracy', F1Score()]
+                      )
 
         return model
 

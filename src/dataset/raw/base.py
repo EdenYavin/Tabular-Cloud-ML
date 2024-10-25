@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
+from keras.src.callbacks import LearningRateScheduler
 
 from src.utils.helpers import load_data, save_data
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from xgboost import XGBClassifier
-from keras.src.layers import Dense, Dropout, Input
+from keras.src.layers import Dense, Dropout, Input, BatchNormalization
 from keras.src.models import Model
 from keras.src.utils import to_categorical
 import pathlib
@@ -27,7 +28,6 @@ class RawDataset:
         self.X, self.y = None, None
         self.sample_split = config.dataset_config.split_ratio
         self.baseline_model = config.dataset_config.baseline_model
-        self.use_pd_df = config.dataset_config.use_pd_df
         self.name = None
         self.metadata = {}
 
@@ -50,14 +50,6 @@ class RawDataset:
 
             X_train, X_test, X_sample, y_train, y_test, y_sample =  load_data(self.name, self.sample_split)
 
-            if not self.use_pd_df and type(X_train) is pd.DataFrame:
-                X_train = X_train.values
-                X_test = X_test.values
-                X_sample = X_sample.values
-                y_train = y_train.values
-                y_test = y_test.values
-                y_sample = y_sample.values
-
             return X_train, X_test, X_sample, y_train, y_test, y_sample
 
         except FileNotFoundError:
@@ -72,14 +64,6 @@ class RawDataset:
             else:
                 _, X_sample, _, y_sample = train_test_split(X_train, y_train, test_size=self.sample_split, stratify=y_train,
                                                         random_state=42)
-
-            if not self.use_pd_df:
-                X_train = X_train.values
-                X_test = X_test.values
-                X_sample = X_sample.values
-                y_train = y_train.values
-                y_test = y_test.values
-                y_sample = y_sample.values
 
             save_data(self.name, self.sample_split,
                       [X_train, X_test, X_sample, y_train, y_test,  y_sample])
@@ -122,7 +106,8 @@ class RawDataset:
         else:
             clf = self._get_model(X_train, y_train)
             y_train = to_categorical(y_train)
-            clf.fit(X_train, y_train, epochs=10, batch_size=8)
+            lr_scheduler = LearningRateScheduler(lambda epoch: 0.0001 * (0.9 ** epoch))
+            clf.fit(X_train, y_train, epochs=config.neural_net_config.epochs, batch_size=config.neural_net_config.batch_size, callbacks=[lr_scheduler])
             preds = np.argmax(clf.predict(X_test), axis=1)
 
         acc = accuracy_score(y_test, preds)
@@ -138,7 +123,8 @@ class RawDataset:
         inputs = Input(shape=(X_train.shape[1],))  # Dynamic input shape
 
         # Define the hidden layers
-        x = Dense(units=128, activation='leaky_relu')(inputs)
+        x = BatchNormalization()(inputs)
+        x = Dense(units=128, activation='leaky_relu')(x)
         x = Dropout(config.neural_net_config.dropout)(x)
 
         # x = Dense(units=64, activation='leaky_relu')(x)

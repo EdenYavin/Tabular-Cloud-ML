@@ -13,7 +13,10 @@ from src.utils.config import config
 class ExperimentHandler:
 
     def __init__(self):
-        self.experiment_name = config.experiment_config.name
+        w_emb = "w_emb" if config.experiment_config.use_embedding else "wo_emb"
+        w_noise_labels = "w_noise_labels" if config.experiment_config.use_labels else "wo_noise_labels"
+        w_pred = "w_pred" if config.experiment_config.use_preds else "wo_pred"
+        self.experiment_name = f"{w_emb}_{w_noise_labels}_{w_pred}"
         self.n_pred_vectors = config.experiment_config.n_pred_vectors
         self.n_noise_samples = config.experiment_config.n_noise_samples
         self.k_folds = config.experiment_config.k_folds
@@ -37,7 +40,7 @@ class ExperimentHandler:
         for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
             raw_dataset: RawDataset = DATASETS[dataset_name]()
 
-            embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X)
+            embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y)
             encryptor: BaseEncryptor = EncryptorFactory().get_model(
                 output_shape=(1, *embedding_model.output_shape),
             )

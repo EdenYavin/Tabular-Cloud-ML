@@ -1,43 +1,57 @@
 import pandas as pd
 from keras.src.applications import resnet
 from keras.src.applications.resnet import preprocess_input
-
+from keras.src.layers import Dense, BatchNormalization
+from keras.src import Sequential
 from gensim.models import KeyedVectors
 import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
-from sympy.stats.sampling.sample_numpy import numpy
+from tab2img.converter import Tab2Img
 
-from src.utils.helpers import create_image_from_numbers, expand_matrix_to_img_size, expand_matrix_to_img_size
+from src.utils.helpers import create_image_from_numbers, expand_matrix_to_img_size, one_hot_labels
 from src.utils.config import config
 
-class IdentityEmbedding(nn.Module):
+class DNNEmbedding(nn.Module):
 
-    name = "identity_embedding"
+    name = "dnn_embedding"
 
     def __init__(self, **kwargs):
-        super(IdentityEmbedding, self).__init__()
+        super(DNNEmbedding, self).__init__()
 
-        self.input_shape = (224, 224)
-        self.output_shape = (224, 224, 3)
+        X, y = kwargs.get("X"), kwargs.get("y")
+        num_classes = len(set(y))
+        y = one_hot_labels(num_classes, y)
+        self.output_shape = (10,)
+
+        model = Sequential()
+        model.add(Dense(units=X.shape[1]//2, activation='relu', name="embedding"))
+        model.add(BatchNormalization())
+        model.add(Dense(units=num_classes, activation='softmax', name="output"))
+
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.fit(X, y, epochs=50, batch_size=64)
+        self.model = model.layers[0]
 
     def forward(self, x):
 
         if type(x) is pd.DataFrame:
             x = x.to_numpy()
 
-        img = expand_matrix_to_img_size(x, self.input_shape)
+        embedding = self.model(x)
+        return embedding
 
-        return img
 
 class ImageEmbedding(nn.Module):
 
     name = "image_embedding"
 
-    def __init__(self, base_model=config.embedding_config.base_model):
+    def __init__(self, **kwargs):
+
         super(ImageEmbedding, self).__init__()
 
+        base_model = config.embedding_config.base_model
         # Load a pre-trained ResNet model
         if base_model == 'resnet50':
             self.model = resnet.ResNet50(weights="imagenet", include_top=False)
@@ -50,23 +64,28 @@ class ImageEmbedding(nn.Module):
 
         self.input_shape = (224, 224)
         self.output_shape = (7, 7, 2048)
-
+        self.image_transformer = Tab2Img()
+        self.image_transformer.fit(kwargs.get("X").values, kwargs.get("y").values)
 
 
     def forward(self, x):
         if len(x.shape) == 3:
             x = x.reshape(1,224,224,3)
         # Extract embeddings
-        image = expand_matrix_to_img_size(x, self.input_shape)
+
+        image = self.image_transformer.transform(x) # expand from 6x6 to 224x224
+        image = expand_matrix_to_img_size(image[0], self.input_shape)
+
         embeddings = self.model(preprocess_input(image))
         return embeddings.numpy()[0]
 
 
-class StringEmbeddings(nn.Module):
-    name = "string_embedding"
+class w2vEmbedding(nn.Module):
+    name = "w2v_embedding"
 
-    def __init__(self, model_path):
-        super(StringEmbeddings, self).__init__()
+    def __init__(self, **kwargs):
+        super(w2vEmbedding, self).__init__()
+        model_path = ""
         # Load the pre-trained Word2Vec model
         self.model = KeyedVectors.load_word2vec_format(model_path, binary=True)
         self.vector_size = self.model.vector_size
@@ -82,7 +101,7 @@ class StringEmbeddings(nn.Module):
     def forward(self, words):
         # Get embeddings for a list of words
         embeddings = [self.embed_word(word) for word in words]
-        return torch.tensor(embeddings, dtype=torch.float32)
+        return np.stack(embeddings, axis=0)
 
 
 class NumericalTableEmbeddings(nn.Module):
@@ -148,6 +167,6 @@ class NumericalTableEmbeddings(nn.Module):
             row_embedding = self.get_row_embedding(row)
             row_embeddings.append(row_embedding)
         # Convert to tensor
-        return numpy.stack(row_embeddings)
+        return np.stack(row_embeddings)
 
 

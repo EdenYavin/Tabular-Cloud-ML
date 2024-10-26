@@ -11,11 +11,14 @@ class Config(BaseModel):
     class EncoderConfig(BaseModel):
         name: str = Field(description="Name of encryptor / encoder model to use", default=ENCODERS_TYPES.DCONV)
 
+    class PipelineConfig(BaseModel):
+        force_to_create_again: bool = Field(description="Flag to indicate if dataset should be created again", default=True)
+
+
     class DatasetConfig(BaseModel):
         names: list = Field(description="The datasets to run the experiments on")
         split_ratio : float = Field(description="How much of the original train set (90%) will be used to train the IIM")
         one_hot: bool = Field(description="A flag to indicate if the ground truth labels should be one-hot encoded", default=False)
-        force_to_create_again: bool = Field(description="Flag to indicate if dataset should be created again", default=True)
         baseline_model: str = IIM_MODELS.NEURAL_NET
 
     class NEURAL_NET_CONFIG(BaseModel):
@@ -42,7 +45,11 @@ class Config(BaseModel):
     cloud_config: CloudModelConfig = CloudModelConfig()
     iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.NEURAL_NET)
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
-    dataset_config: DatasetConfig = DatasetConfig(one_hot=True, names=[DATASETS.STUDENTS_DROPOUT], split_ratio=0.2)
+    dataset_config: DatasetConfig = DatasetConfig(one_hot=True,
+                                                  split_ratio=0.2,
+                                                  names=[DATASETS.HELOC, DATASETS.STUDENTS_DROPOUT, DATASETS.BANK_MARKETING, DATASETS.ADULT, DATASETS.GESTURE_PHASE]
+                                                  )
+    pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.IMAGE)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV)
 

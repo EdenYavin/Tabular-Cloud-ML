@@ -1,15 +1,14 @@
 import pandas as pd
-from openai import embeddings
 from tqdm import tqdm
 import numpy as np
 
 from src.encryptor import BaseEncryptor
 from src.cloud.base import CloudModels
-from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file, expand_matrix_to_img_size
+from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file
 from src.utils.config import config
-from src.utils.cache import DBFactory
+from src.utils.db import EmbeddingDBFactory
 
-class Dataset(object):
+class Pipeline(object):
 
     def __init__(self, dataset_name, cloud_models, encryptor, embeddings_model,
                  n_pred_vectors, n_noise_samples, metadata = None):
@@ -24,10 +23,10 @@ class Dataset(object):
         self.use_embedding = config.experiment_config.use_embedding
         self.use_noise_labels = config.experiment_config.use_labels
         self.use_predictions = config.experiment_config.use_preds
-        self.force_run = config.dataset_config.force_to_create_again
+        self.force_run = config.pipeline_config.force_to_create_again
         self.raw_metadata = metadata
         self.embeddings_model = embeddings_model
-        self.db = DBFactory.get_db(dataset_name, self.embeddings_model)
+        self.db = EmbeddingDBFactory.get_db(dataset_name, self.embeddings_model)
 
 
     def create(self, X_train, y_train, X_test, y_test) -> dict:

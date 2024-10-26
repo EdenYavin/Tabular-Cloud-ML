@@ -1,11 +1,12 @@
 from tqdm import tqdm
 import pandas as pd
 
-from src.dataset.cloud_dataset.creator import Dataset
+from src.pipeline.encoding_pipeline import Pipeline
 from src.cloud import CloudModels, CLOUD_MODELS
 from src.encryptor import BaseEncryptor, EncryptorFactory
 from src.internal_model.model import InternalInferenceModelFactory
 from src.embeddings import EmbeddingsFactory
+from src.utils.db import RawSplitDBFactory
 from src.dataset.raw import DATASETS, RawDataset
 from src.utils.config import config
 
@@ -45,7 +46,7 @@ class ExperimentHandler:
                 output_shape=(1, *embedding_model.output_shape),
             )
 
-            X_train, X_test, X_sample, y_train, y_test, y_sample = raw_dataset.get_split(force_new_split=False)
+            X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
             print(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
 
             cloud_models: CloudModels = CLOUD_MODELS[config.cloud_config.name](
@@ -65,7 +66,7 @@ class ExperimentHandler:
                     print(f"CREATING THE CLOUD-TRAINSET FROM {dataset_name},"
                           f" WITH {n_noise_samples} NOISE SAMPLES AND {n_pred_vectors} PREDICTION VECTORS")
 
-                    dataset_creator = Dataset(
+                    dataset_creator = Pipeline(
                         dataset_name=dataset_name,
                         cloud_models=cloud_models,
                         encryptor=encryptor,
@@ -80,7 +81,7 @@ class ExperimentHandler:
 
                     internal_model = InternalInferenceModelFactory().get_model(
                         num_classes=raw_dataset.get_n_classes(),
-                        input_shape=dataset['train'][0].shape[1],  # Only give the number of features
+                        input_shape=raw_dataset.get_number_of_features(),  # Only give the number of features
                     )
 
                     print(f"Training the IIM {internal_model.name} Model")
@@ -108,6 +109,7 @@ class ExperimentHandler:
                                     "n_pred_vectors": [n_pred_vectors],
                                     "n_noise_sample": [n_noise_samples],
                                     "iim_model": [internal_model.name],
+                                    "embedding": [embedding_model.name],
                                     "encryptor": [encryptor.name],
                                     "cloud_model": [cloud_models.name],
                                     "iim_train_acc": [train_acc],
@@ -125,7 +127,3 @@ class ExperimentHandler:
 
 
         return final_report
-
-
-
-

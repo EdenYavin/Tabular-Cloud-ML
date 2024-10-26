@@ -1,6 +1,5 @@
 import numpy as np
-import pandas as pd
-from keras.src.callbacks import LearningRateScheduler
+from keras.src.utils import to_categorical
 
 from src.utils.helpers import load_data, save_data
 from sklearn.metrics import accuracy_score, f1_score
@@ -8,10 +7,10 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from xgboost import XGBClassifier
 from keras.src.layers import Dense, Dropout, Input, BatchNormalization
 from keras.src.models import Model
-from keras.src.utils import to_categorical
 import pathlib
-from src.utils.constansts import DATASETS_PATH, XGBOOST_BASELINE, CONFIG_DATASET_PANDAS_DF_TRANSFORM_TOKEN
+from src.utils.constansts import DATASETS_PATH, XGBOOST_BASELINE
 from src.utils.config import config
+from src.internal_model.model import InternalInferenceModelFactory
 
 DATASET_DIR = pathlib.Path(DATASETS_PATH)
 
@@ -50,6 +49,14 @@ class RawDataset:
 
             X_train, X_test, X_sample, y_train, y_test, y_sample =  load_data(self.name, self.sample_split)
 
+            if not self.use_pd_df and type(X_train) is pd.DataFrame:
+                X_train = X_train.values
+                X_test = X_test.values
+                X_sample = X_sample.values
+                y_train = y_train.values
+                y_test = y_test.values
+                y_sample = y_sample.values
+
             return X_train, X_test, X_sample, y_train, y_test, y_sample
 
         except FileNotFoundError:
@@ -65,10 +72,19 @@ class RawDataset:
                 _, X_sample, _, y_sample = train_test_split(X_train, y_train, test_size=self.sample_split, stratify=y_train,
                                                         random_state=42)
 
+            if not self.use_pd_df:
+                X_train = X_train.values
+                X_test = X_test.values
+                X_sample = X_sample.values
+                y_train = y_train.values
+                y_test = y_test.values
+                y_sample = y_sample.values
+
             save_data(self.name, self.sample_split,
                       [X_train, X_test, X_sample, y_train, y_test,  y_sample])
 
             return X_train, X_test, X_sample, y_train, y_test, y_sample
+
 
     def k_fold_iterator(self, n_splits=10, shuffle=True, random_state=None):
         """Yields train and test splits for K-Fold cross-validation."""
@@ -104,11 +120,13 @@ class RawDataset:
             clf.fit(X_train, y_train)
             preds = clf.predict(X_test)
         else:
-            clf = self._get_model(X_train, y_train)
+            clf = InternalInferenceModelFactory.get_model(
+                num_classes=self.get_n_classes(),
+                input_shape=self.get_number_of_features(),  # Only give the number of features
+            )
             y_train = to_categorical(y_train)
-            lr_scheduler = LearningRateScheduler(lambda epoch: 0.0001 * (0.9 ** epoch))
-            clf.fit(X_train, y_train, epochs=config.neural_net_config.epochs, batch_size=config.neural_net_config.batch_size, callbacks=[lr_scheduler])
-            preds = np.argmax(clf.predict(X_test), axis=1)
+            clf.fit(X_train, y_train)
+            preds = clf.predict(X_test)
 
         acc = accuracy_score(y_test, preds)
         try:

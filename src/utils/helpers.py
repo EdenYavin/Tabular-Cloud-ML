@@ -111,7 +111,7 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
 
     # If there are categorical columns, apply one-hot encoding
     if categorical_cols:
-        print("Encoding categorical columns...")
+        print("\nEncoding categorical columns...\n")
         # onehot_encoder = OneHotEncoder(categories='auto', sparse=False)
         # X_categorical = pd.DataFrame(onehot_encoder.fit_transform(X[categorical_cols]),
         #                              columns=onehot_encoder.get_feature_names_out(categorical_cols))
@@ -124,7 +124,7 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
 
     # Apply standard scaling to the numeric columns
     if numeric_cols:
-        print("Scaling numerical columns...")
+        print("\nScaling numerical columns...\n")
         # scaler = MinMaxScaler()
         X_numeric = X[numeric_cols]
         # if cloud_dataset:

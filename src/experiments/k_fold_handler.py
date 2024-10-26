@@ -3,12 +3,11 @@ from tqdm import tqdm
 
 from src.embeddings.model import NumericalTableEmbeddings
 
-from src.dataset.cloud_dataset.creator import Dataset
+from src.pipeline.encoding_pipeline import Pipeline
 from src.cloud import CloudModels, CLOUD_MODELS
 from src.encryptor import BaseEncryptor, EncryptorFactory
 from src.internal_model.model import InternalInferenceModelFactory
 
-import src.utils.constansts as consts
 from src.dataset.raw import DATASETS, RawDataset
 from src.utils.config import config
 import pandas as pd
@@ -68,7 +67,7 @@ class KFoldExperimentHandler:
                         cloud_acc, cloud_f1 = cloud_models.evaluate(X_test, y_test)
                         baseline_acc, baseline_f1 = raw_dataset.get_baseline(X_sample, X_test, y_sample, y_test)
 
-                        dataset_creator = Dataset(
+                        dataset_creator = Pipeline(
                             dataset_name=dataset_name,
                             cloud_models=cloud_models,
                             encryptor=encryptor,

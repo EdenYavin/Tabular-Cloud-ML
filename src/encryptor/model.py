@@ -69,7 +69,7 @@ class DCEncryptor(BaseEncryptor):
 
     name = "dc"
 
-    def build_generator(self, input_shape, output_shape):
+    def build_generator_from_ziv(self, input_shape, output_shape):
 
         G = Sequential()
 
@@ -129,7 +129,7 @@ class DCEncryptor(BaseEncryptor):
         return G
 
 
-    def build_generator_old(self, input_shape, output_shape):
+    def build_generator(self, input_shape, output_shape):
 
         input_layer = Input(shape=input_shape)
         x = Flatten()(input_layer)
@@ -158,20 +158,3 @@ class DCEncryptor(BaseEncryptor):
         output_image = Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
 
         return Model(inputs=input_layer, outputs=output_image)
-
-class EfficientNetEncryptor(BaseEncryptor):
-
-    name = "efficientnet"
-
-    def build_generator(self, input_shape, output_shape):
-        output_shape = (260, 260, 3)
-        input_layer = Input(shape=(input_shape[0], input_shape[1]))
-        x = Flatten()(input_layer)
-
-        x = Dense(1024, activation='relu')(x)
-        x = Dense(512, activation='relu')(x)
-        x = Dense(256, activation='relu')(x)
-
-        x = Dense(np.prod(output_shape))(x)
-        output_vector = Reshape(output_shape)(x)
-        return Model(inputs=input_layer, outputs=output_vector)

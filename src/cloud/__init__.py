@@ -1,13 +1,13 @@
-from src.cloud.base import CloudModels
-from src.cloud.vision import EfficientNetB2CloudModels, ResNetEmbeddingCloudModel, VGG16CloudModel, ImagePatchEfficientCloudModel
-from src.cloud.tabular import EnsembleCloudModels, TabularCloudModels, NeuralNetCloudModels
+from src.cloud.base import CloudModel
+from src.cloud.vision import XceptionCloudModel, ResNetEmbeddingCloudModel, VGG16CloudModel, ImagePatchEfficientCloudModel
+from src.cloud.tabular import EnsembleCloudModel, TabularCloudModel, NeuralNetCloudModel
 from src.cloud.llm import CasualLLMCloudModel, MaskedLLMCloudModel, SequenceClassificationLLMCloudModel
 
 CLOUD_MODELS = {
-    NeuralNetCloudModels.name: NeuralNetCloudModels,
-    TabularCloudModels.name: TabularCloudModels,
-    EnsembleCloudModels.name: EnsembleCloudModels,
-    EfficientNetB2CloudModels.name: EfficientNetB2CloudModels,
+    NeuralNetCloudModel.name: NeuralNetCloudModel,
+    TabularCloudModel.name: TabularCloudModel,
+    EnsembleCloudModel.name: EnsembleCloudModel,
+    XceptionCloudModel.name: XceptionCloudModel,
     ResNetEmbeddingCloudModel.name: ResNetEmbeddingCloudModel,
     ImagePatchEfficientCloudModel.name: ImagePatchEfficientCloudModel,
     VGG16CloudModel.name: VGG16CloudModel,

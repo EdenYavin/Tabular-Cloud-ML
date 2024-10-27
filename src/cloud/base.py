@@ -5,7 +5,7 @@ from sklearn.metrics import accuracy_score, f1_score
 from src.utils.constansts import CONFIG_CLOUD_MODELS_TOKEN
 
 
-class CloudModels:
+class CloudModel:
     """
     This is a mockup of a models that are trained on the organization data and are deployed on the cloud
     """
@@ -14,6 +14,8 @@ class CloudModels:
         models_names = kwargs.get(CONFIG_CLOUD_MODELS_TOKEN)
         self.cloud_models = models_names
         self.model = None
+        self.output_shape = None
+        self.input_shape = None
 
     @abstractmethod
     def predict(self, X):

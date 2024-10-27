@@ -7,10 +7,10 @@ import keras
 import numpy as np
 from sklearn.metrics import accuracy_score, f1_score
 from src.utils.config import config
-from src.cloud.base import CloudModels
+from src.cloud.base import CloudModel
 
 
-class NeuralNetCloudModels(CloudModels):
+class NeuralNetCloudModel(CloudModel):
     name = "dense"
 
     def __init__(self, **kwargs):
@@ -52,7 +52,7 @@ class NeuralNetCloudModels(CloudModels):
         return accuracy, f1
 
 
-class TabularCloudModels(CloudModels):
+class TabularCloudModel(CloudModel):
     name = "tabular"
 
     def __init__(self, **kwargs):
@@ -75,7 +75,7 @@ class TabularCloudModels(CloudModels):
 
         return np.hstack(predictions)
 
-class EnsembleCloudModels(CloudModels):
+class EnsembleCloudModel(CloudModel):
     """
     This is a mockup of a models that are trained on the organization data and are deployed on the cloud
     """

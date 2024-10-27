@@ -2,7 +2,7 @@ from tqdm import tqdm
 import pandas as pd
 
 from src.pipeline.encoding_pipeline import Pipeline
-from src.cloud import CloudModels, CLOUD_MODELS
+from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor import BaseEncryptor, EncryptorFactory
 from src.internal_model.model import InternalInferenceModelFactory
 from src.embeddings import EmbeddingsFactory
@@ -49,7 +49,7 @@ class ExperimentHandler:
             X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
             print(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
 
-            cloud_models: CloudModels = CLOUD_MODELS[config.cloud_config.name](
+            cloud_models: CloudModel = CLOUD_MODELS[config.cloud_config.name](
                 num_classes=raw_dataset.get_n_classes()
             )
             cloud_models.fit(X_train, y_train, **raw_dataset.metadata)
@@ -87,7 +87,7 @@ class ExperimentHandler:
                     baseline_model.fit(
                         *dataset[consts.IIM_BASELINE_TRAIN_SET_TOKEN]
                     )
-                    baseline_emb_acc, baseline_emb_f1 = baseline_model.evaluate(*dataset[consts.IIM_TEST_SET_TOKEN])
+                    baseline_emb_acc, baseline_emb_f1 = baseline_model.evaluate(*dataset[consts.IIM_BASELINE_TEST_SET_TOKEN])
 
 
 

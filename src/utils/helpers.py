@@ -9,9 +9,32 @@ from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
 import tensorflow as tf
 
 
-def pad_image(image):
-    # Pad the image to match the required shape (224, 224, 3)
-    padded_image = tf.pad(image, [[0, 0], [48, 48], [48, 48], [0, 0]], mode='CONSTANT')
+def pad_image(image, max_shape):
+
+    # Check if any dimension of the image matches the max_shape
+    if any(s == max_shape for s in image.shape):
+        # If the image is already of the desired shape, no need to pad it
+        return image
+
+    # Calculate the padding needed for height and width
+    height_padding = (max_shape - image.shape[-3]) // 2
+    width_padding = (max_shape - image.shape[-2]) // 2
+
+    # Determine the rank of the input tensor
+    rank = len(image.shape)
+
+    if rank == 3:
+        # For 3D tensors (height, width, channels)
+        paddings = [[height_padding, height_padding], [width_padding, width_padding], [0, 0]]
+    elif rank == 4:
+        # For 4D tensors (batch_size, height, width, channels)
+        paddings = [[0, 0], [height_padding, height_padding], [width_padding, width_padding], [0, 0]]
+    else:
+        raise ValueError("Unsupported tensor rank: {}".format(rank))
+
+    # Pad the image to match the required shape
+    padded_image = tf.pad(image, paddings, mode='CONSTANT')
+
     return padded_image
 
 

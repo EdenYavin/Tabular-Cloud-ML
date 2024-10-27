@@ -4,13 +4,13 @@ from torch.nn import functional as F
 
 from src.utils.cache import Cache
 import src.utils.constansts as consts
-from src.cloud.base import CloudModels
+from src.cloud.base import CloudModel
 
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 
-class SequenceClassificationLLMCloudModel(CloudModels):
+class SequenceClassificationLLMCloudModel(CloudModel):
     name = "sequence_classification_llm"
 
     def __init__(self, **kwargs):
@@ -57,7 +57,7 @@ class SequenceClassificationLLMCloudModel(CloudModels):
         return -1, -1
 
 
-class CasualLLMCloudModel(CloudModels):
+class CasualLLMCloudModel(CloudModel):
 
     name = "casual_llm"
 
@@ -124,7 +124,7 @@ class CasualLLMCloudModel(CloudModels):
         return -1, -1
 
 
-class MaskedLLMCloudModel(CloudModels):
+class MaskedLLMCloudModel(CloudModel):
 
     name = "masked_llm"
 

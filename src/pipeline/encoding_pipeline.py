@@ -1,9 +1,10 @@
 import pandas as pd
+from keras.src.ops import shape
 from tqdm import tqdm
 import numpy as np
 
 from src.encryptor import BaseEncryptor
-from src.cloud.base import CloudModels
+from src.cloud.base import CloudModel
 from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file, pad_image
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
@@ -14,7 +15,7 @@ class Pipeline(object):
     def __init__(self, dataset_name, cloud_models, encryptor, embeddings_model,
                  n_pred_vectors, n_noise_samples, metadata = None):
 
-        self.cloud_models: CloudModels = cloud_models
+        self.cloud_model: CloudModel = cloud_models
         self.encryptor: BaseEncryptor = encryptor
         self.n_pred_vectors = n_pred_vectors
         self.n_noise_samples = n_noise_samples
@@ -86,10 +87,9 @@ class Pipeline(object):
                 embeddings = self.db.get_embedding(samples)
 
                 encrypted_data = self.encryptor.encode(embeddings)
-                encrypted_data = (encrypted_data * 10000).astype(np.uint8)
-                image = pad_image(encrypted_data)
+                image = (encrypted_data * 10000).astype(np.uint8)
 
-                predictions = self.cloud_models.predict(image)
+                predictions = self.cloud_model.predict(image)
 
                 if self.use_predictions:
                     observation.append(predictions) # Shape - |CMLS|
@@ -121,9 +121,9 @@ class Pipeline(object):
             embeddings = self.db.get_embedding(samples)
 
             encrypted_data = self.encryptor.encode(embeddings)
-            encrypted_data = (encrypted_data * 10000).astype(np.uint8)
+            image = (encrypted_data * 10000).astype(np.uint8)
 
-            predictions = self.cloud_models.predict(encrypted_data)
+            predictions = self.cloud_model.predict(image)
 
             if self.use_predictions:
                 sample.append(predictions)

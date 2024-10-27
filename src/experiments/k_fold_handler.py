@@ -4,7 +4,7 @@ from tqdm import tqdm
 from src.embeddings.model import NumericalTableEmbeddings
 
 from src.pipeline.encoding_pipeline import Pipeline
-from src.cloud import CloudModels, CLOUD_MODELS
+from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor import BaseEncryptor, EncryptorFactory
 from src.internal_model.model import InternalInferenceModelFactory
 
@@ -38,7 +38,7 @@ class KFoldExperimentHandler:
 
             progress = tqdm(total=self.k_folds, desc="K-Folds", unit="Fold")
 
-            cloud_models: CloudModels = CLOUD_MODELS[config.cloud_config.name](
+            cloud_models: CloudModel = CLOUD_MODELS[config.cloud_config.name](
                 num_classes=raw_dataset.get_n_classes()
             )
 

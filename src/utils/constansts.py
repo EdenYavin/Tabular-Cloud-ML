@@ -23,7 +23,7 @@ class IIM_MODELS(str, enum.Enum):
 class CLOUD_MODELS(str, enum.Enum):
     ENSEMBLE_OF_TABULAR_MODELS = "ensemble"
     NEURAL_NET_DENSE_LAYERS = "dense"
-    EFFICIENTNET = "efficientnet"
+    Xception = "xception"
     RESNET = "resnet"
     VGG16 = "vgg16"
 

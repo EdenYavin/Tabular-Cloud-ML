@@ -1,6 +1,7 @@
+import numpy as np
 from keras.api.applications import ResNet50V2, VGG16, Xception
 from keras.api.applications.xception import preprocess_input as xception_preprocess_input
-from keras.api.applications.vgg16 import preprocess_input as vgg_preprocess, decode_predictions
+from keras.api.applications.vgg16 import preprocess_input as vgg_preprocess
 from keras import Model
 from keras.src.layers import GlobalAveragePooling2D
 
@@ -40,7 +41,7 @@ class XceptionCloudModel(CloudModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.models = Xception(weights='imagenet', include_top=False)
+        self.models = Xception(weights='imagenet')
         self.input_shape = (299, 299, 3)
 
 
@@ -49,8 +50,12 @@ class XceptionCloudModel(CloudModel):
 
 
     def predict(self, X):
-        # Ensure the input is properly preprocessed for ResNet50
-        X = xception_preprocess_input(X)
+
+        # If the image is 224x224 - pad it to be 229x229
+        padded_image = np.pad(X, ((0, 0), (2, 3), (2, 3), (0, 0)), mode='constant', constant_values=0)
+
+        # Ensure the input is properly preprocessed for Xception
+        X = xception_preprocess_input(padded_image)
         predictions = self.models.predict(X, verbose=None)
         return predictions
 

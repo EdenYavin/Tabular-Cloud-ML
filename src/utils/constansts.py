@@ -94,6 +94,10 @@ LLM_TOP_K_CONFIG_TOKEN = "top_k"
 # INTERNAL MODEL SECTIONS
 # ---------------------
 CONFIG_INN_SECTION = "IIM"
+IIM_TRAIN_SET_TOKEN = "train"
+IIM_TEST_SET_TOKEN = "test"
+IIM_BASELINE_TRAIN_SET_TOKEN = "baseline_train"
+IIM_BASELINE_TEST_SET_TOKEN = "baseline_test"
 
 # ---------------------
 # DATASET SECTIONS

@@ -4,9 +4,10 @@ import numpy as np
 
 from src.encryptor import BaseEncryptor
 from src.cloud.base import CloudModels
-from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file
+from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file, pad_image
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
+import src.utils.constansts as consts
 
 class Pipeline(object):
 
@@ -38,8 +39,8 @@ class Pipeline(object):
                 print(f"Dataset {self.name} was already processed before, loading cache")
                 return dataset
 
-        X_train, y_train = self._create_train(X_train, y_train)
-        X_test = self._create_test(X_test, y_test)
+        X_train, y_train, X_emb_train = self._create_train(X_train, y_train)
+        X_test, X_emb_test = self._create_test(X_test, y_test)
 
         if self.one_hot:
             num_classes = len(np.unique(y_train))
@@ -51,8 +52,10 @@ class Pipeline(object):
         test = [X_test, y_test]
 
         dataset = {
-            "train": train,
-            "test": test
+            consts.IIM_TRAIN_SET_TOKEN: train,
+            consts.IIM_BASELINE_TRAIN_SET_TOKEN: [X_emb_train, y_train],
+            consts.IIM_TEST_SET_TOKEN: test,
+            consts.IIM_BASELINE_TEST_SET_TOKEN: [X_emb_test, y_test]
         }
 
         save_cache_file(dataset_name=name, split_ratio=self.split_ratio, data=dataset)
@@ -62,7 +65,8 @@ class Pipeline(object):
     def _create_train(self, X, y):
 
         new_y = []
-        examples = []
+        observations = []
+        embeddings_for_baseline = [] # Will be used for the baseline
 
         X = pd.DataFrame(X)
 
@@ -73,7 +77,7 @@ class Pipeline(object):
                 # Because we are expanding the dataset to more samples we need to expand the labels as well
                 new_y.append(y[idx])
 
-                example = []
+                observation = []
 
                 # For each new pred vector we will sample new noise to be used. This will cause
                 # The prediction vector to be different each time
@@ -83,28 +87,32 @@ class Pipeline(object):
 
                 encrypted_data = self.encryptor.encode(embeddings)
                 encrypted_data = (encrypted_data * 10000).astype(np.uint8)
-                predictions = self.cloud_models.predict(encrypted_data)
+                image = pad_image(encrypted_data)
+
+                predictions = self.cloud_models.predict(image)
 
                 if self.use_predictions:
-                    example.append(predictions) # Shape - |CMLS|
+                    observation.append(predictions) # Shape - |CMLS|
                 if self.use_embedding:
-                    example.append(embeddings.reshape(1,-1)) # Shape - (1,|Embedding| * Number of noise samples)
+                    observation.append(embeddings.reshape(1,-1)) # Shape - (1,|Embedding| * Number of noise samples)
                 if self.use_noise_labels and noise_labels.shape[0] > 0:
-                    example.append(noise_labels) # Shape - |V| * Number of noise samples
+                    observation.append(noise_labels) # Shape - |V| * Number of noise samples
 
-                examples.append(np.hstack(example))
+                observations.append(np.hstack(observation))
+                embeddings_for_baseline.append(embeddings)
 
-        return np.vstack(examples), np.array(new_y)
+        return np.vstack(observations), np.array(new_y), np.vstack(embeddings_for_baseline)
 
     def _create_test(self, X, y):
-        examples = []
+        observations = []
+        embeddings_for_baseline = []  # Will be used for the baseline
 
         X = pd.DataFrame(X)
 
         for idx, row in tqdm(X.iterrows(), total=len(X), leave=True, position=0):
 
             # We can't touch the test set, i.e. expand it to more samples. So we do it only once
-            example = []
+            sample = []
 
             # For each new pred vector we will sample new noise to be used. This will cause
             # The prediction vector to be different each time
@@ -118,12 +126,13 @@ class Pipeline(object):
             predictions = self.cloud_models.predict(encrypted_data)
 
             if self.use_predictions:
-                example.append(predictions)
+                sample.append(predictions)
             if self.use_embedding:
-                example.append(embeddings.reshape(1, -1))  # Shape - (1,|Embedding| * Number of noise samples)
+                sample.append(embeddings.reshape(1, -1))  # Shape - (1,|Embedding| * Number of noise samples)
             if self.use_noise_labels and noise_labels.shape[0] > 0:
-                example.append(noise_labels)
+                sample.append(noise_labels)
 
-            examples.append(np.hstack(example))
+            observations.append(np.hstack(sample))
+            embeddings_for_baseline.append(embeddings)
 
-        return np.vstack(examples)
+        return np.vstack(observations), np.vstack(embeddings_for_baseline)

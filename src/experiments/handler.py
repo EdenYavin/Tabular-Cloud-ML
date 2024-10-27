@@ -9,7 +9,7 @@ from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
 from src.dataset.raw import DATASETS, RawDataset
 from src.utils.config import config
-
+import src.utils.constansts as consts
 
 class ExperimentHandler:
 
@@ -54,11 +54,11 @@ class ExperimentHandler:
             )
             cloud_models.fit(X_train, y_train, **raw_dataset.metadata)
 
-            print("#### GETTING DATASET FULL BASELINE####")
+            print("#### GETTING CLOUD DATASET FULL BASELINE####")
             cloud_acc, cloud_f1 = raw_dataset.get_cloud_model_baseline(X_train, X_test, y_train, y_test)
 
-            print("#### GETTING BASELINE PREDICTION ####")
-            baseline_acc, baseline_f1 = raw_dataset.get_baseline(X_sample, X_test, y_sample, y_test)
+            print("#### GETTING RAW BASELINE PREDICTION ####")
+            raw_baseline_acc, raw_baseline_f1 = raw_dataset.get_baseline(X_sample, X_test, y_sample, y_test)
 
             for n_noise_samples in self.n_noise_samples:
                 for n_pred_vectors in self.n_pred_vectors:
@@ -77,24 +77,37 @@ class ExperimentHandler:
                     )
                     dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
                     print("Finished Creating the dataset")
-                    print(f"##### CLOUD DATASET SIZE - {dataset['train'][0].shape} ###########")
+                    print(f"##### CLOUD DATASET SIZE - {dataset[consts.IIM_TRAIN_SET_TOKEN][0].shape} ###########")
+
+                    print("#### GETTING EMBEDDING BASELINE PREDICTION ####")
+                    baseline_model = InternalInferenceModelFactory.get_model(
+                        num_classes=raw_dataset.get_n_classes(),
+                        input_shape=dataset[consts.IIM_BASELINE_TRAIN_SET_TOKEN][0].shape[1],
+                    )
+                    baseline_model.fit(
+                        *dataset[consts.IIM_BASELINE_TRAIN_SET_TOKEN]
+                    )
+                    baseline_emb_acc, baseline_emb_f1 = baseline_model.evaluate(*dataset[consts.IIM_TEST_SET_TOKEN])
+
+
 
                     internal_model = InternalInferenceModelFactory().get_model(
                         num_classes=raw_dataset.get_n_classes(),
-                        input_shape=raw_dataset.get_number_of_features(),  # Only give the number of features
+                        input_shape=dataset[consts.IIM_TRAIN_SET_TOKEN][0].shape[1],  # Only give the number of features
                     )
 
                     print(f"Training the IIM {internal_model.name} Model")
                     internal_model.fit(
-                        *dataset['train']
+                        *dataset[consts.IIM_TRAIN_SET_TOKEN]
                     )
-                    train_acc, train_f1 = internal_model.evaluate(*dataset['train'])
-                    test_acc, test_f1 = internal_model.evaluate(*dataset['test'])
+                    train_acc, train_f1 = internal_model.evaluate(*dataset[consts.IIM_TRAIN_SET_TOKEN])
+                    test_acc, test_f1 = internal_model.evaluate(*dataset[consts.IIM_TEST_SET_TOKEN])
 
 
                     print(f"""
                           Cloud: {cloud_acc}, {cloud_f1}\n
-                          Baseline: {baseline_acc}, {baseline_f1}\n
+                          Raw Baseline: {raw_baseline_acc}, {raw_baseline_f1}\n
+                          Emb Baseline: {baseline_emb_acc}, {baseline_emb_f1}\n
                           IIM: {test_acc}, {test_f1}\n
                           """)
 
@@ -116,8 +129,10 @@ class ExperimentHandler:
                                     "iim_train_f1": [train_f1],
                                     "iim_test_acc": [test_acc],
                                     "iim_test_f1": [test_f1],
-                                    "baseline_acc": [baseline_acc],
-                                    "baseline_f1": [baseline_f1],
+                                    "raw_baseline_acc": [raw_baseline_acc],
+                                    "raw_baseline_f1": [raw_baseline_f1],
+                                    "emb_baseline_acc": [baseline_emb_acc],
+                                    "emb_baseline_f1": [baseline_emb_f1],
                                     "cloud_acc": [cloud_acc],
                                     "cloud_f1": [cloud_f1],
 

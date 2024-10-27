@@ -33,11 +33,11 @@ class Config(BaseModel):
         name: str = Field(description="Cloud model to use", default=CLOUD_MODELS.VGG16)
 
     class ExperimentConfig(BaseModel):
-        use_labels: bool = Field(description="A flag to indicate if the noise labels should be used in training the IIM", default=True)
-        use_preds: bool = Field(description="A flag to indicate if the predictions should be used in training the IIM", default=True)
-        use_embedding: bool = Field(description="A flag to indicate if the embedding should be used in training the IIM", default=True)
-        n_pred_vectors: int = Field(description="Number of prediction vectors to query from the cloud models", default=1)
-        n_noise_samples: int = Field(description="Number samples to sample from the dataset and use as noise", default=0)
+        use_labels: bool = Field(description="A flag to indicate if the noise labels should be used in training the IIM")
+        use_preds: bool = Field(description="A flag to indicate if the predictions should be used in training the IIM")
+        use_embedding: bool = Field(description="A flag to indicate if the embedding should be used in training the IIM")
+        n_pred_vectors: int = Field(description="Number of prediction vectors to query from the cloud models")
+        n_noise_samples: int = Field(description="Number samples to sample from the dataset and use as noise")
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,
@@ -47,10 +47,10 @@ class Config(BaseModel):
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(one_hot=True,
                                                   split_ratio=0.2,
-                                                  names=[DATASETS.HELOC, DATASETS.STUDENTS_DROPOUT, DATASETS.BANK_MARKETING, DATASETS.ADULT, DATASETS.GESTURE_PHASE]
+                                                  names=[DATASETS.HELOC]
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)
-    embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.IMAGE)
+    embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.DNN)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV)
 
 

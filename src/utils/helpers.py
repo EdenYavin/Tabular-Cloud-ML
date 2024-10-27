@@ -6,7 +6,13 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
 from PIL import Image, ImageDraw, ImageFont
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
+import tensorflow as tf
 
+
+def pad_image(image):
+    # Pad the image to match the required shape (224, 224, 3)
+    padded_image = tf.pad(image, [[0, 0], [48, 48], [48, 48], [0, 0]], mode='CONSTANT')
+    return padded_image
 
 
 def create_image_from_number(number, image_size=(224, 224), font_size=80):

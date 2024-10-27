@@ -42,16 +42,17 @@ class Config(BaseModel):
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,
                                                            use_preds=True, use_embedding=False, use_labels=False)
-    cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.Xception)
+    cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16)
     iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.NEURAL_NET)
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(one_hot=True,
                                                   split_ratio=0.01,
                                                   names=[DATASETS.HELOC, DATASETS.ADULT, DATASETS.STUDENTS_DROPOUT,
+                                                         DATASETS.BANK_MARKETING, DATASETS.GESTURE_PHASE
                                                          ]
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)
-    embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.DNN)
+    embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.IMAGE)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV)
 
 

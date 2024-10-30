@@ -98,9 +98,13 @@ class ExperimentDatabase:
         self.db = {}
 
     def save(self):
+        try:
+            with open(self.cache_file_path, 'wb') as f:
+                pickle.dump(self.db, f)
 
-        with open(self.cache_file_path, 'wb') as f:
-            pickle.dump(self.db, f)
+        except Exception as e:
+            print(str(e))
+            print("Skipping saving")
 
     def load(self):
 

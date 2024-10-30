@@ -47,7 +47,9 @@ class Config(BaseModel):
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(one_hot=True,
                                                   split_ratio=1,
-                                                  names=[DATASETS.HELOC,
+                                                  names=[DATASETS.HELOC, DATASETS.STUDENTS_DROPOUT,
+                                                         DATASETS.ADULT, DATASETS.BANK_MARKETING,
+                                                         DATASETS.GESTURE_PHASE
                                                          ]
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)

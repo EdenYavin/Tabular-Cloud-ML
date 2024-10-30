@@ -8,8 +8,8 @@ import os
 from src.dataset.raw import RawDataset
 from src.utils.config import config
 from src.utils.constansts import (DATA_CACHE_PATH, DB_EMBEDDING_TOKEN, DB_LABEL_TOKEN, DB_RAW_FEATURES_TOKEN,
-                                  DB_TRAIN_INDEX_TOKEN, DB_TEST_INDEX_TOKEN, DB_IMM_TRAIN_INDEX_TOKEN)
-from src.utils.helpers import one_hot_labels
+                                  DB_TRAIN_INDEX_TOKEN, DB_TEST_INDEX_TOKEN, DB_IMM_TRAIN_INDEX_TOKEN,
+                                  )
 
 
 class RawDataExperimentDatabase:
@@ -24,10 +24,11 @@ class RawDataExperimentDatabase:
         self.db_path = os.path.join(db_path, f"{dataset.name}_dataset.json")
         if os.path.exists(self.db_path):
             self.db = json.load(open(self.db_path, "r"))
+            self.empty = False if config.dataset_config.split_ratio in self.db else True
         else:
-            self.db = {}
+            self.db = {config.dataset_config.split_ratio: {}}
+            self.empty = True
 
-        self.empty = True if len(self.db) == 0 else False
 
     def __del__(self):
         self._save()
@@ -53,21 +54,27 @@ class RawDataExperimentDatabase:
                                                         test_size=config.dataset_config.split_ratio, stratify=y_train,
                                                         random_state=42)
 
+            new_data = {}
+            new_data[DB_TRAIN_INDEX_TOKEN] = X_train.index.tolist()
+            new_data[DB_IMM_TRAIN_INDEX_TOKEN] = X_sample.index.tolist()
+            new_data[DB_TEST_INDEX_TOKEN] = X_test.index.tolist()
 
-            self.db[DB_TRAIN_INDEX_TOKEN] = X_train.index.tolist()
-            self.db[DB_IMM_TRAIN_INDEX_TOKEN] = X_sample.index.tolist()
-            self.db[DB_TEST_INDEX_TOKEN] = X_test.index.tolist()
+            self.db[config.dataset_config.split_ratio] = new_data
+
+            print(f"#### CREATED ENW INDEX FOR {config.dataset_config.split_ratio} - INDEX SIZE {len(X_sample)}")
 
             self._save()
 
         else:
+            indexes = self.db[config.dataset_config.split_ratio]
+            print(f"LOAD INDEX {config.dataset_config.split_ratio} - INDEX SIZE {len(DB_IMM_TRAIN_INDEX_TOKEN)}")
             # Get the existing indices and create new dataframes
-            X_train = pd.DataFrame(X.loc[self.db[DB_TRAIN_INDEX_TOKEN]])
-            y_train = pd.Series(y.loc[self.db[DB_TRAIN_INDEX_TOKEN]])
-            X_sample = pd.DataFrame(X.loc[self.db[DB_IMM_TRAIN_INDEX_TOKEN]])
-            y_sample = pd.Series(y.loc[self.db[DB_IMM_TRAIN_INDEX_TOKEN]])
-            X_test = pd.DataFrame(X.loc[self.db[DB_TEST_INDEX_TOKEN]])
-            y_test = pd.Series(y.loc[self.db[DB_TEST_INDEX_TOKEN]])
+            X_train = pd.DataFrame(X.loc[indexes[DB_TRAIN_INDEX_TOKEN]])
+            y_train = pd.Series(y.loc[indexes[DB_TRAIN_INDEX_TOKEN]])
+            X_sample = pd.DataFrame(X.loc[indexes[DB_IMM_TRAIN_INDEX_TOKEN]])
+            y_sample = pd.Series(y.loc[indexes[DB_IMM_TRAIN_INDEX_TOKEN]])
+            X_test = pd.DataFrame(X.loc[indexes[DB_TEST_INDEX_TOKEN]])
+            y_test = pd.Series(y.loc[indexes[DB_TEST_INDEX_TOKEN]])
 
         return X_train, X_test, X_sample, y_train, y_test, y_sample
 

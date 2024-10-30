@@ -1,5 +1,5 @@
 import src.utils.constansts as consts
-from src.experiments.handler import ExperimentHandler
+from src.experiments.single_experiment_handler import ExperimentHandler
 from src.experiments.k_fold_handler import KFoldExperimentHandler
 from src.utils.config import config
 import pandas as pd

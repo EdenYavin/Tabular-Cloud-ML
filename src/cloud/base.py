@@ -21,6 +21,10 @@ class CloudModel:
     def predict(self, X):
         pass
 
+    @abstractmethod
+    def preprocess(self, X):
+        pass
+
     def evaluate(self, X, y) -> tuple:
         """Evaluate using majority voting over predictions from multiple models.
 

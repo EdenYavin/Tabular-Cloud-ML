@@ -5,7 +5,8 @@ from src.embeddings.model import NumericalTableEmbeddings
 
 from src.pipeline.encoding_pipeline import Pipeline
 from src.cloud import CloudModel, CLOUD_MODELS
-from src.encryptor import BaseEncryptor, EncryptorFactory
+from src.encryptor import EncryptorFactory
+from src.encryptor.base import BaseEncryptor
 from src.internal_model.model import InternalInferenceModelFactory
 
 from src.dataset.raw import DATASETS, RawDataset

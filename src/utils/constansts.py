@@ -14,17 +14,17 @@ class ENCODERS_TYPES(str, enum.Enum):
     DENSE = "dense"
     EFFICIENT = "efficientnet"
     DCONV = "dc"
+    DCONV32x32 = "dc32x32"
 
 class IIM_MODELS(str, enum.Enum):
     NEURAL_NET = "neural_network"
     XGBOOST = "xgboost"
 
-
 class CLOUD_MODELS(str, enum.Enum):
     ENSEMBLE_OF_TABULAR_MODELS = "ensemble"
     NEURAL_NET_DENSE_LAYERS = "dense"
     Xception = "xception"
-    RESNET = "resnet"
+    VGG16_CIFAR10 = "vgg16_cifar10"
     VGG16 = "vgg16"
 
 class DATASETS(str, enum.Enum):
@@ -89,6 +89,7 @@ LLM_CACHE_PATH = os.path.join(STORE_PATH, LLM_CACHE_DIR)
 os.makedirs(LLM_CACHE_PATH, exist_ok=True)
 LLM_PRED_VECTOR_TYPE_CONFIG_TOKEN = 'logits'
 LLM_TOP_K_CONFIG_TOKEN = "top_k"
+VGG16_CIFAR10_MODEL_PATH = os.path.join(MODELS_PATH, "cifar10vgg.h5")
 
 # ---------------------
 # INTERNAL MODEL SECTIONS

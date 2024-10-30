@@ -1,30 +1,10 @@
 from keras.src.layers import Input, Dense,  Flatten
 from keras.src.layers import BatchNormalization, Activation, Conv2DTranspose
 from keras.src.models import Model, Sequential
-import numpy as np
-from keras.src.layers import LeakyReLU, Reshape, Conv2D, UpSampling2D
+from keras.src.layers import LeakyReLU, Reshape, Conv2D, UpSampling2D, ReLU
+from src.encryptor.base import BaseEncryptor
 
 
-
-
-class BaseEncryptor:
-
-    name: str
-
-    def __init__(self, output_shape=None):
-        self.model = None
-        self.output_shape = output_shape
-
-    def build_generator(self, input_shape, output_shape):
-        raise NotImplementedError("Subclasses should implement this method")
-
-    def encode(self, inputs) -> np.array:
-        inputs = np.expand_dims(inputs, axis=0)
-        if self.model is None:
-            input_shape = inputs.shape[1:]
-            output_shape = self.output_shape or (1, inputs.shape[2])
-            self.model = self.build_generator(input_shape, output_shape)
-        return self.model(inputs).numpy()
 
 class TabularDCEncryptor(BaseEncryptor):
 
@@ -155,6 +135,32 @@ class DCEncryptor(BaseEncryptor):
         x = BatchNormalization()(x)
         x = LeakyReLU()(x)
 
-        output_image = Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
+        output_image = Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='sigmoid')(x)
+
+        return Model(inputs=input_layer, outputs=output_image)
+
+
+class DC32x32Encryptor(BaseEncryptor):
+
+    name = "dc32x32"
+
+    def build_generator(self, input_shape, output_shape):
+
+        input_layer = Input(shape=input_shape)
+        x = Flatten()(input_layer)
+        x = Dense(3 * 3 * 256, use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Reshape((3, 3, 256))(x)
+        x = Conv2DTranspose(64, 3, padding='same')(x)
+        x = BatchNormalization()(x)
+        x = ReLU()(x)
+        x = UpSampling2D()(x)
+        x = Conv2DTranspose(32, 3, padding='same')(x)
+        x = BatchNormalization()(x)
+        x = ReLU()(x)
+        x = UpSampling2D()(x)
+        output_image = Conv2DTranspose(3, 4, padding='same', activation='sigmoid')(x)
+
 
         return Model(inputs=input_layer, outputs=output_image)

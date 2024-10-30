@@ -8,7 +8,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
+from openai import embeddings
 from tab2img.converter import Tab2Img
+from keras.src.callbacks import EarlyStopping
 
 from src.utils.helpers import create_image_from_numbers, expand_matrix_to_img_size, one_hot_labels
 from src.utils.config import config
@@ -23,7 +25,6 @@ class DNNEmbedding(nn.Module):
         X, y = kwargs.get("X"), kwargs.get("y")
         num_classes = len(set(y))
         y = one_hot_labels(num_classes, y)
-        self.output_shape = (10,)
 
         model = Sequential()
         model.add(Dense(units=X.shape[1]//2, activation='relu', name="embedding"))
@@ -31,8 +32,12 @@ class DNNEmbedding(nn.Module):
         model.add(Dense(units=num_classes, activation='softmax', name="output"))
 
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-        model.fit(X, y, epochs=50, batch_size=64)
+        early_stop = EarlyStopping(patience=2, monitor="loss")
+
+        model.fit(X, y, epochs=50, batch_size=64, callbacks=[early_stop])
         self.model = model.layers[0]
+        self.output_shape = (1, X.shape[1]//2)
+
 
     def forward(self, x):
 

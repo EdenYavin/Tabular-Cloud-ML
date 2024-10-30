@@ -1,9 +1,8 @@
 import pandas as pd
-from keras.src.ops import shape
 from tqdm import tqdm
 import numpy as np
 
-from src.encryptor import BaseEncryptor
+from src.encryptor.base import BaseEncryptor
 from src.cloud.base import CloudModel
 from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file, pad_image
 from src.utils.config import config
@@ -101,7 +100,7 @@ class Pipeline(object):
                 observations.append(np.hstack(observation))
                 embeddings_for_baseline.append(embeddings)
 
-        return np.vstack(observations), np.array(new_y), np.vstack(embeddings_for_baseline)
+        return np.vstack(observations), np.array(new_y), np.stack(embeddings_for_baseline)
 
     def _create_test(self, X, y):
         observations = []
@@ -135,4 +134,4 @@ class Pipeline(object):
             observations.append(np.hstack(sample))
             embeddings_for_baseline.append(embeddings)
 
-        return np.vstack(observations), np.vstack(embeddings_for_baseline)
+        return np.vstack(observations), np.stack(embeddings_for_baseline)

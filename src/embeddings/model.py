@@ -8,7 +8,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
-from openai import embeddings
 from tab2img.converter import Tab2Img
 from keras.src.callbacks import EarlyStopping
 

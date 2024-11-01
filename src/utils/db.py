@@ -30,9 +30,6 @@ class RawDataExperimentDatabase:
             self.empty = True
 
 
-    def __del__(self):
-        self._save()
-
     def _save(self):
         with open(self.db_path, "w") as f:
             json.dump(self.db, f)

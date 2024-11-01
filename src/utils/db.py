@@ -141,9 +141,6 @@ class ExperimentDatabase:
     def set_embedding(self, idx, value):
         self.db.setdefault(idx, {}).setdefault(DB_EMBEDDING_TOKEN, value)
 
-    def __del__(self):
-        self.save()
-
 
 class EmbeddingDBFactory:
     dbs = {}

@@ -10,7 +10,7 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 from tab2img.converter import Tab2Img
 from keras.src.callbacks import EarlyStopping
-
+from keras.src.utils import to_categorical
 from src.utils.helpers import create_image_from_numbers, expand_matrix_to_img_size, one_hot_labels
 from src.utils.config import config
 
@@ -23,7 +23,7 @@ class DNNEmbedding(nn.Module):
 
         X, y = kwargs.get("X"), kwargs.get("y")
         num_classes = len(set(y))
-        y = one_hot_labels(num_classes, y)
+        y = to_categorical(y, num_classes)
 
         model = Sequential()
         model.add(Dense(units=X.shape[1]//2, activation='relu', name="embedding"))

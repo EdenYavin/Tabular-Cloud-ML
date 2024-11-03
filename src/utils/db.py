@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import os
 
-from src.dataset.raw import RawDataset
+from src.dataset.base import RawDataset
 from src.utils.config import config
 from src.utils.constansts import (DATA_CACHE_PATH, DB_EMBEDDING_TOKEN, DB_LABEL_TOKEN, DB_RAW_FEATURES_TOKEN,
                                   DB_TRAIN_INDEX_TOKEN, DB_TEST_INDEX_TOKEN, DB_IMM_TRAIN_INDEX_TOKEN,

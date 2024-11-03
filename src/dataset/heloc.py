@@ -1,6 +1,6 @@
 from src.utils.helpers import preprocess
 import pandas as pd
-from src.dataset.raw.base import DATASET_DIR, RawDataset
+from src.dataset.base import DATASET_DIR, RawDataset
 
 class HelocDataset(RawDataset):
     name = 'heloc'

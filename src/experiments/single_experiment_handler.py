@@ -6,10 +6,10 @@ from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor.base import BaseEncryptor
 from src.encryptor import EncryptorFactory
 from src.internal_model.model import InternalInferenceModelFactory
-from src.internal_model.baseline import EmbeddingBaseline
+from src.internal_model.baseline import EmbeddingBaselineModelFactory
 from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
-from src.dataset.raw import DATASETS, RawDataset
+from src.dataset import DATASETS, RawDataset
 from src.utils.config import config
 import src.utils.constansts as consts
 
@@ -22,7 +22,6 @@ class ExperimentHandler:
         self.experiment_name = f"{w_emb}_{w_noise_labels}_{w_pred}"
         self.n_pred_vectors = config.experiment_config.n_pred_vectors
         self.n_noise_samples = config.experiment_config.n_noise_samples
-        self.k_folds = config.experiment_config.k_folds
 
     def run_experiment(self):
 
@@ -82,7 +81,8 @@ class ExperimentHandler:
                     print("Finished Creating the dataset")
 
                     print("#### GETTING EMBEDDING BASELINE PREDICTION ####")
-                    baseline_model = EmbeddingBaseline(
+
+                    baseline_model = EmbeddingBaselineModelFactory.get_model(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=dataset[consts.IIM_BASELINE_TRAIN_SET_TOKEN][0].shape[1:],
                     )

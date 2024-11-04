@@ -1,10 +1,11 @@
 import pandas as pd
+from keras.src.utils import to_categorical
 from tqdm import tqdm
 import numpy as np
 
 from src.encryptor.base import BaseEncryptor
 from src.cloud.base import CloudModel
-from src.utils.helpers import sample_noise, one_hot_labels, load_cache_file, save_cache_file, pad_image
+from src.utils.helpers import sample_noise, load_cache_file, save_cache_file
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
 import src.utils.constansts as consts
@@ -44,8 +45,8 @@ class Pipeline(object):
 
         if self.one_hot:
             num_classes = len(np.unique(y_train))
-            y_train = one_hot_labels(labels=y_train, num_classes=num_classes)
-            y_test = one_hot_labels(labels=y_test, num_classes=num_classes)
+            y_train = to_categorical(y_train, num_classes=num_classes)
+            y_test = to_categorical(y_test, num_classes=num_classes)
 
 
         train = [X_train, y_train]
@@ -74,7 +75,7 @@ class Pipeline(object):
 
             for _ in range(self.n_pred_vectors):
 
-                # Because we are expanding the dataset to more samples we need to expand the labels as well
+                # Because we are expanding the dataset to more samples (depending on n_pred) we need to expand the labels as well
                 new_y.append(y[idx])
 
                 observation = []

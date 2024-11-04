@@ -7,6 +7,7 @@ from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
 from PIL import Image, ImageDraw, ImageFont
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
 import tensorflow as tf
+from gensim.models import Word2Vec
 
 
 def pad_image(image, max_shape):
@@ -154,10 +155,10 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
     # Apply standard scaling to the numeric columns
     if numeric_cols:
         print("\nScaling numerical columns...")
-        # scaler = MinMaxScaler()
-        X_numeric = X[numeric_cols]
+        scaler = MinMaxScaler()
+        # X_numeric = X[numeric_cols]
         # if cloud_dataset:
-        #     X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols, index=X.index)
+        X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols, index=X.index)
         # else:
         #     X_numeric = pd.DataFrame(scaler.fit_transform(X[numeric_cols]), columns=numeric_cols, index=X.index)
 

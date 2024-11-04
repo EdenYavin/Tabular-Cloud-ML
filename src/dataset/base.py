@@ -1,7 +1,6 @@
 import numpy as np
 from keras.src.utils import to_categorical
 
-from src.utils.helpers import load_data, save_data
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from xgboost import XGBClassifier
@@ -26,7 +25,7 @@ class RawDataset:
 
         self.X, self.y = None, None
         self.sample_split = config.dataset_config.split_ratio
-        self.baseline_model = config.dataset_config.baseline_model
+        self.baseline_model = config.iim_config.name
         self.name = None
         self.metadata = {}
 
@@ -38,52 +37,6 @@ class RawDataset:
 
     def get_dataset(self):
         return self.X, self.y
-
-    def get_split(self, force_new_split=False):
-
-        try:
-
-            if not force_new_split:
-                # Do not load cached split
-                raise FileNotFoundError()
-
-            X_train, X_test, X_sample, y_train, y_test, y_sample =  load_data(self.name, self.sample_split)
-
-            if not self.use_pd_df and type(X_train) is pd.DataFrame:
-                X_train = X_train.values
-                X_test = X_test.values
-                X_sample = X_sample.values
-                y_train = y_train.values
-                y_test = y_test.values
-                y_sample = y_sample.values
-
-            return X_train, X_test, X_sample, y_train, y_test, y_sample
-
-        except FileNotFoundError:
-            # The cloud train-test split is 90% train and 10% test
-            X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.1, stratify=self.y,
-                                                                random_state=42)
-
-            if self.sample_split == 1:
-                # Use the entire Train set as the sample
-                X_sample, y_sample = X_train, y_train
-
-            else:
-                _, X_sample, _, y_sample = train_test_split(X_train, y_train, test_size=self.sample_split, stratify=y_train,
-                                                        random_state=42)
-
-            if not self.use_pd_df:
-                X_train = X_train.values
-                X_test = X_test.values
-                X_sample = X_sample.values
-                y_train = y_train.values
-                y_test = y_test.values
-                y_sample = y_sample.values
-
-            save_data(self.name, self.sample_split,
-                      [X_train, X_test, X_sample, y_train, y_test,  y_sample])
-
-            return X_train, X_test, X_sample, y_train, y_test, y_sample
 
 
     def k_fold_iterator(self, n_splits=10, shuffle=True, random_state=None):

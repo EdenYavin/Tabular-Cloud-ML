@@ -19,7 +19,6 @@ class Config(BaseModel):
         names: list = Field(description="The datasets to run the experiments on")
         split_ratio : float = Field(description="How much of the original train set (90%) will be used to train the IIM")
         one_hot: bool = Field(description="A flag to indicate if the ground truth labels should be one-hot encoded", default=False)
-        baseline_model: str = IIM_MODELS.NEURAL_NET
 
     class NEURAL_NET_CONFIG(BaseModel):
         epochs: int = 100
@@ -40,21 +39,17 @@ class Config(BaseModel):
         n_noise_samples: int = Field(description="Number samples to sample from the dataset and use as noise")
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
 
-    experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,
+    experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False)
     cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16)
-    iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.NEURAL_NET)
+    iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.XGBOOST)
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
-    dataset_config: DatasetConfig = DatasetConfig(one_hot=True,
+    dataset_config: DatasetConfig = DatasetConfig(one_hot=False,
                                                   split_ratio=1,
-                                                  names=[DATASETS.HELOC,
-                                                         DATASETS.ADULT,
-                                                         DATASETS.STUDENTS_DROPOUT,
-                                                         DATASETS.BANK_MARKETING,
-                                                         DATASETS.GESTURE_PHASE
+                                                  names=[DATASETS.HELOC
                                                          ]
                                                   )
-    pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)
+    pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=False)
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.DNN)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV)
 

@@ -12,16 +12,16 @@ import numpy as np
 
 
 from src.utils.config import config
+from src.utils.constansts import IIM_MODELS
 
 models = {
-    "xgboost": XGBClassifier,
+    IIM_MODELS.XGBOOST.value: XGBClassifier,
 }
-
 
 class TabularInternalModel(BaseEstimator, ClassifierMixin):
     def __init__(self, **kwargs):
-        self.name = kwargs.get("name", "xgboost")
-        self.model = kwargs.get("model", models['xgboost'])()
+        self.name = config.iim_config.name
+        self.model = kwargs.get('model')
 
     def fit(self, X, y):
         self.model.fit(X, y)
@@ -156,7 +156,7 @@ class InternalInferenceModelFactory:
         model = models.get(name)
 
         if model:
-            return TabularInternalModel(**dict(model=model, **kwargs))
+            return TabularInternalModel(**dict(model=model(), **kwargs))
 
         else:
             return DenseInternalModel(**kwargs)

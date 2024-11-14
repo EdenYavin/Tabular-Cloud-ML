@@ -86,8 +86,8 @@ class Pipeline(object):
 
                 embeddings = self.db.get_embedding(samples)
 
-                encrypted_data = self.encryptor.encode(embeddings)
-                image = (encrypted_data * 10000).astype(np.uint8)
+                image = self.encryptor.encode(embeddings)
+                # image = (encrypted_data * 10000).astype(np.uint8)
 
                 predictions = self.cloud_model.predict(image)
 
@@ -120,8 +120,8 @@ class Pipeline(object):
 
             embeddings = self.db.get_embedding(samples)
 
-            encrypted_data = self.encryptor.encode(embeddings)
-            image = (encrypted_data * 10000).astype(np.uint8)
+            image = self.encryptor.encode(embeddings)
+            # image = (encrypted_data * 10000).astype(np.uint8)
 
             predictions = self.cloud_model.predict(image)
 

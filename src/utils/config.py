@@ -49,7 +49,7 @@ class Config(BaseModel):
                                                   names=[DATASETS.HELOC
                                                          ]
                                                   )
-    pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=False)
+    pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.DNN)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV)
 

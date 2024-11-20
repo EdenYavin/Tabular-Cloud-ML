@@ -42,14 +42,11 @@ class Config(BaseModel):
     experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False)
     cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16)
-    iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.XGBOOST)
+    iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.NEURAL_NET)
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
-    dataset_config: DatasetConfig = DatasetConfig(one_hot=False,
+    dataset_config: DatasetConfig = DatasetConfig(one_hot=True,
                                                   split_ratio=1,
-                                                  names=[DATASETS.HELOC,
-                                                         DATASETS.ADULT,
-                                                         DATASETS.STUDENTS_DROPOUT,
-                                                         DATASETS.BANK_MARKETING
+                                                  names=[DATASETS.LOAD_APPROVAL
                                                          ]
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)

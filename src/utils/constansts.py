@@ -34,6 +34,7 @@ class DATASETS(str, enum.Enum):
     BANK_MARKETING = "bank_marketing"
     GESTURE_PHASE = "gesture_phase"
     PHISHING = "phishing"
+    LOAD_APPROVAL = "load_approval"
 
 
 WINDOWS_OS_STR = "nt"

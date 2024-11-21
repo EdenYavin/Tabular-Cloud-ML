@@ -35,6 +35,7 @@ class DATASETS(str, enum.Enum):
     GESTURE_PHASE = "gesture_phase"
     PHISHING = "phishing"
     LOAD_APPROVAL = "load_approval"
+    AIRLINE_SATISFACTION = "airline_satisfaction"
 
 
 WINDOWS_OS_STR = "nt"

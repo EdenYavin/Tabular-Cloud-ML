@@ -5,6 +5,7 @@ from src.dataset.bank_marketing import BankMarketing
 from src.dataset.students_dropout import StudentsDropout
 from src.dataset.phishing import PhishingDataset
 from src.dataset.load_approval import LoadApprovalDataset
+from src.dataset.airline import AirlineSatisfaction
 from src.dataset.base import RawDataset
 
 
@@ -16,4 +17,5 @@ DATASETS = {
     StudentsDropout.name: StudentsDropout,
     PhishingDataset.name: PhishingDataset,
     LoadApprovalDataset.name: LoadApprovalDataset,
+    AirlineSatisfaction.name: AirlineSatisfaction,
 }

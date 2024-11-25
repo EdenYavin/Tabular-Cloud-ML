@@ -33,7 +33,7 @@ class DATASETS(str, enum.Enum):
     STUDENTS_DROPOUT = "students_dropout"
     BANK_MARKETING = "bank_marketing"
     GESTURE_PHASE = "gesture_phase"
-    PHISHING = "phishing"
+    RAIN = "rain"
     LOAD_APPROVAL = "load_approval"
     AIRLINE_SATISFACTION = "airline_satisfaction"
 

@@ -7,9 +7,10 @@ from keras.src.layers import GlobalAveragePooling2D, Conv2D, Activation, BatchNo
     Flatten, Dense
 import tensorflow as tf
 from keras import regularizers
+from keras.api.models import load_model
 
 from src.cloud.base import CloudModel
-from src.utils.constansts import VGG16_CIFAR10_MODEL_PATH
+from src.utils.constansts import VGG16_CIFAR10_MODEL_PATH, CIFAR_100_VGG16_MODEL_PATH
 
 class ResNetEmbeddingCloudModel:
     name = "resnet"
@@ -112,6 +113,43 @@ class VGG16CloudModel(CloudModel):
 
     def evaluate(self, X, y):
         return -1, -1
+
+
+class VGG16Cifar100CloudModel(CloudModel):
+    name = "vgg16_cifar100"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.model = self.get_model()
+        self.input_shape = (32, 32, 3)
+        self.output_shape = (1,100)
+
+    def fit(self, X_train, y_train, **kwargs):
+        pass
+
+    def get_model(self):
+        # Load the pretrained VGG16 model with ImageNet weights
+        model = load_model(CIFAR_100_VGG16_MODEL_PATH)
+        return model
+
+    def predict(self, X):
+        X = self.preprocess(X)
+        predictions = self.model.predict(X, verbose=None)
+        return predictions
+
+
+    def preprocess(self, X):
+
+        padded_X = tf.image.resize_with_crop_or_pad(X, 32, 32)
+
+        # Ensure the input is properly preprocessed for VGG16
+        X = vgg_preprocess(padded_X.numpy())
+
+        return X
+
+    def evaluate(self, X, y):
+        return -1, -1
+
 
 
 class VGG16Cifer10CloudModel(CloudModel):

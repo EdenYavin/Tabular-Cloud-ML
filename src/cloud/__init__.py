@@ -1,5 +1,5 @@
 from src.cloud.base import CloudModel
-from src.cloud.vision import XceptionCloudModel, ResNetEmbeddingCloudModel, VGG16CloudModel, VGG16Cifer10CloudModel
+from src.cloud.vision import XceptionCloudModel, ResNetEmbeddingCloudModel, VGG16CloudModel, VGG16Cifer10CloudModel, VGG16Cifar100CloudModel
 from src.cloud.tabular import EnsembleCloudModel, TabularCloudModel, NeuralNetCloudModel
 # from src.cloud.llm import CasualLLMCloudModel, MaskedLLMCloudModel, SequenceClassificationLLMCloudModel
 
@@ -10,6 +10,7 @@ CLOUD_MODELS = {
     XceptionCloudModel.name: XceptionCloudModel,
     VGG16Cifer10CloudModel.name: VGG16Cifer10CloudModel,
     VGG16CloudModel.name: VGG16CloudModel,
+    VGG16Cifar100CloudModel.name: VGG16Cifar100CloudModel,
     # CasualLLMCloudModel.name: CasualLLMCloudModel,
     # MaskedLLMCloudModel.name: MaskedLLMCloudModel,
     # SequenceClassificationLLMCloudModel.name: SequenceClassificationLLMCloudModel,

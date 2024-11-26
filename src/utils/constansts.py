@@ -25,6 +25,7 @@ class CLOUD_MODELS(str, enum.Enum):
     NEURAL_NET_DENSE_LAYERS = "dense"
     Xception = "xception"
     VGG16_CIFAR10 = "vgg16_cifar10"
+    VGG16_CIFAR100 = "vgg16_cifar100"
     VGG16 = "vgg16"
 
 class DATASETS(str, enum.Enum):
@@ -93,6 +94,7 @@ os.makedirs(LLM_CACHE_PATH, exist_ok=True)
 LLM_PRED_VECTOR_TYPE_CONFIG_TOKEN = 'logits'
 LLM_TOP_K_CONFIG_TOKEN = "top_k"
 VGG16_CIFAR10_MODEL_PATH = os.path.join(MODELS_PATH, "cifar10vgg.h5")
+CIFAR_100_VGG16_MODEL_PATH = os.path.join(MODELS_PATH, "cifar100_vgg.keras")
 
 # ---------------------
 # INTERNAL MODEL SECTIONS

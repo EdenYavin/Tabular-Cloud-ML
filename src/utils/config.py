@@ -45,7 +45,7 @@ class Config(BaseModel):
     iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.NEURAL_NET)
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(one_hot=True,
-                                                  split_ratio=0.1,
+                                                  split_ratio=1,
                                                   names=[DATASETS.RAIN
                                                          ]
                                                   )

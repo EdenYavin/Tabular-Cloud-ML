@@ -46,7 +46,9 @@ class Config(BaseModel):
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(one_hot=True,
                                                   split_ratio=1,
-                                                  names=[DATASETS.RAIN
+                                                  names=[DATASETS.LOAD_APPROVAL,
+                                                         DATASETS.BANK_MARKETING,
+                                                         DATASETS.AIRLINE_SATISFACTION
                                                          ]
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)

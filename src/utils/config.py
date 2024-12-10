@@ -41,7 +41,7 @@ class Config(BaseModel):
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False)
-    cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16_CIFAR100)
+    cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16)
     iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.XGBOOST)
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(one_hot=False,

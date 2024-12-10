@@ -3,7 +3,7 @@ import pandas as pd
 
 from src.pipeline.encoding_pipeline import Pipeline
 from src.cloud import CloudModel, CLOUD_MODELS
-from src.encryptor.base import BaseEncryptor
+from src.encryptor.base import BaseEncryptor, Encryptors
 from src.encryptor import EncryptorFactory
 from src.internal_model.model import InternalInferenceModelFactory
 from src.internal_model.baseline import EmbeddingBaselineModelFactory
@@ -46,9 +46,13 @@ class ExperimentHandler:
                 num_classes=raw_dataset.get_n_classes()
             )
             embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y)
-            encryptor: BaseEncryptor = EncryptorFactory().get_model(
-                output_shape=(1, *cloud_model.input_shape),
-            )
+            # encryptor: BaseEncryptor = EncryptorFactory().get_model(
+            #     output_shape=(1, *cloud_model.input_shape),
+            # )
+            encryptor = Encryptors(output_shape=(1, *cloud_model.input_shape),
+                                   number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,
+                                   enc_base_cls=EncryptorFactory.get_model_cls()
+                                   )
 
             X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
             print(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")

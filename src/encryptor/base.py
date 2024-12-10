@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class BaseEncryptor:
 
     name: str
@@ -20,3 +19,25 @@ class BaseEncryptor:
             output_shape = self.output_shape or (1, inputs.shape[2])
             self.model = self.build_generator(input_shape, output_shape)
         return self.model(inputs).numpy()
+
+
+class Encryptors:
+    """
+    Ensemble class to join together numerous encryptors from the same type.
+    """
+    name: str
+
+    def __init__(self, input_shape=None, output_shape=None, number_of_encryptors_to_init=1, enc_base_cls=BaseEncryptor):
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+        self.number_of_encryptors_to_init = number_of_encryptors_to_init
+        self.models = None
+        self.enc_base_cls = enc_base_cls
+        self.name =  enc_base_cls.name
+
+    def encode(self, inputs) -> np.array:
+        inputs = np.expand_dims(inputs, axis=0)
+        if self.models is None:
+            self.models = [self.enc_base_cls(output_shape=(1,*self.output_shape)) for _ in range(self.number_of_encryptors_to_init)]
+
+        return [model.encode(inputs) for model in self.models]

@@ -39,12 +39,14 @@ class Config(BaseModel):
         n_noise_samples: int = Field(description="Number samples to sample from the dataset and use as noise")
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
 
-    experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,k_folds=1,
+
+
+    experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=2,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False)
     cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16)
-    iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.XGBOOST)
+    iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.NEURAL_NET)
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
-    dataset_config: DatasetConfig = DatasetConfig(one_hot=False,
+    dataset_config: DatasetConfig = DatasetConfig(one_hot=True,
                                                   split_ratio=1,
                                                   names=[DATASETS.LOAD_APPROVAL,
                                                          DATASETS.BANK_MARKETING,

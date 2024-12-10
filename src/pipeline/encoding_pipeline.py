@@ -86,10 +86,12 @@ class Pipeline(object):
 
                 embeddings = self.db.get_embedding(samples)
 
-                image = self.encryptor.encode(embeddings)
+                images = self.encryptor.encode(embeddings) # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as feautres
                 # image = (encrypted_data * 10000).astype(np.uint8)
 
-                predictions = self.cloud_model.predict(image)
+                # We are then creating a prediction vector for each new encoded sample (image)
+                predictions = [self.cloud_model.predict(image)  for image in images]
+                predictions = np.hstack(predictions) # Create one feature vector of all concatenated predictions
 
                 if self.use_predictions:
                     observation.append(predictions) # Shape - |CMLS|
@@ -120,10 +122,12 @@ class Pipeline(object):
 
             embeddings = self.db.get_embedding(samples)
 
-            image = self.encryptor.encode(embeddings)
+            images = self.encryptor.encode(embeddings)  # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as feautres
             # image = (encrypted_data * 10000).astype(np.uint8)
 
-            predictions = self.cloud_model.predict(image)
+            # We are then creating a prediction vector for each new encoded sample (image)
+            predictions = [self.cloud_model.predict(image) for image in images]
+            predictions = np.hstack(predictions)  # Create one feature vector of all concatenated predictions
 
             if self.use_predictions:
                 sample.append(predictions)

@@ -46,9 +46,6 @@ class ExperimentHandler:
                 num_classes=raw_dataset.get_n_classes()
             )
             embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y)
-            # encryptor: BaseEncryptor = EncryptorFactory().get_model(
-            #     output_shape=(1, *cloud_model.input_shape),
-            # )
             encryptor = Encryptors(output_shape=(1, *cloud_model.input_shape),
                                    number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,
                                    enc_base_cls=EncryptorFactory.get_model_cls()

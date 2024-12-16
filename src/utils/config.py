@@ -41,7 +41,7 @@ class Config(BaseModel):
 
 
 
-    experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=2,k_folds=1,
+    experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=3,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False)
     cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16)
     iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.NEURAL_NET)
@@ -49,10 +49,6 @@ class Config(BaseModel):
     dataset_config: DatasetConfig = DatasetConfig(one_hot=True,
                                                   split_ratio=1,
                                                   names=[DATASETS.LOAD_APPROVAL,
-                                                         DATASETS.BANK_MARKETING,
-                                                         DATASETS.AIRLINE_SATISFACTION,
-                                                         DATASETS.RAIN,
-                                                         DATASETS.GESTURE_PHASE
                                                          ]
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)

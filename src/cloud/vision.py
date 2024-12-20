@@ -11,6 +11,7 @@ from keras.api.models import load_model
 
 from src.cloud.base import CloudModel
 from src.utils.constansts import VGG16_CIFAR10_MODEL_PATH, CIFAR_100_VGG16_MODEL_PATH
+from src.utils.config import config
 
 class ResNetEmbeddingCloudModel:
     name = "resnet"
@@ -81,25 +82,41 @@ class VGG16CloudModel(CloudModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.model = self.get_model()
-        self.input_shape = (224, 224, 3)
+        self.input_shape = config.cloud_config.input_shape
         self.output_shape = (1,1000)
 
     def fit(self, X_train, y_train, **kwargs):
         pass
 
     def get_model(self):
-        # Load the pretrained VGG16 model with ImageNet weights
-        model = VGG16(weights='imagenet')
+
+        # If the class head flag is not set, we need to use include_top = False.
+        # This will cause the vgg model to output the last hidden layer state.
+        # We will use a softmax with a temperature to soften the output so it still be a pred vector
+        if not config.cloud_config.use_classification_head:
+            # Load the pretrained VGG16 model with ImageNet weights
+            model = VGG16(weights='imagenet', include_top=False, input_shape=self.input_shape)
+        else:
+            model = VGG16(weights='imagenet')
+
         return model
 
     def predict(self, X):
         X = self.preprocess(X)
         predictions = self.model.predict(X, verbose=None)
+
+        # If the use_class_head flag is not set, the predictions will be a hidden state.
+        # We will use a softmax with a temperature from the config to soften it
+        if not config.cloud_config.use_classification_head:
+            predictions = tf.nn.softmax(predictions / config.cloud_config.temperature, axis=1)
+
         return predictions
 
     def preprocess(self, X):
 
-        if any(s < 224 for s in X.shape[1:3]):
+        # If the use_class_head is not set, we will use the real output shape, in this case
+        # no need to readjust the image size.
+        if any(s < 224 for s in X.shape[1:3]) and config.cloud_config.use_classification_head:
             # Pad the input to make its size equal to 224
             padded_X = tf.image.resize_with_crop_or_pad(X, 224, 224)
 

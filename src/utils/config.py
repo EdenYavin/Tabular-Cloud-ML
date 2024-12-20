@@ -30,6 +30,9 @@ class Config(BaseModel):
 
     class CloudModelConfig(BaseModel):
         name: str = Field(description="Cloud model to use", default=CLOUD_MODELS.VGG16)
+        use_classification_head: bool = Field(description="Flag to indicate if cloud model should be used with classification head", default=True)
+        temperature: float = Field(description="Temperature of the cloud model", default=3.5)
+        input_shape: float = Field(description="Shape of the input cloud model", default=(128, 128, 3))
 
     class ExperimentConfig(BaseModel):
         use_labels: bool = Field(description="A flag to indicate if the noise labels should be used in training the IIM")
@@ -43,7 +46,7 @@ class Config(BaseModel):
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=3,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False)
-    cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16)
+    cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16, use_classification_head=True)
     iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.NEURAL_NET)
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(one_hot=True,

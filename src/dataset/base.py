@@ -6,8 +6,8 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from xgboost import XGBClassifier
 from keras.src.layers import Dense, Dropout, Input, BatchNormalization
 from keras.src.models import Model
-import pathlib
-from src.utils.constansts import DATASETS_PATH, XGBOOST_BASELINE
+import pathlib, tensorflow as tf
+from src.utils.constansts import DATASETS_PATH, XGBOOST_BASELINE, CPU_DEVICE
 from src.utils.config import config
 from src.internal_model.model import InternalInferenceModelFactory
 
@@ -78,7 +78,10 @@ class RawDataset:
                 input_shape=self.get_number_of_features(),  # Only give the number of features
             )
             y_train = to_categorical(y_train)
-            clf.fit(X_train, y_train)
+
+            with tf.device(CPU_DEVICE):
+            # Dense networks run faster on CPU
+                clf.fit(X_train, y_train)
             preds = clf.predict(X_test)
 
         acc = accuracy_score(y_test, preds)

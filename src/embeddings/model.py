@@ -8,11 +8,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
+import tensorflow as tf
 from tab2img.converter import Tab2Img
 from keras.src.callbacks import EarlyStopping
 from keras.src.utils import to_categorical
-from src.utils.helpers import create_image_from_numbers, expand_matrix_to_img_size, one_hot_labels
+from src.utils.helpers import create_image_from_numbers, expand_matrix_to_img_size
 from src.utils.config import config
+from src.utils.constansts import CPU_DEVICE
 
 class DNNEmbedding(nn.Module):
 
@@ -33,7 +35,10 @@ class DNNEmbedding(nn.Module):
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         early_stop = EarlyStopping(patience=2, monitor="loss")
 
-        model.fit(X, y, epochs=50, batch_size=64, callbacks=[early_stop])
+        with tf.device(CPU_DEVICE):
+            # Dense networks run faster on CPU
+            model.fit(X, y, epochs=50, batch_size=64, callbacks=[early_stop])
+
         self.model = model.layers[0]
         self.output_shape = (1, X.shape[1]//2)
 

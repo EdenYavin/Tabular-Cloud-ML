@@ -83,6 +83,7 @@ libclang==18.1.1
 lightgbm==4.5.0
 llvmlite==0.43.0
 lm-format-enforcer==0.10.6
+loguru==0.7.3
 Markdown==3.7
 markdown-it-py==3.0.0
 MarkupSafe==2.1.4
@@ -169,6 +170,8 @@ tensorboard==2.16.2
 tensorboard-data-server==0.7.2
 tensorflow==2.16.2
 tensorflow-io-gcs-filesystem==0.37.1
+tensorflow-macos==2.16.2
+tensorflow-metal==1.1.0
 termcolor==2.4.0
 terminado==0.18.1
 threadpoolctl==3.5.0

@@ -82,7 +82,7 @@ class ExperimentHandler:
                     dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
                     logger.debug("Finished Creating the dataset")
 
-                    logger.info("#### EVALUATING EMBEDDING BASELINE MODEL ####")
+                    logger.info(f"#### EVALUATING EMBEDDING BASELINE MODEL ####\nDataset Shape: Train - {dataset.train_embeddings.embeddings.shape}, Test: {dataset.test_embeddings.embeddings.shape}")
                     baseline_model = EmbeddingBaselineModelFactory.get_model(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=dataset.train_embeddings.embeddings.shape[1],
@@ -94,7 +94,7 @@ class ExperimentHandler:
                         dataset.test_embeddings.embeddings, dataset.test_embeddings.labels
                     )
 
-                    logger.info("#### EVALUATING PREDICTIONS BASELINE MODEL ####")
+                    logger.info(f"#### EVALUATING PREDICTIONS BASELINE MODEL ####\nDataset Shape: Train - {dataset.train_predictions.predictions.shape}, Test: {dataset.test_predictions.predictions.shape}")
                     baseline_model = EmbeddingBaselineModelFactory.get_model(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=dataset.train_predictions.predictions.shape[1],
@@ -106,7 +106,7 @@ class ExperimentHandler:
                         dataset.test_predictions.predictions, dataset.test_predictions.labels
                     )
 
-                    logger.info("#### EVALUATING INTERNAL MODEL ####")
+                    logger.info(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {dataset.train_iim_features.features.shape}, Test: {dataset.test_iim_features.features.shape}")
                     internal_model = InternalInferenceModelFactory().get_model(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=dataset.train_iim_features.features.shape[1],

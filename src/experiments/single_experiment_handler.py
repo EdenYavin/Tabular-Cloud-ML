@@ -85,38 +85,38 @@ class ExperimentHandler:
                     logger.info("#### EVALUATING EMBEDDING BASELINE MODEL ####")
                     baseline_model = EmbeddingBaselineModelFactory.get_model(
                         num_classes=raw_dataset.get_n_classes(),
-                        input_shape=dataset.train_data.embeddings.shape[1],
+                        input_shape=dataset.train_embeddings.embeddings.shape[1],
                     )
                     baseline_model.fit(
-                        dataset.train_data.embeddings, dataset.train_data.labels,
+                        dataset.train_embeddings.embeddings, dataset.train_embeddings.labels,
                     )
                     baseline_emb_acc, baseline_emb_f1 = baseline_model.evaluate(
-                        dataset.test_data.embeddings, dataset.test_data.labels
+                        dataset.test_embeddings.embeddings, dataset.test_embeddings.labels
                     )
 
                     logger.info("#### EVALUATING PREDICTIONS BASELINE MODEL ####")
                     baseline_model = EmbeddingBaselineModelFactory.get_model(
                         num_classes=raw_dataset.get_n_classes(),
-                        input_shape=dataset.train_data.predictions.shape[1],
+                        input_shape=dataset.train_predictions.predictions.shape[1],
                     )
                     baseline_model.fit(
-                        dataset.train_data.predictions, dataset.train_data.labels,
+                        dataset.train_predictions.predictions, dataset.train_predictions.labels,
                     )
                     baseline_pred_acc, baseline_pred_f1 = baseline_model.evaluate(
-                        dataset.test_data.predictions, dataset.test_data.labels
+                        dataset.test_predictions.predictions, dataset.test_predictions.labels
                     )
 
                     logger.info("#### EVALUATING INTERNAL MODEL ####")
                     internal_model = InternalInferenceModelFactory().get_model(
                         num_classes=raw_dataset.get_n_classes(),
-                        input_shape=dataset.train_data.predictions_and_embeddings.shape[1],
+                        input_shape=dataset.train_iim_features.features.shape[1],
                         # Only give the number of features
                     )
                     internal_model.fit(
-                        dataset.train_data.predictions_and_embeddings, dataset.train_data.labels,
+                        dataset.train_iim_features.features, dataset.train_iim_features.labels,
                     )
                     test_acc, test_f1 = internal_model.evaluate(
-                        dataset.test_data.predictions_and_embeddings, dataset.test_data.labels
+                        dataset.test_iim_features.features, dataset.test_iim_features.labels
                     )
 
                     logger.info(f"""

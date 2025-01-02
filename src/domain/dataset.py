@@ -3,9 +3,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from tqdm import tqdm
-from pydantic import BaseModel, ConfigDict, Field
-
-import src.utils.constansts as consts
+from pydantic import BaseModel, ConfigDict
 
 class Batch:
 
@@ -41,17 +39,28 @@ class Batch:
         return np.vstack(data), np.vstack(y)
 
 
-class Features(BaseModel):
+class IIMFeatures(BaseModel):
     # Enable arbitrary types in the model configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    features: NDArray[np.float_]
+    labels: NDArray[np.float_] | list[float]
+
+class EmbeddingBaselineFeatures(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     embeddings: NDArray[np.float_]
+    labels: NDArray[np.float_] | list[float]
+
+class PredictionBaselineFeatures(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     predictions: NDArray[np.float_]
-    predictions_and_embeddings: NDArray[np.float_]
     labels: NDArray[np.float_] | list[float]
 
 class PredictionsDataset(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    train_data: Features
-    test_data: Features
+    train_iim_features: IIMFeatures
+    train_embeddings: EmbeddingBaselineFeatures
+    train_predictions: PredictionBaselineFeatures
+    test_iim_features: IIMFeatures
+    test_embeddings: EmbeddingBaselineFeatures
+    test_predictions: PredictionBaselineFeatures

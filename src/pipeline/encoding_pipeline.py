@@ -5,7 +5,7 @@ import numpy as np
 from loguru import logger
 import tensorflow as tf
 
-from src.domain.dataset import PredictionsDataset, Features, Batch
+from src.domain.dataset import PredictionsDataset,IIMFeatures,PredictionBaselineFeatures,EmbeddingBaselineFeatures, Batch
 from src.encryptor.base import Encryptors
 from src.cloud.base import CloudModel
 from src.utils.constansts import GPU_DEVICE
@@ -43,25 +43,28 @@ class FeatureEngineeringPipeline(object):
                 logger.info(f"Dataset {self.name} was already processed before, loading cache")
                 return dataset
 
-        X_train, y_train, X_emb_train, X_pred_train = self._get_new_features(X_train, y_train, is_test=False)
-        X_test, y_test, X_emb_test, X_pred_test = self._get_new_features(X_test, y_test, is_test=True)
+        X_train, new_y_train, X_emb_train, X_pred_train = self._get_new_features(X_train, y_train, is_test=False)
+        X_test, new_y_test, X_emb_test, X_pred_test = self._get_new_features(X_test, y_test, is_test=True)
 
         # One hot encode the labels
         num_classes = len(np.unique(y_train))
         y_train = to_categorical(y_train, num_classes=num_classes)
+        new_y_train = to_categorical(new_y_train, num_classes=num_classes)
         y_test = to_categorical(y_test, num_classes=num_classes)
+        new_y_test = to_categorical(new_y_test, num_classes=num_classes)
 
         dataset = PredictionsDataset(
-            train_data=Features(embeddings=X_emb_train, predictions_and_embeddings=X_train, predictions=X_pred_train, labels=y_train),
-            test_data=Features(embeddings=X_emb_test, predictions_and_embeddings=X_test, predictions=X_pred_test, labels=y_test)
+            train_iim_features=IIMFeatures(features=X_train, labels=new_y_train),
+            train_embeddings=EmbeddingBaselineFeatures(embeddings=X_emb_train, labels=y_train),
+            train_predictions=PredictionBaselineFeatures(predictions=X_pred_train, labels=new_y_train),
+            test_iim_features=IIMFeatures(features=X_test, labels=new_y_test),
+            test_embeddings=EmbeddingBaselineFeatures(embeddings=X_emb_test, labels=y_test),
+            test_predictions=PredictionBaselineFeatures(predictions=X_pred_test, labels=new_y_test),
         )
 
         save_cache_file(dataset_name=name, split_ratio=self.split_ratio, data=dataset)
         self.db.save()
-        return PredictionsDataset(
-            train_data=Features(embeddings=X_emb_train, predictions_and_embeddings=X_train, predictions=X_pred_train, labels=y_train),
-            test_data=Features(embeddings=X_emb_test, predictions_and_embeddings=X_test, predictions=X_pred_test, labels=y_test)
-        )
+        return dataset
 
     def _prepare_embedding_data(self, X, y, is_test=False):
         new_y = []
@@ -133,7 +136,7 @@ class FeatureEngineeringPipeline(object):
                 observation.append(noise_labels[batch.start: batch.end]) # Shape - |V| * Number of noise samples
 
             observations.append(np.hstack(observation))
-            embeddings_for_baseline.append(embeddings_samples)
+            embeddings_for_baseline.append(mini_batch)
             predictions_for_baseline.append(predictions)
 
         return np.vstack(observations), np.vstack(new_y), np.vstack(embeddings_for_baseline), np.vstack(predictions_for_baseline)

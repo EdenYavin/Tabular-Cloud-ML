@@ -13,7 +13,7 @@ class BaseEncryptor:
         raise NotImplementedError("Subclasses should implement this method")
 
     def encode(self, inputs) -> np.array:
-        inputs = np.expand_dims(inputs, axis=0)
+        # inputs = np.resize(inputs, (100, 11, 11, 1))  # Resize by repeating, turning the samples to an images
         if self.model is None:
             input_shape = inputs.shape[1:]
             output_shape = self.output_shape or (1, inputs.shape[2])
@@ -35,9 +35,14 @@ class Encryptors:
         self.enc_base_cls = enc_base_cls
         self.name =  enc_base_cls.name
 
-    def encode(self, inputs) -> np.array:
-        inputs = np.expand_dims(inputs, axis=0)
+    def encode(self, inputs, number_of_encoder_to_use=1) -> np.array:
         if self.models is None:
-            self.models = [self.enc_base_cls(output_shape=(1,*self.output_shape)) for _ in range(self.number_of_encryptors_to_init)]
+            self.models = [self.enc_base_cls(output_shape=self.output_shape) for _ in range(self.number_of_encryptors_to_init)]
 
-        return [model.encode(inputs) for model in self.models]
+        assert number_of_encoder_to_use <= len(self.models)
+
+        outputs = []
+        for encoder in self.models[:number_of_encoder_to_use]:
+            outputs.append(encoder.encode(inputs))
+
+        return np.vstack(outputs)

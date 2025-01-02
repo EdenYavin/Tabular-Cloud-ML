@@ -73,16 +73,18 @@ class RawDataset:
             clf.fit(X_train, y_train)
             preds = clf.predict(X_test)
         else:
-            clf = InternalInferenceModelFactory.get_model(
-                num_classes=self.get_n_classes(),
-                input_shape=self.get_number_of_features(),  # Only give the number of features
-            )
-            y_train = to_categorical(y_train)
-
             with tf.device(CPU_DEVICE):
-            # Dense networks run faster on CPU
+
+                clf = InternalInferenceModelFactory.get_model(
+                    num_classes=self.get_n_classes(),
+                    input_shape=self.get_number_of_features(),  # Only give the number of features
+                )
+                y_train = to_categorical(y_train)
+
+                # Dense networks run faster on CPU
                 clf.fit(X_train, y_train)
-            preds = clf.predict(X_test)
+
+                preds = clf.predict(X_test)
 
         acc = accuracy_score(y_test, preds)
         try:

@@ -1,4 +1,5 @@
 import pandas as pd
+from huggingface_hub.keras_mixin import keras
 from keras.src.applications import resnet
 from keras.src.applications.resnet import preprocess_input
 from keras.src.layers import Dense, BatchNormalization
@@ -14,7 +15,7 @@ from keras.src.callbacks import EarlyStopping
 from keras.src.utils import to_categorical
 from src.utils.helpers import create_image_from_numbers, expand_matrix_to_img_size
 from src.utils.config import config
-from src.utils.constansts import CPU_DEVICE
+from src.utils.constansts import CPU_DEVICE, EMBEDDING_MODEL_PATH
 
 class DNNEmbedding(nn.Module):
 
@@ -22,22 +23,14 @@ class DNNEmbedding(nn.Module):
 
     def __init__(self, **kwargs):
         super(DNNEmbedding, self).__init__()
-
         X, y = kwargs.get("X"), kwargs.get("y")
-        num_classes = len(set(y))
-        y = to_categorical(y, num_classes)
-
-        model = Sequential()
-        model.add(Dense(units=X.shape[1]//2, activation='relu', name="embedding"))
-        model.add(BatchNormalization())
-        model.add(Dense(units=num_classes, activation='softmax', name="output"))
-
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-        early_stop = EarlyStopping(patience=2, monitor="loss")
-
-        with tf.device(CPU_DEVICE):
-            # Dense networks run faster on CPU
-            model.fit(X, y, epochs=50, batch_size=64, callbacks=[early_stop])
+        dataset_name = kwargs.get("dataset_name", None)
+        path = EMBEDDING_MODEL_PATH / f"{dataset_name}.h5" or ""
+        if path.exists():
+            model = keras.models.load_model(path)
+        else:
+            model = self._get_trained_model(X,y)
+            model.save(path)
 
         self.model = model.layers[0]
         self.output_shape = (1, X.shape[1]//2)
@@ -51,6 +44,26 @@ class DNNEmbedding(nn.Module):
         embedding = self.model(x)
         return embedding
 
+
+
+    def _get_trained_model(self, X:np.ndarray | pd.DataFrame, y:np.ndarray | pd.DataFrame):
+
+        num_classes = len(set(y))
+        y = to_categorical(y, num_classes)
+
+        model = Sequential()
+        model.add(Dense(units=X.shape[1] // 2, activation='relu', name="embedding"))
+        model.add(BatchNormalization())
+        model.add(Dense(units=num_classes, activation='softmax', name="output"))
+
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        early_stop = EarlyStopping(patience=2, monitor="loss")
+
+        with tf.device(CPU_DEVICE):
+            # Dense networks run faster on CPU
+            model.fit(X, y, epochs=50, batch_size=64, callbacks=[early_stop])
+
+        return model
 
 class ImageEmbedding(nn.Module):
 

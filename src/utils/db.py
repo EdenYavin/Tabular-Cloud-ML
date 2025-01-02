@@ -99,6 +99,8 @@ class ExperimentDatabase:
             with open(self.cache_file_path, 'wb') as f:
                 pickle.dump(self.db, f)
 
+            del self.db
+
         except Exception as e:
             print(str(e))
             print("Skipping saving")

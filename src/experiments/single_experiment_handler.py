@@ -1,9 +1,9 @@
 from tqdm import tqdm
 import pandas as pd
 
-from src.pipeline.encoding_pipeline import Pipeline
+from src.pipeline.encoding_pipeline import FeatureEngineeringPipeline
 from src.cloud import CloudModel, CLOUD_MODELS
-from src.encryptor.base import BaseEncryptor, Encryptors
+from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
 from src.internal_model.model import InternalInferenceModelFactory
 from src.internal_model.baseline import EmbeddingBaselineModelFactory
@@ -46,8 +46,8 @@ class ExperimentHandler:
             cloud_model: CloudModel = CLOUD_MODELS[config.cloud_config.name](
                 num_classes=raw_dataset.get_n_classes()
             )
-            embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y)
-            encryptor = Encryptors(output_shape=(1, *cloud_model.input_shape),
+            embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name.value)
+            encryptor = Encryptors(output_shape=cloud_model.input_shape,
                                    number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,
                                    enc_base_cls=EncryptorFactory.get_model_cls()
                                    )
@@ -70,7 +70,7 @@ class ExperimentHandler:
                     logger.debug(f"CREATING THE CLOUD-TRAINSET FROM {dataset_name},"
                           f" WITH {n_noise_samples} NOISE SAMPLES AND {n_pred_vectors} PREDICTION VECTORS")
 
-                    dataset_creator = Pipeline(
+                    dataset_creator = FeatureEngineeringPipeline(
                         dataset_name=dataset_name,
                         cloud_models=cloud_model,
                         encryptor=encryptor,

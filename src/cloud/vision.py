@@ -113,18 +113,10 @@ class VGG16CloudModel(CloudModel):
         return predictions
 
     def preprocess(self, X):
+        # Resize the inputs to always be 224, small or big.
+        resize_X = tf.image.resize_with_crop_or_pad(X, 224, 224)
 
-        # If the use_class_head is not set, we will use the real output shape, in this case
-        # no need to readjust the image size.
-        if any(s < 224 for s in X.shape[1:3]) and config.cloud_config.use_classification_head:
-            # Pad the input to make its size equal to 224
-            padded_X = tf.image.resize_with_crop_or_pad(X, 224, 224)
-
-            # Ensure the input is properly preprocessed for VGG16
-            X = vgg_preprocess(padded_X.numpy())
-        else:
-            # If no padding is needed, directly preprocess the input
-            X = vgg_preprocess(X)
+        X = vgg_preprocess(resize_X)
 
         return X
 

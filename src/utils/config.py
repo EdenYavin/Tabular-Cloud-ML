@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from src.utils.constansts import EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, DATASETS
+from src.utils.constansts import EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, DATASETS, HARD_DATASETS
 
 
 class Config(BaseModel):
@@ -19,6 +19,7 @@ class Config(BaseModel):
         names: list = Field(description="The datasets to run the experiments on")
         split_ratio : float = Field(description="How much of the original train set (90%) will be used to train the IIM")
         one_hot: bool = Field(description="A flag to indicate if the ground truth labels should be one-hot encoded", default=False)
+        batch_size: int = Field(description="Batch size to accumulate", default=100)
 
     class NEURAL_NET_CONFIG(BaseModel):
         epochs: int = 100
@@ -50,11 +51,8 @@ class Config(BaseModel):
     iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.NEURAL_NET)
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(
-                                                  split_ratio=1,
-                                                  names=[DATASETS.ADULT,
-
-
-                                                         ]
+                                                  split_ratio=0.1,
+                                                  names=HARD_DATASETS
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.DNN)

@@ -1,6 +1,8 @@
 import os
+import pathlib
 import sys
 import enum
+import tensorflow as tf
 
 class EMBEDDING_TYPES(str, enum.Enum):
     STRING = "w2v_embedding"
@@ -100,8 +102,8 @@ CIFAR_100_VGG16_MODEL_PATH = os.path.join(MODELS_PATH, "cifar100_vgg.keras")
 # INTERNAL MODEL SECTIONS
 # ---------------------
 CONFIG_INN_SECTION = "IIM"
-IIM_TRAIN_SET_TOKEN = "train"
-IIM_TEST_SET_TOKEN = "test"
+TRAIN_SET_TOKEN = "train"
+TEST_SET_TOKEN = "test"
 IIM_BASELINE_TRAIN_SET_TOKEN = "baseline_train"
 IIM_BASELINE_TEST_SET_TOKEN = "baseline_test"
 
@@ -148,14 +150,21 @@ CONFIG_IMM_NAME_TOKEN = "name"
 CONFIG_ENCRYPTOR_SECTION = "ENCRYPTOR"
 GPU_MODELS = ['dc', 'resnet', 'efficientnet']
 CONFIG_ENCRYPTOR_NAME_TOKEN = "name"
-GPU_DEVICE = '/GPU:0'
 CPU_DEVICE = '/CPU:0'
+GPU_DEVICE = (CPU_DEVICE if len(tf.config.get_visible_devices()) == 1
+              else '/GPU:0')
 
 # ---------------------
 # EXPERIMENT SECTIONS
 # ---------------------
 CONFIG_EXPERIMENT_SECTION = "EXPERIMENT"
 K_FOLDS_TOKEN = "k_fold"
+
+# ---------------------
+# EMBEDDING SECTIONS
+# ---------------------
+EMBEDDING_MODEL_PATH = pathlib.Path(MODELS_PATH) / "embeddings"
+EMBEDDING_MODEL_PATH.mkdir(exist_ok=True)
 
 
 # ---------------------

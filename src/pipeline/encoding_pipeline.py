@@ -5,21 +5,22 @@ import numpy as np
 from loguru import logger
 import tensorflow as tf
 
-from src.domain.dataset import PredictionsDataset, PredictionsData
-from src.encryptor.base import BaseEncryptor
+from src.domain.dataset import PredictionsDataset, Features, Batch
+from src.encryptor.base import Encryptors
 from src.cloud.base import CloudModel
+from src.utils.constansts import GPU_DEVICE
 from src.utils.helpers import sample_noise, load_cache_file, save_cache_file
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
 import src.utils.constansts as consts
 
-class Pipeline(object):
+class FeatureEngineeringPipeline(object):
 
     def __init__(self, dataset_name, cloud_models, encryptor, embeddings_model,
                  n_pred_vectors, n_noise_samples, metadata = None):
 
         self.cloud_model: CloudModel = cloud_models
-        self.encryptor: BaseEncryptor = encryptor
+        self.encryptor: Encryptors = encryptor
         self.n_pred_vectors = n_pred_vectors
         self.n_noise_samples = n_noise_samples
         self.name = dataset_name
@@ -40,118 +41,99 @@ class Pipeline(object):
         if dataset := load_cache_file(dataset_name=name, split_ratio=self.split_ratio):
             if not self.force_run:
                 logger.info(f"Dataset {self.name} was already processed before, loading cache")
-                return  PredictionsDataset(
-            train_data=PredictionsData(embeddings=dataset[consts.IIM_BASELINE_TRAIN_SET_TOKEN],
-                                       predictions_and_embeddings=consts.IIM_TRAIN_SET_TOKEN[0],
-                                       labels=consts.IIM_TRAIN_SET_TOKEN[1]),
-            test_data=PredictionsDataset(embeddings=dataset[consts.IIM_BASELINE_TEST_SET_TOKEN],
-                                       predictions_and_embeddings=consts.IIM_TEST_SET_TOKEN[0],
-                                       labels=consts.IIM_TEST_SET_TOKEN[1])
-        )
+                return dataset
 
-        X_train, y_train, X_emb_train, X_pred_train = self._create_train(X_train, y_train)
-        X_test, X_emb_test, X_pred_test = self._create_test(X_test, y_test)
+        X_train, y_train, X_emb_train, X_pred_train = self._get_new_features(X_train, y_train, is_test=False)
+        X_test, y_test, X_emb_test, X_pred_test = self._get_new_features(X_test, y_test, is_test=True)
 
         # One hot encode the labels
         num_classes = len(np.unique(y_train))
         y_train = to_categorical(y_train, num_classes=num_classes)
         y_test = to_categorical(y_test, num_classes=num_classes)
 
-        train = [X_train, y_train]
-        test = [X_test, y_test]
-
-        dataset = {
-            consts.IIM_TRAIN_SET_TOKEN: train,
-            consts.IIM_BASELINE_TRAIN_SET_TOKEN: [X_emb_train, y_train],
-            consts.IIM_TEST_SET_TOKEN: test,
-            consts.IIM_BASELINE_TEST_SET_TOKEN: [X_emb_test, y_test]
-        }
+        dataset = PredictionsDataset(
+            train_data=Features(embeddings=X_emb_train, predictions_and_embeddings=X_train, predictions=X_pred_train, labels=y_train),
+            test_data=Features(embeddings=X_emb_test, predictions_and_embeddings=X_test, predictions=X_pred_test, labels=y_test)
+        )
 
         save_cache_file(dataset_name=name, split_ratio=self.split_ratio, data=dataset)
         self.db.save()
         return PredictionsDataset(
-            train_data=PredictionsData(embeddings=X_emb_train, predictions_and_embeddings=X_train,predictions=X_pred_train, labels=y_train),
-            test_data=PredictionsDataset(embeddings=X_emb_test, predictions_and_embeddings=X_test,predictions=X_pred_test, labels=y_test)
+            train_data=Features(embeddings=X_emb_train, predictions_and_embeddings=X_train, predictions=X_pred_train, labels=y_train),
+            test_data=Features(embeddings=X_emb_test, predictions_and_embeddings=X_test, predictions=X_pred_test, labels=y_test)
         )
 
-    def _create_train(self, X, y):
-
+    def _prepare_embedding_data(self, X, y, is_test=False):
         new_y = []
+        noise_labels_data = []
+        embeddings = []
+        for idx, row in tqdm(X.iterrows(), total=len(X), position=0, leave=True, desc="Embedding Dataset"):
+
+            samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
+            noise_labels_data.append(noise_labels)
+            new_y.append(y[idx])
+            if not is_test and noise_labels.shape[0] > 0:
+                # For train we will create new labels based on the number of noise samples
+                new_y.append(noise_labels)
+
+            embeddings.append(self.db.get_embedding(samples))
+
+        return embeddings, np.vstack(new_y), np.vstack(noise_labels_data)
+
+    def _get_new_features(self, X, y, is_test):
+
         observations = []
         embeddings_for_baseline = [] # Will be used for the baseline
         predictions_for_baseline = [] # Will be used for the baseline
 
         X = pd.DataFrame(X)
 
-        for idx, row in tqdm(X.iterrows(), total=len(X), leave=True, position=0):
+        embeddings, y, noise_labels = self._prepare_embedding_data(X, y, is_test)
 
-            for _ in range(self.n_pred_vectors):
+        new_y = []
 
-                # Because we are expanding the dataset to more samples (depending on n_pred) we need to expand the labels as well
-                new_y.append(y[idx])
+        batch = Batch(X=embeddings,y=y, size=config.dataset_config.batch_size)
+        for mini_batch, labels in batch:
 
-                observation = []
+            # For the training set creation we can create multiple encoded images for each input
+            # and by doing so augmenting the training set beyond the original size.
+            # For the testing, we can't create new samples
+            number_of_new_samples = (
+                self.n_pred_vectors if not is_test
+                else 1
+            )
+            # Because we are potentially expanding X_train we should also expand y_train
+            # with the same number of labels. We do so by duplicate the labels for each new augmentation.
+            # For example if we encode x_1 to 3 new samples x_enc_1_1, x_enc_1_2, x_enc_1_2 and the original
+            # label for x_1 was 1, than we add [1,1,1] to y_train.
+            # For y_test, we just duplicate it
+            for label in labels:
+                if not is_test:
+                    [new_y.append(label) for _ in range(number_of_new_samples)]
+                else:
+                    new_y.append(label)
 
-                # For each new pred vector we will sample new noise to be used. This will cause
-                # The prediction vector to be different each time
-                samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
+            observation = []
 
-                embeddings = self.db.get_embedding(samples)
+            with tf.device(GPU_DEVICE):
 
-                images = self.encryptor.encode(embeddings) # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as feautres
+                images = self.encryptor.encode(mini_batch, number_of_new_samples) # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as feautres
                 # image = (encrypted_data * 10000).astype(np.uint8)
 
                 # We are then creating a prediction vector for each new encoded sample (image)
-                predictions = [self.cloud_model.predict(image)  for image in images]
-                predictions = np.hstack(predictions) # Create one feature vector of all concatenated predictions
+                predictions = self.cloud_model.predict(images)
 
-                if self.use_predictions:
-                    observation.append(predictions) # Shape - |CMLS|
-                if self.use_embedding:
-                    observation.append(embeddings.reshape(1,-1)) # Shape - (1,|Embedding| * Number of noise samples)
-                if self.use_noise_labels and noise_labels.shape[0] > 0:
-                    observation.append(noise_labels) # Shape - |V| * Number of noise samples
-
-                observations.append(np.hstack(observation))
-                embeddings_for_baseline.append(embeddings)
-                predictions_for_baseline.append(predictions)
-
-        return np.vstack(observations), np.array(new_y), np.stack(embeddings_for_baseline), np.stack(predictions_for_baseline)
-
-    def _create_test(self, X, y):
-        observations = []
-        embeddings_for_baseline = []  # Will be used for the baseline
-        predictions_for_baseline = [] # Will be used for the baseline
-
-        X = pd.DataFrame(X)
-
-        for idx, row in tqdm(X.iterrows(), total=len(X), leave=True, position=0):
-
-            # We can't touch the test set, i.e. expand it to more samples. So we do it only once
-            sample = []
-
-            # For each new pred vector we will sample new noise to be used. This will cause
-            # The prediction vector to be different each time
-            samples, noise_labels = sample_noise(row=row, X=X, y=pd.Series(y), sample_n=self.n_noise_samples)
-
-            embeddings = self.db.get_embedding(samples)
-
-            with tf.device(consts.GPU_DEVICE):
-                images = self.encryptor.encode(embeddings)  # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as feautres
-                # image = (encrypted_data * 10000).astype(np.uint8)
-                # We are then creating a prediction vector for each new encoded sample (image)
-                predictions = [self.cloud_model.predict(image) for image in images]
-
-            predictions = np.hstack(predictions)  # Create one feature vector of all concatenated predictions
-
+            predictions = np.vstack(predictions) # Create one feature vector of all concatenated predictions
+            embeddings_samples = np.vstack([mini_batch for _ in range(number_of_new_samples)]) # Duplicate the embeddings as the number of predictions
             if self.use_predictions:
-                sample.append(predictions)
+                observation.append(predictions) # Shape - |CMLS|
             if self.use_embedding:
-                sample.append(embeddings.reshape(1, -1))  # Shape - (1,|Embedding| * Number of noise samples)
+                observation.append(embeddings_samples) # Shape - (1,|Embedding| * Number of noise samples)
             if self.use_noise_labels and noise_labels.shape[0] > 0:
-                sample.append(noise_labels)
+                observation.append(noise_labels[batch.start: batch.end]) # Shape - |V| * Number of noise samples
 
-            observations.append(np.hstack(sample))
-            embeddings_for_baseline.append(embeddings)
+            observations.append(np.hstack(observation))
+            embeddings_for_baseline.append(embeddings_samples)
+            predictions_for_baseline.append(predictions)
 
-        return np.vstack(observations), np.stack(embeddings_for_baseline), np.stack(predictions_for_baseline)
+        return np.vstack(observations), np.vstack(new_y), np.vstack(embeddings_for_baseline), np.vstack(predictions_for_baseline)

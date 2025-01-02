@@ -14,6 +14,9 @@ class EmbeddingBaseline(DenseInternalModel):
 
     def get_model(self, num_classes, input_shape):
 
+        if isinstance(input_shape, int):
+            input_shape = (input_shape,)
+
         inputs = Input(shape=input_shape)
         x = Flatten()(inputs)
         x = BatchNormalization()(x)

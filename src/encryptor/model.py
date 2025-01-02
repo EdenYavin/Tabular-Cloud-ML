@@ -53,7 +53,7 @@ class DCEncryptor(BaseEncryptor):
         # Ziv's Model
         G = Sequential()
 
-        G.add(Reshape(target_shape=[1, *input_shape[1:]], input_shape=input_shape))
+        G.add(Reshape(target_shape=[1,1, *input_shape], input_shape=input_shape))
         # No weights or activations here
 
         # 1x1x4096

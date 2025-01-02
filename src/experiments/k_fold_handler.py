@@ -4,7 +4,7 @@ from tqdm import tqdm
 from src.embeddings import EmbeddingsFactory
 import src.utils.constansts as consts
 from src.internal_model.baseline import EmbeddingBaseline
-from src.pipeline.encoding_pipeline import Pipeline
+from src.pipeline.encoding_pipeline import FeatureEngineeringPipeline
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor import EncryptorFactory
 from src.encryptor.base import BaseEncryptor
@@ -87,7 +87,7 @@ class KFoldExperimentHandler:
                         print(f"CREATING THE CLOUD-TRAINSET FROM {dataset_name},"
                               f" WITH {n_noise_samples} NOISE SAMPLES AND {n_pred_vectors} PREDICTION VECTORS")
 
-                        dataset_creator = Pipeline(
+                        dataset_creator = FeatureEngineeringPipeline(
                             dataset_name=dataset_name,
                             cloud_models=cloud_model,
                             encryptor=encryptor,

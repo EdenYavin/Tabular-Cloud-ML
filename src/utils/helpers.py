@@ -1,14 +1,20 @@
 
 import pickle
 import os
+from typing import Generator
+
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
 from PIL import Image, ImageDraw, ImageFont
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
 import tensorflow as tf
-from gensim.models import Word2Vec
 
+
+
+def batch(list_: list, size: int) -> Generator[list, None, None]:
+    list_ = np.vstack(list_)
+    yield from (list_[i : i + size] for i in range(0, len(list_), size))
 
 def pad_image(image, max_shape):
 

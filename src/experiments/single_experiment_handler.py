@@ -153,5 +153,7 @@ class ExperimentHandler:
                             )
                         ])
 
+                    del dataset # Free up space
+
 
         return final_report

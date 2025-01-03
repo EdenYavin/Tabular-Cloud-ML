@@ -41,12 +41,14 @@ class EmbeddingBaseline(DenseInternalModel):
 class TreeEmbeddingBaseModel(TabularInternalModel):
 
     def fit(self, X, y):
-        X = np.squeeze(X, axis=1)
+        if len(X.shape) == 1:
+            X = np.squeeze(X, axis=1)
         self.model.fit(X, y)
         return self
 
     def evaluate(self, X, y):
-        X = np.squeeze(X, axis=1)
+        if len(X.shape) == 1:
+            X = np.squeeze(X, axis=1)
         return super().evaluate(X, y)
 
 class EmbeddingBaselineModelFactory:

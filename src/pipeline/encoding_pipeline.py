@@ -12,7 +12,7 @@ from src.utils.constansts import GPU_DEVICE
 from src.utils.helpers import sample_noise, load_cache_file, save_cache_file
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
-import src.utils.constansts as consts
+
 
 class FeatureEngineeringPipeline(object):
 

@@ -82,76 +82,84 @@ class ExperimentHandler:
                     dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
                     logger.debug("Finished Creating the dataset")
 
-                    logger.info(f"#### EVALUATING EMBEDDING BASELINE MODEL ####\nDataset Shape: Train - {dataset.train_embeddings.embeddings.shape}, Test: {dataset.test_embeddings.embeddings.shape}")
-                    baseline_model = EmbeddingBaselineModelFactory.get_model(
-                        num_classes=raw_dataset.get_n_classes(),
-                        input_shape=dataset.train_embeddings.embeddings.shape[1],
-                    )
-                    baseline_model.fit(
-                        dataset.train_embeddings.embeddings, dataset.train_embeddings.labels,
-                    )
-                    baseline_emb_acc, baseline_emb_f1 = baseline_model.evaluate(
-                        dataset.test_embeddings.embeddings, dataset.test_embeddings.labels
-                    )
+                    iim_models = config.iim_config.name
+                    if isinstance(iim_models, str):
+                        iim_models = [iim_models]
 
-                    logger.info(f"#### EVALUATING PREDICTIONS BASELINE MODEL ####\nDataset Shape: Train - {dataset.train_predictions.predictions.shape}, Test: {dataset.test_predictions.predictions.shape}")
-                    baseline_model = EmbeddingBaselineModelFactory.get_model(
-                        num_classes=raw_dataset.get_n_classes(),
-                        input_shape=dataset.train_predictions.predictions.shape[1],
-                    )
-                    baseline_model.fit(
-                        dataset.train_predictions.predictions, dataset.train_predictions.labels,
-                    )
-                    baseline_pred_acc, baseline_pred_f1 = baseline_model.evaluate(
-                        dataset.test_predictions.predictions, dataset.test_predictions.labels
-                    )
+                    for iim_model in iim_models:
+                        logger.info(f"FOR ALL BASELINES #############{iim_model} FOR ALL BASELINES #############")
+                        logger.info(f"#### EVALUATING EMBEDDING BASELINE MODEL ####\nDataset Shape: Train - {dataset.train_embeddings.embeddings.shape}, Test: {dataset.test_embeddings.embeddings.shape}")
+                        baseline_model = EmbeddingBaselineModelFactory.get_model(
+                            num_classes=raw_dataset.get_n_classes(),
+                            input_shape=dataset.train_embeddings.embeddings.shape[1],
+                            type=iim_model
+                        )
+                        baseline_model.fit(
+                            dataset.train_embeddings.embeddings, dataset.train_embeddings.labels,
+                        )
+                        baseline_emb_acc, baseline_emb_f1 = baseline_model.evaluate(
+                            dataset.test_embeddings.embeddings, dataset.test_embeddings.labels
+                        )
 
-                    logger.info(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {dataset.train_iim_features.features.shape}, Test: {dataset.test_iim_features.features.shape}")
-                    internal_model = InternalInferenceModelFactory().get_model(
-                        num_classes=raw_dataset.get_n_classes(),
-                        input_shape=dataset.train_iim_features.features.shape[1],
-                        # Only give the number of features
-                    )
-                    internal_model.fit(
-                        dataset.train_iim_features.features, dataset.train_iim_features.labels,
-                    )
-                    test_acc, test_f1 = internal_model.evaluate(
-                        dataset.test_iim_features.features, dataset.test_iim_features.labels
-                    )
+                        logger.info(f"#### EVALUATING PREDICTIONS BASELINE MODEL ####\nDataset Shape: Train - {dataset.train_predictions.predictions.shape}, Test: {dataset.test_predictions.predictions.shape}")
+                        baseline_model = EmbeddingBaselineModelFactory.get_model(
+                            num_classes=raw_dataset.get_n_classes(),
+                            input_shape=dataset.train_predictions.predictions.shape[1],
+                            type=iim_model
+                        )
+                        baseline_model.fit(
+                            dataset.train_predictions.predictions, dataset.train_predictions.labels,
+                        )
+                        baseline_pred_acc, baseline_pred_f1 = baseline_model.evaluate(
+                            dataset.test_predictions.predictions, dataset.test_predictions.labels
+                        )
 
-                    logger.info(f"""
-                          Cloud: {cloud_acc}, {cloud_f1}\n
-                          Raw Baseline: {raw_baseline_acc}, {raw_baseline_f1}\n
-                          Emb Baseline: {baseline_emb_acc}, {baseline_emb_f1}\n
-                          Prediction Baseline: {baseline_pred_acc}, {baseline_pred_f1}\n
-                          IIM: {test_acc}, {test_f1}\n
-                          """)
+                        logger.info(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {dataset.train_iim_features.features.shape}, Test: {dataset.test_iim_features.features.shape}")
+                        internal_model = InternalInferenceModelFactory().get_model(
+                            num_classes=raw_dataset.get_n_classes(),
+                            input_shape=dataset.train_iim_features.features.shape[1],
+                            type=iim_model
+                        )
+                        internal_model.fit(
+                            dataset.train_iim_features.features, dataset.train_iim_features.labels,
+                        )
+                        test_acc, test_f1 = internal_model.evaluate(
+                            dataset.test_iim_features.features, dataset.test_iim_features.labels
+                        )
 
-                    final_report = pd.concat(
-                        [
-                            final_report,
-                            pd.DataFrame(
-                                {
-                                    "exp_name": [self.experiment_name],
-                                    "dataset": [dataset_name],
-                                    "train_size_ratio": [dataset_creator.split_ratio],
-                                    "n_pred_vectors": [n_pred_vectors],
-                                    "n_noise_sample": [n_noise_samples],
-                                    "iim_model": [internal_model.name],
-                                    "embedding": [embedding_model.name],
-                                    "encryptor": [encryptor.name],
-                                    "cloud_model": [cloud_model.name],
-                                    "raw_baseline_acc": [raw_baseline_acc],
-                                    "raw_baseline_f1": [raw_baseline_f1],
-                                    "emb_baseline_acc": [baseline_emb_acc],
-                                    "emb_baseline_f1": [baseline_emb_f1],
-                                    "pred_baseline_acc": [baseline_pred_acc],
-                                    "pred_baseline_f1": [baseline_pred_f1],
-                                    "iim_test_acc": [test_acc],
-                                    "iim_test_f1": [test_f1]
-                                }
-                            )
-                        ])
+                        logger.info(f"""
+                              Cloud: {cloud_acc}, {cloud_f1}\n
+                              Raw Baseline: {raw_baseline_acc}, {raw_baseline_f1}\n
+                              Emb Baseline: {baseline_emb_acc}, {baseline_emb_f1}\n
+                              Prediction Baseline: {baseline_pred_acc}, {baseline_pred_f1}\n
+                              IIM: {test_acc}, {test_f1}\n
+                              """)
+
+                        final_report = pd.concat(
+                            [
+                                final_report,
+                                pd.DataFrame(
+                                    {
+                                        "exp_name": [self.experiment_name],
+                                        "dataset": [dataset_name],
+                                        "train_size_ratio": [dataset_creator.split_ratio],
+                                        "n_pred_vectors": [n_pred_vectors],
+                                        "n_noise_sample": [n_noise_samples],
+                                        "iim_model": [internal_model.name],
+                                        "embedding": [embedding_model.name],
+                                        "encryptor": [encryptor.name],
+                                        "cloud_model": [cloud_model.name],
+                                        "raw_baseline_acc": [raw_baseline_acc],
+                                        "raw_baseline_f1": [raw_baseline_f1],
+                                        "emb_baseline_acc": [baseline_emb_acc],
+                                        "emb_baseline_f1": [baseline_emb_f1],
+                                        "pred_baseline_acc": [baseline_pred_acc],
+                                        "pred_baseline_f1": [baseline_pred_f1],
+                                        "iim_test_acc": [test_acc],
+                                        "iim_test_f1": [test_f1]
+                                    }
+                                )
+                            ])
 
                     del dataset # Free up space
 

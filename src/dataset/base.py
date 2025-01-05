@@ -68,24 +68,24 @@ class RawDataset:
 
     def get_baseline(self, X_train, X_test, y_train, y_test):
 
-        if self.baseline_model == XGBOOST_BASELINE:
-            clf = XGBClassifier()
-            clf.fit(X_train, y_train)
-            preds = clf.predict(X_test)
-        else:
-            with tf.device(CPU_DEVICE):
-
-                clf = InternalInferenceModelFactory.get_model(
-                    num_classes=self.get_n_classes(),
-                    input_shape=self.get_number_of_features(),  # Only give the number of features
-                )
-                y_train = to_categorical(y_train)
-
-                # Dense networks run faster on CPU
-                clf.fit(X_train, y_train)
-
-                preds = clf.predict(X_test)
-
+        # if self.baseline_model == XGBOOST_BASELINE:
+        clf = XGBClassifier()
+        clf.fit(X_train, y_train)
+        preds = clf.predict(X_test)
+        # else:
+        #     with tf.device(CPU_DEVICE):
+        #
+        #         clf = InternalInferenceModelFactory.get_model(
+        #             num_classes=self.get_n_c
+        #             input_shape=self.get_number_of_features(),  # Only give the number of features
+        #         )
+        #         y_train = to_categorical(y_train)
+        #
+        #         # Dense networks run faster on CPU
+        #         clf.fit(X_train, y_train)
+        #
+        #         preds = clf.predict(X_test)
+        #
         acc = accuracy_score(y_test, preds)
         try:
             f1 = f1_score(y_test, preds, average='weighted')
@@ -93,7 +93,7 @@ class RawDataset:
             f1 = -1
 
         return acc, f1
-    
+
 
     def _get_model(self, X_train, y_train):
         inputs = Input(shape=(X_train.shape[1],))  # Dynamic input shape

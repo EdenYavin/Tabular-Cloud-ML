@@ -5,10 +5,9 @@ import enum
 import tensorflow as tf
 
 class EMBEDDING_TYPES(str, enum.Enum):
-    STRING = "w2v_embedding"
     IMAGE = "image_embedding"
-    DIGIT_TO_IMAGE_TO_EMBEDDING = "numerical_table_embedding"
     DNN = "dnn_embedding"
+    SPARSE_AE = "sparse_ae"
 
 
 class ENCODERS_TYPES(str, enum.Enum):
@@ -40,6 +39,10 @@ class DATASETS(str, enum.Enum):
     LOAD_APPROVAL = "load_approval"
     AIRLINE_SATISFACTION = "airline_satisfaction"
 
+
+class EXPERIMENTS(str, enum.Enum):
+    GLOBAL_EMBEDDINGS = "global_embeddings"
+    PREDICTIONS_BASELINE = "predictions_baseline"
 
 WINDOWS_OS_STR = "nt"
 IS_WINDOWS_OS = (os.name == WINDOWS_OS_STR)
@@ -80,6 +83,9 @@ DATASETS_PATH = os.path.join(PROJECT_DIR, DATASETS_DIR)
 
 REPORT_NAME = 'report.csv'
 REPORT_PATH = os.path.join(OUTPUT_DIR_PATH, REPORT_NAME)
+
+GLOBAL_EMB_REPORT_NAME = "global_emb_report.csv"
+GLOBAL_EMB_REPORT_PATH = os.path.join(OUTPUT_DIR_PATH, GLOBAL_EMB_REPORT_NAME)
 
 DATA_CACHE_PATH = os.path.join(STORE_PATH, "dataset")
 os.makedirs(DATA_CACHE_PATH, exist_ok=True)

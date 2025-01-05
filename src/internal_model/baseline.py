@@ -56,9 +56,10 @@ class EmbeddingBaselineModelFactory:
     @staticmethod
     def get_model(**kwargs) -> Union[EmbeddingBaseline, TreeEmbeddingBaseModel]:
 
+        iim_type: IIM_MODELS = kwargs.get("type", IIM_MODELS.XGBOOST)
         model = XGBClassifier()
 
-        if config.iim_config.name == IIM_MODELS.XGBOOST.value:
+        if iim_type == IIM_MODELS.XGBOOST:
             return TreeEmbeddingBaseModel(**dict(model=model, **kwargs))
 
         else:

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from src.utils.constansts import EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, DATASETS, HARD_DATASETS
+from src.utils.constansts import EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, EXPERIMENTS, HARD_DATASETS
 
 
 class Config(BaseModel):
@@ -27,7 +27,7 @@ class Config(BaseModel):
         dropout: float = 0.3
 
     class IIMConfig(BaseModel):
-        name: str = Field(description="IIM model to use", default=IIM_MODELS.NEURAL_NET)
+        name: list[str] | str = Field(description="IIM model to use. Can be multiple models", default=IIM_MODELS.NEURAL_NET)
 
     class CloudModelConfig(BaseModel):
         name: str = Field(description="Cloud model to use", default=CLOUD_MODELS.VGG16)
@@ -42,20 +42,22 @@ class Config(BaseModel):
         n_pred_vectors: int = Field(description="Number of prediction vectors to query from the cloud models")
         n_noise_samples: int = Field(description="Number samples to sample from the dataset and use as noise")
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
+        exp_type: str = Field(description="type of the experiment")
 
 
 
-    experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=3,k_folds=1,
-                                                           use_preds=True, use_embedding=True, use_labels=False)
+    experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,k_folds=1,
+                                                           use_preds=True, use_embedding=True, use_labels=False,
+                                                           exp_type=EXPERIMENTS.PREDICTIONS_BASELINE)
     cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16, use_classification_head=True)
-    iim_config: IIMConfig = IIMConfig(name=IIM_MODELS.XGBOOST)
+    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.XGBOOST])
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(
                                                   split_ratio=1,
                                                   names=HARD_DATASETS
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)
-    embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.DNN)
+    embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV)
 
 

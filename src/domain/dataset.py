@@ -46,6 +46,7 @@ class IIMFeatures(BaseModel):
     features: NDArray[np.float_]
     labels: NDArray[np.float_] | list[float]
 
+
 class EmbeddingBaselineFeatures(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     embeddings: NDArray[np.float_]

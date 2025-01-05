@@ -103,7 +103,8 @@ class DCEncryptor(BaseEncryptor):
 
         # 128x128x4
         G.add(Conv2D(filters=3, kernel_size=4, padding='same'))
-        G.add(Activation('sigmoid'))
+        # G.add(Activation('sigmoid'))
+        G.add(Activation('relu'))
         # Weights index: 32, Activations index: 25
 
         return G

@@ -152,11 +152,10 @@ class InternalInferenceModelFactory:
     @staticmethod
     def get_model(**kwargs) -> Union[NeuralNetworkInternalModel, TabularInternalModel]:
 
-        name = config.iim_config.name
-        model = models.get(name)
+        iim = kwargs.get("type", IIM_MODELS.XGBOOST)
 
-        if model:
-            return TabularInternalModel(**dict(model=model(), **kwargs))
+        if iim == IIM_MODELS.XGBOOST:
+            return TabularInternalModel(**dict(model=XGBClassifier(), **kwargs))
 
         else:
             return DenseInternalModel(**kwargs)

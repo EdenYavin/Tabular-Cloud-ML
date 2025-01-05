@@ -123,7 +123,7 @@ class ExperimentDatabase:
             embedding = self.db.get(i, {}).get(DB_EMBEDDING_TOKEN, None)
             if embedding is None:
                 embedding = self.embedding_model(sample.values.reshape(1, -1))
-                self.db.setdefault(i, {})[DB_EMBEDDING_TOKEN] = embedding
+                self.set_embedding(i, embedding)
 
             embeddings.append(embedding)
 

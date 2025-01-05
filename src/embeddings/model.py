@@ -2,7 +2,7 @@ import pandas as pd
 from huggingface_hub.keras_mixin import keras
 from keras.src.applications import resnet
 from keras.src.applications.resnet import preprocess_input
-from keras.src.layers import Dense, BatchNormalization
+from keras.src.layers import Dense, BatchNormalization, Input
 from keras.src import Sequential
 from gensim.models import KeyedVectors
 import numpy as np
@@ -44,8 +44,6 @@ class DNNEmbedding(nn.Module):
         embedding = self.model(x)
         return embedding
 
-
-
     def _get_trained_model(self, X:np.ndarray | pd.DataFrame, y:np.ndarray | pd.DataFrame):
 
         num_classes = len(set(y))
@@ -64,6 +62,60 @@ class DNNEmbedding(nn.Module):
             model.fit(X, y, epochs=50, batch_size=64, callbacks=[early_stop])
 
         return model
+
+class SparseAE(nn.Module):
+    name: str = "sparse_ae"
+
+    def __init__(self, **kwargs):
+        super(SparseAE, self).__init__()
+        X = kwargs.get("X")
+        dataset_name = kwargs.get("dataset_name", None)
+        path = EMBEDDING_MODEL_PATH / f"{dataset_name}_sparse.h5" or ""
+        if path.exists():
+            self.model = keras.models.load_model(path)
+        else:
+            self.model = self._get_trained_model(X)
+            self.model.save(path)
+
+        self.output_shape = (1, 64)
+
+    def forward(self, x):
+
+        if type(x) is pd.DataFrame:
+            x = x.to_numpy()
+
+        embedding = self.model(x)
+        return embedding
+
+    def _get_trained_model(self, X:np.ndarray | pd.DataFrame):
+
+        def sparse_loss(y_true, y_pred):
+            sparsity_level = 0.05
+            lambda_sparse = 0.1
+            mse_loss = tf.reduce_mean(keras.losses.MeanSquaredError()(y_true, y_pred))
+            hidden_layer_output = encoder(y_true)
+            mean_activation = tf.reduce_mean(hidden_layer_output, axis=0)
+
+            kl_divergence = tf.reduce_sum(sparsity_level * tf.math.log(sparsity_level / (mean_activation + 1e-10)) +
+                                          (1 - sparsity_level) * tf.math.log(
+                (1 - sparsity_level) / (1 - mean_activation + 1e-10)))
+
+            return mse_loss + lambda_sparse * kl_divergence
+
+        input_dim = X.shape[1]
+        inputs = Input(shape=(input_dim,))
+        encoded = Dense(64, activation='relu')(inputs)
+        decoded = Dense(input_dim, activation='sigmoid')(encoded)
+
+        autoencoder = keras.Model(inputs, decoded)
+        encoder = keras.Model(inputs, encoded)
+        early_stop = EarlyStopping(patience=2, monitor="loss")
+
+        autoencoder.compile(optimizer='adam', loss=sparse_loss)
+        autoencoder.fit(X, X, epochs=50, batch_size=256, shuffle=True, callbacks=[early_stop])
+
+        return encoder
+
 
 class ImageEmbedding(nn.Module):
 
@@ -100,95 +152,5 @@ class ImageEmbedding(nn.Module):
 
         embeddings = self.model(preprocess_input(image))
         return embeddings.numpy()[0]
-
-
-class w2vEmbedding(nn.Module):
-    name = "w2v_embedding"
-
-    def __init__(self, **kwargs):
-        super(w2vEmbedding, self).__init__()
-        model_path = ""
-        # Load the pre-trained Word2Vec model
-        self.model = KeyedVectors.load_word2vec_format(model_path, binary=True)
-        self.vector_size = self.model.vector_size
-
-    def embed_word(self, word):
-        # Get the embedding for a single word
-        if word in self.model:
-            return self.model[word]
-        else:
-            # Return a zero vector if the word is not in the vocabulary
-            return np.zeros(self.vector_size)
-
-    def forward(self, words):
-        # Get embeddings for a list of words
-        embeddings = [self.embed_word(word) for word in words]
-        return np.stack(embeddings, axis=0)
-
-
-class NumericalTableEmbeddings(nn.Module):
-
-    name = "numerical_table_embedding"
-
-    def __init__(self, **kwargs):
-        super(NumericalTableEmbeddings, self).__init__()
-        # Load pre-trained ResNet model and remove the final classification layer
-        self.resnet = resnet.ResNet101(weights='imagenet', include_top=False, pooling='avg')
-        # self.resnet = nn.Sequential(*list(resnet_model.children())[:-1])  # Remove the last FC layer
-        self.image_size = kwargs.get('image_size', (224, 224))
-        self.font_size = kwargs.get('font_size', 80)
-        self.output_shape = (config.experiment_config.n_noise_samples, 1, 2048)
-
-        # Image transformation pipeline
-        self.transform = transforms.Compose([
-            transforms.Resize(self.image_size),  # ResNet expects 224x224 images
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            # Normalization like ResNet expects
-        ])
-
-    # Function to pass an image through ResNet and get the embedding
-    def get_embedding_from_image(self, img):
-        array = np.array(img)[np.newaxis, ...] # Add batch dim
-        with torch.no_grad():
-            embedding = self.resnet(array)  # Get 1D embedding
-        return embedding.cpu().numpy()
-
-    # Function to get the row embedding by averaging all column embeddings
-    def get_row_embedding(self, row):
-        # embeddings = []
-
-        # for value in row:
-        #     value = int(value) # Round to make the image more clear
-        #     img = create_image_from_number(value, image_size=self.image_size, font_size=self.font_size)
-        #     embedding = self.get_embedding_from_image(img)
-        #     embeddings.append(embedding)
-        #
-        # # Stack embeddings and compute the mean
-        # embeddings = torch.stack(embeddings)
-
-        row = row.astype(np.int16)
-        image = create_image_from_numbers(row)
-
-        embedding = self.get_embedding_from_image(image)
-
-        return embedding
-
-        # return torch.mean(embeddings, dim=0)
-
-
-
-    # Function to process an entire dataframe and return row embeddings
-    def forward(self, matrix):
-
-        if type(matrix) is pd.DataFrame:
-            matrix = matrix.to_numpy()
-
-        row_embeddings = []
-        for row in matrix:
-            row_embedding = self.get_row_embedding(row)
-            row_embeddings.append(row_embedding)
-        # Convert to tensor
-        return np.stack(row_embeddings)
 
 

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from src.utils.constansts import EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, EXPERIMENTS, HARD_DATASETS
+from src.utils.constansts import EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, EXPERIMENTS, HARD_DATASETS, LARGE_DATASETS
 
 
 class Config(BaseModel):
@@ -19,7 +19,7 @@ class Config(BaseModel):
         names: list = Field(description="The datasets to run the experiments on")
         split_ratio : float = Field(description="How much of the original train set (90%) will be used to train the IIM")
         one_hot: bool = Field(description="A flag to indicate if the ground truth labels should be one-hot encoded", default=False)
-        batch_size: int = Field(description="Batch size to accumulate", default=100)
+        batch_size: int = Field(description="Batch size to accumulate", default=200)
 
     class NEURAL_NET_CONFIG(BaseModel):
         epochs: int = 100
@@ -29,10 +29,8 @@ class Config(BaseModel):
     class IIMConfig(BaseModel):
         name: list[str] | str = Field(description="IIM model to use. Can be multiple models", default=IIM_MODELS.NEURAL_NET)
 
-    class CloudModelConfig(BaseModel):
-        name: str = Field(description="Cloud model to use", default=CLOUD_MODELS.VGG16)
-        use_classification_head: bool = Field(description="Flag to indicate if cloud model should be used with classification head", default=True)
-        temperature: float = Field(description="Temperature of the cloud model", default=3.5)
+    class CloudModelsConfig(BaseModel):
+        names: list[str] = Field(description="Cloud model to use", default=[CLOUD_MODELS.VGG16])
         input_shape: float = Field(description="Shape of the input cloud model", default=(128, 128, 3))
 
     class ExperimentConfig(BaseModel):
@@ -42,18 +40,18 @@ class Config(BaseModel):
         n_pred_vectors: int = Field(description="Number of prediction vectors to query from the cloud models")
         n_noise_samples: int = Field(description="Number samples to sample from the dataset and use as noise")
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
-        exp_type: str = Field(description="type of the experiment")
+        exp_type: str = Field(description="type of the experiment - embedding learning, predictions stacking or single prediction iim model")
 
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False,
-                                                           exp_type=EXPERIMENTS.PREDICTIONS_BASELINE)
-    cloud_config: CloudModelConfig = CloudModelConfig(name=CLOUD_MODELS.VGG16, use_classification_head=True)
-    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.XGBOOST])
+                                                           exp_type=EXPERIMENTS.PREDICTIONS_LEARNING)
+    cloud_config: CloudModelsConfig = CloudModelsConfig(names=[CLOUD_MODELS.VGG16, CLOUD_MODELS.Xception])
+    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.XGBOOST, IIM_MODELS.NEURAL_NET])
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(
-                                                  split_ratio=1,
+                                                  split_ratio=0.01,
                                                   names=HARD_DATASETS
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)

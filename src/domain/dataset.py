@@ -46,16 +46,28 @@ class IIMFeatures(BaseModel):
     features: NDArray[np.float_]
     labels: NDArray[np.float_] | list[float]
 
+class IIMDataset(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    train: IIMFeatures
+    test: IIMFeatures
 
 class EmbeddingBaselineFeatures(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     embeddings: NDArray[np.float_]
     labels: NDArray[np.float_] | list[float]
 
+class EmbeddingBaselineDataset(BaseModel):
+    train: EmbeddingBaselineFeatures
+    test: EmbeddingBaselineFeatures
+
 class PredictionBaselineFeatures(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     predictions: NDArray[np.float_]
     labels: NDArray[np.float_] | list[float]
+
+class PredictionBaselineDataset(BaseModel):
+    train: PredictionBaselineFeatures
+    test: PredictionBaselineFeatures
 
 class PredictionsDataset(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)

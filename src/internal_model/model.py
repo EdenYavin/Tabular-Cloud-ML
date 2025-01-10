@@ -1,8 +1,9 @@
-from typing import Union
+from typing import Union, Type
 
 from keras.src.callbacks import LearningRateScheduler, EarlyStopping
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import accuracy_score, f1_score
+from sklearn.ensemble import StackingClassifier
 from xgboost import XGBClassifier
 from keras.src.models import Model
 from keras.src.layers import Dense, Dropout, Input,  BatchNormalization, concatenate
@@ -12,7 +13,7 @@ import numpy as np
 
 
 from src.utils.config import config
-from src.utils.constansts import IIM_MODELS
+from src.utils.constansts import IIM_MODELS, EXPERIMENTS
 
 models = {
     IIM_MODELS.XGBOOST.value: XGBClassifier,
@@ -20,8 +21,8 @@ models = {
 
 class TabularInternalModel(BaseEstimator, ClassifierMixin):
     def __init__(self, **kwargs):
-        self.name = config.iim_config.name
         self.model = kwargs.get('model')
+        self.name = "xgboost"
 
     def fit(self, X, y):
         self.model.fit(X, y)
@@ -56,6 +57,8 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
         prediction = self.model.predict(X)
         return np.argmax(prediction, axis=1)
 
+    def predict_proba(self, X):
+        return self.model.predict(X)
 
     def evaluate(self, X, y):
         if len(y.shape) == 2:
@@ -145,17 +148,74 @@ class DoubleDenseInternalModel(NeuralNetworkInternalModel):
 
         return model
 
+class StackingInternalModel:
+    def __init__(self, iim_cls: Type[TabularInternalModel] | Type[NeuralNetworkInternalModel], **kwargs):
+        num_models = len(config.cloud_config.names)
+        self.models = [iim_cls(**kwargs) for _ in range(num_models)]
+        self.final_model = iim_cls(**kwargs)
+
+
+    def fit(self, X: list, y):
+        assert len(X) == len(self.models), "Number of datasets, targets, and models must be the same"
+
+        # Fit each model on its corresponding dataset
+        for i, x in enumerate(X):
+            self.models[i].fit(x, y)
+
+        # Collect predictions from each model
+        meta_features = []
+        for i, x in enumerate(X):
+            preds = self.models[i].predict_proba(x)
+            meta_features.append(preds)
+
+        # Stack predictions horizontally (axis=1) to form the meta-features
+        meta_features = np.hstack(meta_features)
+
+        # Transpose meta_features to have shape (num_samples, num_models)
+        meta_features = np.vstack(meta_features)
+
+        # Fit the final model on the meta-features
+        self.final_model.fit(meta_features, y)  # Assuming y is the target for the final model
+
+
+    def predict(self, X):
+        # Collect predictions from each model
+        meta_features = []
+        for i, x in enumerate(X):
+            preds = self.models[i].predict_proba(x)
+            meta_features.append(preds)
+
+            # Stack predictions horizontally (axis=1) to form the meta-features
+        meta_features = np.hstack(meta_features)
+
+        # Predict using the final model
+        return self.final_model.predict(meta_features)
+
+    def evaluate(self, X, y):
+        # if len(y.shape) == 2:
+        #     y = np.argmax(y, axis=1)
+
+        pred = self.predict(X)
+        return accuracy_score(y, pred), f1_score(y, pred, average='weighted')
 
 
 class InternalInferenceModelFactory:
 
     @staticmethod
-    def get_model(**kwargs) -> Union[NeuralNetworkInternalModel, TabularInternalModel]:
+    def get_model(**kwargs) -> Union[NeuralNetworkInternalModel, TabularInternalModel, StackingInternalModel]:
 
         iim = kwargs.get("type", IIM_MODELS.XGBOOST)
+        stacking = len(config.cloud_config.names) > 1
+
 
         if iim == IIM_MODELS.XGBOOST:
+            if stacking:
+                return StackingInternalModel(TabularInternalModel, **dict(model=XGBClassifier(), **kwargs))
+
             return TabularInternalModel(**dict(model=XGBClassifier(), **kwargs))
 
         else:
+            if stacking:
+                return StackingInternalModel(DenseInternalModel, **kwargs)
+
             return DenseInternalModel(**kwargs)

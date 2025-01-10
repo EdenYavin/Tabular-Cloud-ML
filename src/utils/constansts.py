@@ -42,7 +42,7 @@ class DATASETS(str, enum.Enum):
 
 class EXPERIMENTS(str, enum.Enum):
     GLOBAL_EMBEDDINGS = "global_embeddings"
-    PREDICTIONS_BASELINE = "predictions_baseline"
+    PREDICTIONS_LEARNING = "predictions_learning"
 
 WINDOWS_OS_STR = "nt"
 IS_WINDOWS_OS = (os.name == WINDOWS_OS_STR)
@@ -140,8 +140,8 @@ LARGE_DATASETS = [
 
 HARD_DATASETS = [
     # DATASETS where the IIM score an accuracy of below 0.75
-    DATASETS.HELOC,
-    DATASETS.ADULT
+    DATASETS.ADULT,
+    DATASETS.HELOC
 ]
 
 # ---------------------
@@ -149,6 +149,8 @@ HARD_DATASETS = [
 # ---------------------
 CONFIG_IIM_SECTION = "IIM"
 CONFIG_IMM_NAME_TOKEN = "name"
+NUMBER_OF_MODELS_TOKEN = "num_models"
+USE_STACKING = "stacking"
 
 # ---------------------
 # ENCODER SECTIONS

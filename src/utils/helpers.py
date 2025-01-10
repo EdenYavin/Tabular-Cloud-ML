@@ -148,14 +148,11 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
     # If there are categorical columns, apply one-hot encoding
     if categorical_cols:
         print("\nEncoding categorical columns...")
-        # onehot_encoder = OneHotEncoder(categories='auto', sparse=False)
-        # X_categorical = pd.DataFrame(onehot_encoder.fit_transform(X[categorical_cols]),
-        #                              columns=onehot_encoder.get_feature_names_out(categorical_cols))
-        label_encoder = LabelEncoder()
-        X_categorical = pd.DataFrame()
-        for col in categorical_cols:
-            X_categorical[col] = label_encoder.fit_transform(X[col])
-
+        X_categorical = pd.get_dummies(X[categorical_cols], drop_first=True)
+        # label_encoder = LabelEncoder()
+        # X_categorical = pd.DataFrame()
+        # for col in categorical_cols:
+        #     # X_categorical[col] = label_encoder.fit_transform(X[col])
         processed_columns.append(X_categorical)
 
     # Apply standard scaling to the numeric columns

@@ -90,26 +90,12 @@ class VGG16CloudModel(CloudModel):
 
     def get_model(self):
 
-        # If the class head flag is not set, we need to use include_top = False.
-        # This will cause the vgg model to output the last hidden layer state.
-        # We will use a softmax with a temperature to soften the output so it still be a pred vector
-        if not config.cloud_config.use_classification_head:
-            # Load the pretrained VGG16 model with ImageNet weights
-            model = VGG16(weights='imagenet', include_top=False, input_shape=self.input_shape)
-        else:
-            model = VGG16(weights='imagenet')
-
+        model = VGG16(weights='imagenet')
         return model
 
     def predict(self, X):
         X = self.preprocess(X)
         predictions = self.model.predict(X, verbose=None)
-
-        # If the use_class_head flag is not set, the predictions will be a hidden state.
-        # We will use a softmax with a temperature from the config to soften it
-        if not config.cloud_config.use_classification_head:
-            predictions = tf.nn.softmax(predictions / config.cloud_config.temperature, axis=1)
-
         return predictions
 
     def preprocess(self, X):

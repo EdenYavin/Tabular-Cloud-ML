@@ -26,6 +26,8 @@ class ExperimentHandler:
 
     def run_experiment(self):
 
+        assert len(config.cloud_config.names) == 1 # This experiment is only for a single cloud model
+
         # For dynamic run time - the list type is preferred
         if type(self.n_noise_samples) is int:
             self.n_noise_samples = [self.n_noise_samples]
@@ -39,13 +41,13 @@ class ExperimentHandler:
 
         datasets = config.dataset_config.names
 
+        cloud_model: CloudModel = CLOUD_MODELS[config.cloud_config.names[0]](
+        )
 
         for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
             raw_dataset: RawDataset = DATASETS[dataset_name]()
 
-            cloud_model: CloudModel = CLOUD_MODELS[config.cloud_config.name](
-                num_classes=raw_dataset.get_n_classes()
-            )
+
             embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name.value)
             encryptor = Encryptors(output_shape=cloud_model.input_shape,
                                    number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,
@@ -53,15 +55,15 @@ class ExperimentHandler:
                                    )
 
             X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
-            logger.info(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
+            logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
 
 
             cloud_model.fit(X_train, y_train, **raw_dataset.metadata)
 
-            logger.info("#### GETTING CLOUD DATASET FULL BASELINE####")
+            logger.debug("#### GETTING CLOUD DATASET FULL BASELINE ####")
             cloud_acc, cloud_f1 = raw_dataset.get_cloud_model_baseline(X_train, X_test, y_train, y_test)
 
-            logger.info("#### GETTING RAW BASELINE PREDICTION ####")
+            logger.debug("#### GETTING RAW BASELINE PREDICTION ####")
             raw_baseline_acc, raw_baseline_f1 = raw_dataset.get_baseline(X_sample, X_test, y_sample, y_test)
 
             for n_noise_samples in self.n_noise_samples:
@@ -87,8 +89,8 @@ class ExperimentHandler:
                         iim_models = [iim_models]
 
                     for iim_model in iim_models:
-                        logger.info(f"FOR ALL BASELINES #############{iim_model} FOR ALL BASELINES #############")
-                        logger.info(f"#### EVALUATING EMBEDDING BASELINE MODEL ####\nDataset Shape: Train - {dataset.train_embeddings.embeddings.shape}, Test: {dataset.test_embeddings.embeddings.shape}")
+                        logger.info(f"############# USING {iim_model} FOR ALL BASELINES #############")
+                        logger.debug(f"#### EVALUATING EMBEDDING BASELINE MODEL ####\nDataset Shape: Train - {dataset.train_embeddings.embeddings.shape}, Test: {dataset.test_embeddings.embeddings.shape}")
                         baseline_model = EmbeddingBaselineModelFactory.get_model(
                             num_classes=raw_dataset.get_n_classes(),
                             input_shape=dataset.train_embeddings.embeddings.shape[1],
@@ -101,7 +103,7 @@ class ExperimentHandler:
                             dataset.test_embeddings.embeddings, dataset.test_embeddings.labels
                         )
 
-                        logger.info(f"#### EVALUATING PREDICTIONS BASELINE MODEL ####\nDataset Shape: Train - {dataset.train_predictions.predictions.shape}, Test: {dataset.test_predictions.predictions.shape}")
+                        logger.debug(f"#### EVALUATING PREDICTIONS BASELINE MODEL ####\nDataset Shape: Train - {dataset.train_predictions.predictions.shape}, Test: {dataset.test_predictions.predictions.shape}")
                         baseline_model = EmbeddingBaselineModelFactory.get_model(
                             num_classes=raw_dataset.get_n_classes(),
                             input_shape=dataset.train_predictions.predictions.shape[1],
@@ -114,7 +116,7 @@ class ExperimentHandler:
                             dataset.test_predictions.predictions, dataset.test_predictions.labels
                         )
 
-                        logger.info(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {dataset.train_iim_features.features.shape}, Test: {dataset.test_iim_features.features.shape}")
+                        logger.debug(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {dataset.train_iim_features.features.shape}, Test: {dataset.test_iim_features.features.shape}")
                         internal_model = InternalInferenceModelFactory().get_model(
                             num_classes=raw_dataset.get_n_classes(),
                             input_shape=dataset.train_iim_features.features.shape[1],

@@ -2,6 +2,7 @@ import src.utils.constansts as consts
 from src.experiments.single_experiment_handler import ExperimentHandler
 from src.experiments.k_fold_handler import KFoldExperimentHandler
 from src.experiments.global_embedding_experiment import GlobalEmbeddingExperimentHandler
+from src.experiments.stacking_experiment_handler import ExperimentHandler as StackingExperimentHandler
 from src.utils.config import config
 import pandas as pd
 import os
@@ -18,15 +19,20 @@ def main():
         # Hide GPU from visible devices
         tf.config.set_visible_devices([], 'GPU')
 
-    if config.experiment_config.exp_type == consts.EXPERIMENTS.PREDICTIONS_BASELINE:
+    if config.experiment_config.exp_type == consts.EXPERIMENTS.PREDICTIONS_LEARNING:
 
-        if config.experiment_config.k_folds == 1:
+        if len(config.cloud_config.names) > 1:
+            experiment_handler = StackingExperimentHandler()
+
+        elif config.experiment_config.k_folds == 1:
             experiment_handler = ExperimentHandler()
+
         else:
             experiment_handler = KFoldExperimentHandler()
 
         new_report_lines = experiment_handler.run_experiment()
         report_path = consts.REPORT_PATH
+
 
     else: # Global embedding experiment
         experiment_handler = GlobalEmbeddingExperimentHandler()

@@ -71,6 +71,8 @@ class SparseAE(nn.Module):
         X = kwargs.get("X")
         dataset_name = kwargs.get("dataset_name", None)
         path = EMBEDDING_MODEL_PATH / f"{dataset_name}_sparse.h5" or ""
+        self.model = self._get_trained_model(X)
+
         if path.exists():
             self.model = keras.models.load_model(path)
         else:

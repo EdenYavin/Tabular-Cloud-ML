@@ -6,10 +6,9 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from xgboost import XGBClassifier
 from keras.src.layers import Dense, Dropout, Input, BatchNormalization
 from keras.src.models import Model
-import pathlib, tensorflow as tf
-from src.utils.constansts import DATASETS_PATH, XGBOOST_BASELINE, CPU_DEVICE
+import pathlib
+from src.utils.constansts import DATASETS_PATH
 from src.utils.config import config
-from src.internal_model.model import InternalInferenceModelFactory
 
 DATASET_DIR = pathlib.Path(DATASETS_PATH)
 

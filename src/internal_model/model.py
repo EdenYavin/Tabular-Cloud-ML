@@ -1,9 +1,7 @@
-from typing import Union, Type
 
 from keras.src.callbacks import LearningRateScheduler, EarlyStopping
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import accuracy_score, f1_score
-from sklearn.ensemble import StackingClassifier
 from xgboost import XGBClassifier
 from keras.src.models import Model
 from keras.src.layers import Dense, Dropout, Input,  BatchNormalization, concatenate
@@ -149,10 +147,11 @@ class DoubleDenseInternalModel(NeuralNetworkInternalModel):
         return model
 
 class StackingInternalModel:
-    def __init__(self, iim_cls: Type[TabularInternalModel] | Type[NeuralNetworkInternalModel], **kwargs):
-        num_models = len(config.cloud_config.names)
-        self.models = [iim_cls(**kwargs) for _ in range(num_models)]
-        self.final_model = iim_cls(**kwargs)
+
+    def __init__(self, **kwargs):
+        self.models = None
+        self.final_model = None
+        self.name = None
 
 
     def fit(self, X: list, y):
@@ -170,9 +169,6 @@ class StackingInternalModel:
 
         # Stack predictions horizontally (axis=1) to form the meta-features
         meta_features = np.hstack(meta_features)
-
-        # Transpose meta_features to have shape (num_samples, num_models)
-        meta_features = np.vstack(meta_features)
 
         # Fit the final model on the meta-features
         self.final_model.fit(meta_features, y)  # Assuming y is the target for the final model
@@ -192,30 +188,88 @@ class StackingInternalModel:
         return self.final_model.predict(meta_features)
 
     def evaluate(self, X, y):
-        # if len(y.shape) == 2:
-        #     y = np.argmax(y, axis=1)
 
         pred = self.predict(X)
+        if len(y.shape) == 2 and len(pred.shape) == 1:
+            y = y.argmax(axis=1)
         return accuracy_score(y, pred), f1_score(y, pred, average='weighted')
 
 
-class InternalInferenceModelFactory:
 
-    @staticmethod
-    def get_model(**kwargs) -> Union[NeuralNetworkInternalModel, TabularInternalModel, StackingInternalModel]:
-
-        iim = kwargs.get("type", IIM_MODELS.XGBOOST)
-        stacking = len(config.cloud_config.names) > 1
+class StackingDenseInternalModel(StackingInternalModel):
 
 
-        if iim == IIM_MODELS.XGBOOST:
-            if stacking:
-                return StackingInternalModel(TabularInternalModel, **dict(model=XGBClassifier(), **kwargs))
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        num_models = len(config.cloud_config.names)
+        self.models = [DenseInternalModel(**kwargs) for _ in range(num_models)]
 
-            return TabularInternalModel(**dict(model=XGBClassifier(), **kwargs))
+        # For the final model, we need to init it according to the correct number of inputs. The final model will need a
+        # different number of inputs which is num_classes * num_models
+        input_size = num_models * kwargs.get("num_classes")
+        kwargs['input_shape'] = input_size
+        self.final_model = DenseInternalModel(**kwargs)
+        self.name ="stacking_with_only_nn_models"
 
-        else:
-            if stacking:
-                return StackingInternalModel(DenseInternalModel, **kwargs)
 
-            return DenseInternalModel(**kwargs)
+class StackingXGDenseInternalModel(StackingInternalModel):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        num_models = len(config.cloud_config.names)
+        self.nn_models = [DenseInternalModel(**kwargs) for _ in range(num_models)]
+        self.xg_models = [XGBClassifier() for _ in range(num_models)]
+
+        # For the final model, we need to init it according to the correct number of inputs. The final model will need a
+        # different number of inputs which is num_classes * num_models
+        input_size = num_models * 2 * kwargs.get("num_classes")
+        kwargs['input_shape'] = input_size
+        self.final_model = DenseInternalModel(**kwargs)
+        self.name = "stacking_nn_with_xg_models"
+
+    def fit(self, X: list, y):
+
+        # Fit each model on its corresponding dataset
+        for i, x in enumerate(X):
+            self.nn_models[i].fit(x, y)
+
+        for i, x in enumerate(X):
+            self.xg_models[i].fit(x, y)
+
+        # Collect predictions from each model
+        meta_features = []
+        for i, x in enumerate(X):
+            preds = self.nn_models[i].predict_proba(x)
+            meta_features.append(preds)
+
+        for i, x in enumerate(X):
+            preds = self.xg_models[i].predict_proba(x)
+            meta_features.append(preds)
+
+        # Stack predictions horizontally (axis=1) to form the meta-features
+        meta_features = np.hstack(meta_features)
+
+        # Fit the final model on the meta-features
+        self.final_model.fit(meta_features, y)  # Assuming y is the target for the final model
+
+    def predict(self, X):
+
+        # Collect predictions from each model
+        meta_features = []
+        for i, x in enumerate(X):
+            preds = self.nn_models[i].predict_proba(x)
+            meta_features.append(preds)
+
+        for i, x in enumerate(X):
+            preds = self.xg_models[i].predict_proba(x)
+            meta_features.append(preds)
+
+
+        # Stack predictions horizontally (axis=1) to form the meta-features
+        meta_features = np.hstack(meta_features)
+
+        # Predict using the final model
+        return self.final_model.predict(meta_features)
+
+
+

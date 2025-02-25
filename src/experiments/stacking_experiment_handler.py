@@ -1,18 +1,18 @@
-import numpy as np
 from tqdm import tqdm
 import pandas as pd
+from loguru import logger
 
 from src.pipeline.stacking_encoding_pipeline import FeatureEngineeringPipeline
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
-from src.internal_model.model import InternalInferenceModelFactory
+from src.utils.constansts import IIM_MODELS
+from src.internal_model.model import StackingDenseInternalModel, StackingXGDenseInternalModel
 from src.internal_model.baseline import EmbeddingBaselineModelFactory
 from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
 from src.dataset import DATASETS, RawDataset
 from src.utils.config import config
-from loguru import logger
 
 
 class ExperimentHandler:
@@ -61,7 +61,7 @@ class ExperimentHandler:
                 logger.debug(f"CREATING THE CLOUD-TRAINSET FROM {dataset_name},"
                       f" WITH {n_pred_vectors} PREDICTION VECTORS")
 
-                dataset_creator = FeatureEngineeringPipeline(
+                datasets_creator = FeatureEngineeringPipeline(
                     dataset_name=dataset_name,
                     cloud_models=cloud_models,
                     encryptor=encryptor,
@@ -69,20 +69,27 @@ class ExperimentHandler:
                     n_pred_vectors=n_pred_vectors,
                     metadata=raw_dataset.metadata
                 )
-                datasets, emb_baseline, pred_baseline, = dataset_creator.create(X_sample, y_sample, X_test, y_test)
+                datasets, emb_baseline, pred_baseline, = datasets_creator.create(X_sample, y_sample, X_test, y_test)
                 logger.debug("Finished Creating the dataset")
 
-                iim_models = config.iim_config.name
-                if isinstance(iim_models, str):
-                    iim_models = [iim_models]
+                internal_models = [
+                    StackingDenseInternalModel(
+                        num_classes=raw_dataset.get_n_classes(),
+                        input_shape=datasets[0].train.features.shape[1],
+                    ),
+                    StackingXGDenseInternalModel(
+                        num_classes=raw_dataset.get_n_classes(),
+                        input_shape=datasets[0].train.features.shape[1],
+                    )
+                ]
 
-                for iim_model in iim_models:
-                    logger.info(f"############# USING {iim_model} FOR ALL BASELINES #############")
+                for iim_model in internal_models:
+                    logger.info(f"############# USING {IIM_MODELS.NEURAL_NET} FOR ALL BASELINES #############")
                     logger.debug(f"#### EVALUATING EMBEDDING BASELINE MODEL ####\nDataset Shape: Train - {emb_baseline.train.embeddings.shape}, Test: {emb_baseline.test.embeddings.shape}")
                     baseline_model = EmbeddingBaselineModelFactory.get_model(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=emb_baseline.train.embeddings.shape[1],
-                        type=iim_model
+                        type=IIM_MODELS.NEURAL_NET # The base line will be only neural network
                     )
                     baseline_model.fit(
                         emb_baseline.train.embeddings, emb_baseline.train.labels,
@@ -95,7 +102,7 @@ class ExperimentHandler:
                     baseline_model = EmbeddingBaselineModelFactory.get_model(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=pred_baseline.train.predictions.shape[1],
-                        type=iim_model
+                        type=IIM_MODELS.NEURAL_NET
                     )
                     baseline_model.fit(
                         pred_baseline.train.predictions, pred_baseline.train.labels,
@@ -105,15 +112,11 @@ class ExperimentHandler:
                     )
 
                     logger.debug(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {datasets[0].train.features.shape}, Test: {datasets[0].test.features.shape}")
-                    internal_model = InternalInferenceModelFactory().get_model(
-                        num_classes=raw_dataset.get_n_classes(),
-                        input_shape=datasets[0].train.features.shape[1],
-                        type=iim_model
-                    )
-                    internal_model.fit(
+
+                    iim_model.fit(
                         X=[dataset.train.features for dataset in datasets],y=datasets[0].train.labels,
                     )
-                    test_acc, test_f1 = internal_model.evaluate(
+                    test_acc, test_f1 = iim_model.evaluate(
                         X=[dataset.test.features for dataset in datasets],y=datasets[0].test.labels
                     )
 
@@ -132,11 +135,13 @@ class ExperimentHandler:
                                 {
                                     "exp_name": [self.experiment_name],
                                     "dataset": [dataset_name],
+                                    "train_size_ratio": [config.experiment_config.train_size_ratio],
                                     "n_pred_vectors": [n_pred_vectors],
-                                    "iim_model": [internal_model.name],
+                                    "n_noise_sample": [config.experiment_config.n_noise_sample],
+                                    "iim_model": [iim_model.name],
                                     "embedding": [embedding_model.name],
                                     "encryptor": [encryptor.name],
-                                    "cloud_model": [cloud_model.name for cloud_model in cloud_models],
+                                    "cloud_model": [str([cloud_model.name for cloud_model in cloud_models])],
                                     "raw_baseline_acc": [raw_baseline_acc],
                                     "raw_baseline_f1": [raw_baseline_f1],
                                     "emb_baseline_acc": [baseline_emb_acc],
@@ -149,7 +154,6 @@ class ExperimentHandler:
                             )
                         ])
 
-                del dataset # Free up space
-
+                del datasets  # Free up space
 
         return final_report

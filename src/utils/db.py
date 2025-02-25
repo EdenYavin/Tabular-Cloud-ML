@@ -1,5 +1,5 @@
 import json, pickle
-
+from loguru import logger
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -58,13 +58,13 @@ class RawDataExperimentDatabase:
 
             self.db[config.dataset_config.split_ratio] = new_data
 
-            print(f"#### CREATED ENW INDEX FOR {config.dataset_config.split_ratio} - INDEX SIZE {len(X_sample)}")
+            logger.info(f"#### CREATED NEW INDEX FOR {config.dataset_config.split_ratio} - INDEX SIZE {len(X_sample)}")
 
             self._save()
 
         else:
             indexes = self.db[config.dataset_config.split_ratio]
-            print(f"LOAD INDEX {config.dataset_config.split_ratio} - INDEX SIZE {len(DB_IMM_TRAIN_INDEX_TOKEN)}")
+            logger.info(f"LOAD INDEX {config.dataset_config.split_ratio} - INDEX SIZE {len(DB_IMM_TRAIN_INDEX_TOKEN)}")
             # Get the existing indices and create new dataframes
             X_train = pd.DataFrame(X.loc[indexes[DB_TRAIN_INDEX_TOKEN]])
             y_train = pd.Series(y.loc[indexes[DB_TRAIN_INDEX_TOKEN]])

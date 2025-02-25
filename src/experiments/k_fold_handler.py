@@ -8,7 +8,7 @@ from src.pipeline.encoding_pipeline import FeatureEngineeringPipeline
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor import EncryptorFactory
 from src.encryptor.base import BaseEncryptor
-from src.internal_model.model import InternalInferenceModelFactory
+from src.internal_model.base import InternalInferenceModelFactory
 
 from src.dataset import DATASETS, RawDataset
 from src.utils.config import config

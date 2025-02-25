@@ -48,10 +48,10 @@ class Config(BaseModel):
                                                            use_preds=True, use_embedding=True, use_labels=False,
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING)
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[CLOUD_MODELS.VGG16, CLOUD_MODELS.Xception])
-    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.XGBOOST, IIM_MODELS.NEURAL_NET])
+    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET])
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(
-                                                  split_ratio=0.01,
+                                                  split_ratio=1,
                                                   names=HARD_DATASETS
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)

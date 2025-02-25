@@ -149,10 +149,19 @@ class DoubleDenseInternalModel(NeuralNetworkInternalModel):
         return model
 
 class StackingInternalModel:
-    def __init__(self, iim_cls: Type[TabularInternalModel] | Type[NeuralNetworkInternalModel], **kwargs):
+    name = "stacking"
+
+    def __init__(self, iim_cls: Type[XGBClassifier] | Type[NeuralNetworkInternalModel], **kwargs):
         num_models = len(config.cloud_config.names)
         self.models = [iim_cls(**kwargs) for _ in range(num_models)]
+
+        # For the final model, we need to init it according to the correct number of inputs. The final model will need a
+        # different number of inputs which is num_classes * num_models
+        input_size = num_models * kwargs.get("num_classes")
+        kwargs['input_shape'] = input_size
         self.final_model = iim_cls(**kwargs)
+
+        self.name = f'{self.name}_{type(self.final_model).__name__}'
 
 
     def fit(self, X: list, y):
@@ -170,9 +179,6 @@ class StackingInternalModel:
 
         # Stack predictions horizontally (axis=1) to form the meta-features
         meta_features = np.hstack(meta_features)
-
-        # Transpose meta_features to have shape (num_samples, num_models)
-        meta_features = np.vstack(meta_features)
 
         # Fit the final model on the meta-features
         self.final_model.fit(meta_features, y)  # Assuming y is the target for the final model
@@ -192,10 +198,10 @@ class StackingInternalModel:
         return self.final_model.predict(meta_features)
 
     def evaluate(self, X, y):
-        # if len(y.shape) == 2:
-        #     y = np.argmax(y, axis=1)
 
         pred = self.predict(X)
+        if len(y.shape) == 2 and len(pred.shape) == 1:
+            y = y.argmax(axis=1)
         return accuracy_score(y, pred), f1_score(y, pred, average='weighted')
 
 
@@ -210,7 +216,7 @@ class InternalInferenceModelFactory:
 
         if iim == IIM_MODELS.XGBOOST:
             if stacking:
-                return StackingInternalModel(TabularInternalModel, **dict(model=XGBClassifier(), **kwargs))
+                return StackingInternalModel(XGBClassifier, **kwargs)
 
             return TabularInternalModel(**dict(model=XGBClassifier(), **kwargs))
 

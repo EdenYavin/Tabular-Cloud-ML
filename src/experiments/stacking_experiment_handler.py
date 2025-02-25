@@ -61,7 +61,7 @@ class ExperimentHandler:
                 logger.debug(f"CREATING THE CLOUD-TRAINSET FROM {dataset_name},"
                       f" WITH {n_pred_vectors} PREDICTION VECTORS")
 
-                dataset_creator = FeatureEngineeringPipeline(
+                datasets_creator = FeatureEngineeringPipeline(
                     dataset_name=dataset_name,
                     cloud_models=cloud_models,
                     encryptor=encryptor,
@@ -69,7 +69,7 @@ class ExperimentHandler:
                     n_pred_vectors=n_pred_vectors,
                     metadata=raw_dataset.metadata
                 )
-                datasets, emb_baseline, pred_baseline, = dataset_creator.create(X_sample, y_sample, X_test, y_test)
+                datasets, emb_baseline, pred_baseline, = datasets_creator.create(X_sample, y_sample, X_test, y_test)
                 logger.debug("Finished Creating the dataset")
 
                 iim_models = config.iim_config.name
@@ -136,7 +136,7 @@ class ExperimentHandler:
                                     "iim_model": [internal_model.name],
                                     "embedding": [embedding_model.name],
                                     "encryptor": [encryptor.name],
-                                    "cloud_model": [cloud_model.name for cloud_model in cloud_models],
+                                    "cloud_model": [str([cloud_model.name for cloud_model in cloud_models])],
                                     "raw_baseline_acc": [raw_baseline_acc],
                                     "raw_baseline_f1": [raw_baseline_f1],
                                     "emb_baseline_acc": [baseline_emb_acc],
@@ -149,7 +149,6 @@ class ExperimentHandler:
                             )
                         ])
 
-                del dataset # Free up space
-
+                del datasets  # Free up space
 
         return final_report

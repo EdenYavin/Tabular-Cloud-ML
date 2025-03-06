@@ -2,13 +2,10 @@ import pandas as pd
 from huggingface_hub.keras_mixin import keras
 from keras.src.applications import resnet
 from keras.src.applications.resnet import preprocess_input
-from keras.src.layers import Dense, BatchNormalization, Input
+from keras.src.layers import Dense, BatchNormalization, Input, LeakyReLU
 from keras.src import Sequential
-from gensim.models import KeyedVectors
 import numpy as np
-import torch
 import torch.nn as nn
-import torchvision.transforms as transforms
 import tensorflow as tf
 from tab2img.converter import Tab2Img
 from keras.src.callbacks import EarlyStopping
@@ -105,8 +102,9 @@ class SparseAE(nn.Module):
             return mse_loss + lambda_sparse * kl_divergence
 
         input_dim = X.shape[1]
+        encoding_dim = max(int(input_dim * 1.5), 64)
         inputs = Input(shape=(input_dim,))
-        encoded = Dense(64, activation='relu')(inputs)
+        encoded = Dense(encoding_dim, activation="relu")(inputs)
         decoded = Dense(input_dim, activation='sigmoid')(encoded)
 
         autoencoder = keras.Model(inputs, decoded)

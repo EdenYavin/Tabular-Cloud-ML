@@ -15,7 +15,7 @@ class Batch:
         self.end = size
         self.progress = tqdm(total=len(X), unit="samples", position=0, leave=True, desc="Batches")
 
-    def accumulate(self, item: NDArray[np.float_] | pd.DataFrame):
+    def accumulate(self, item: NDArray[float] | pd.DataFrame):
         self.data.append(item)
 
     def is_empty(self) -> bool:

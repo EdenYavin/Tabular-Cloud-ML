@@ -1,5 +1,6 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from sklearn.metrics import accuracy_score, f1_score
+import tensorflow as tf
 
 
 from src.utils.constansts import CONFIG_CLOUD_MODELS_TOKEN
@@ -44,6 +45,41 @@ class CloudModel:
 
 
 
+class KerasApplicationCloudModel(ABC):
+    def __init__(self, **kwargs):
+        self.input_shape = kwargs.get("input_shape")
+        self.output_shape = (1, 1000)
+        self.preprocess_input = kwargs.get("preprocess_input")
+        self.model = self.get_model()
+
+    @abstractmethod
+    def get_model(self):
+        """Abstract method to be implemented by subclasses to return the model."""
+        pass
+
+    def fit(self, X_train, y_train, **kwargs):
+        """Fit the model. This can be overridden if needed."""
+        pass
+
+    def preprocess(self, X):
+        """Preprocess the input data using the specified preprocessing function."""
+        if any(s < self.input_shape[0] for s in X.shape[1:3]):
+            # Pad the input to make its size equal to the required input shape
+            padded_X = tf.image.resize_with_crop_or_pad(X, self.input_shape[0], self.input_shape[1])
+            X = self.preprocess_input(padded_X.numpy())
+        else:
+            # If no padding is needed, directly preprocess the input
+            X = self.preprocess_input(X)
+        return X
+
+    def predict(self, X):
+        """Predict using the model."""
+        X = self.preprocess(X)
+        return self.model.predict(X, verbose=None)
+
+    def evaluate(self, X, y, **kwargs):
+        """Evaluate the model. This can be overridden if needed."""
+        return -1, -1
 
 
 

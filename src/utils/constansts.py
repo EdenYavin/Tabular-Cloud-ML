@@ -28,6 +28,9 @@ class CLOUD_MODELS(str, enum.Enum):
     VGG16_CIFAR10 = "vgg16_cifar10"
     VGG16_CIFAR100 = "vgg16_cifar100"
     VGG16 = "vgg16"
+    INCEPTION = "inception"
+    EFFICIENTNET = "efficientnet"
+    DENSENET = "densenet"
 
 class DATASETS(str, enum.Enum):
     HELOC = "heloc"

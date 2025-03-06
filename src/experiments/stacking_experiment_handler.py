@@ -7,7 +7,7 @@ from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
 from src.utils.constansts import IIM_MODELS
-from src.internal_model.model import StackingDenseInternalModel, StackingXGDenseInternalModel
+from src.internal_model.model import StackingDenseInternalModel, StackingXGDenseInternalModel, StackingXGInternalModel
 from src.internal_model.baseline import EmbeddingBaselineModelFactory
 from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
@@ -80,7 +80,12 @@ class ExperimentHandler:
                     StackingXGDenseInternalModel(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=datasets[0].train.features.shape[1],
+                    ),
+                    StackingXGInternalModel(
+                        num_classes=raw_dataset.get_n_classes(),
+                        input_shape=datasets[0].train.features.shape[1],
                     )
+
                 ]
 
                 for iim_model in internal_models:
@@ -99,17 +104,23 @@ class ExperimentHandler:
                     )
 
                     logger.debug(f"#### EVALUATING PREDICTIONS BASELINE MODEL ####\nDataset Shape: Train - {pred_baseline.train.predictions.shape}, Test: {pred_baseline.test.predictions.shape}")
-                    baseline_model = EmbeddingBaselineModelFactory.get_model(
-                        num_classes=raw_dataset.get_n_classes(),
-                        input_shape=pred_baseline.train.predictions.shape[1],
-                        type=IIM_MODELS.NEURAL_NET
-                    )
-                    baseline_model.fit(
-                        pred_baseline.train.predictions, pred_baseline.train.labels,
-                    )
-                    baseline_pred_acc, baseline_pred_f1 = baseline_model.evaluate(
-                        pred_baseline.test.predictions, pred_baseline.test.labels
-                    )
+
+                    try:
+                        baseline_model = EmbeddingBaselineModelFactory.get_model(
+                            num_classes=raw_dataset.get_n_classes(),
+                            input_shape=pred_baseline.train.predictions.shape[1],
+                            type=IIM_MODELS.NEURAL_NET
+                        )
+                        baseline_model.fit(
+                            pred_baseline.train.predictions, pred_baseline.train.labels,
+                        )
+                        baseline_pred_acc, baseline_pred_f1 = baseline_model.evaluate(
+                            pred_baseline.test.predictions, pred_baseline.test.labels
+                        )
+                    except Exception as e:
+                        logger.error("Error while evaluating the Prediction baseline model. Skipping the baseline")
+                        logger.error(e)
+                        baseline_emb_acc, baseline_pred_f1 = -1, -1
 
                     logger.debug(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {datasets[0].train.features.shape}, Test: {datasets[0].test.features.shape}")
 
@@ -135,9 +146,9 @@ class ExperimentHandler:
                                 {
                                     "exp_name": [self.experiment_name],
                                     "dataset": [dataset_name],
-                                    "train_size_ratio": [config.experiment_config.train_size_ratio],
+                                    "train_size_ratio": [config.dataset_config.split_ratio],
                                     "n_pred_vectors": [n_pred_vectors],
-                                    "n_noise_sample": [config.experiment_config.n_noise_sample],
+                                    "n_noise_sample": [1],
                                     "iim_model": [iim_model.name],
                                     "embedding": [embedding_model.name],
                                     "encryptor": [encryptor.name],

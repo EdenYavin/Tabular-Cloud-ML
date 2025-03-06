@@ -148,10 +148,11 @@ class DoubleDenseInternalModel(NeuralNetworkInternalModel):
 
 class StackingInternalModel:
 
+    name: str
+
     def __init__(self, **kwargs):
         self.models = None
         self.final_model = None
-        self.name = None
 
 
     def fit(self, X: list, y):
@@ -198,6 +199,7 @@ class StackingInternalModel:
 
 class StackingDenseInternalModel(StackingInternalModel):
 
+    name = "neural_network_stacking_iim"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -209,10 +211,26 @@ class StackingDenseInternalModel(StackingInternalModel):
         input_size = num_models * kwargs.get("num_classes")
         kwargs['input_shape'] = input_size
         self.final_model = DenseInternalModel(**kwargs)
-        self.name ="stacking_with_only_nn_models"
+
+
+class StackingXGInternalModel(StackingInternalModel):
+
+    name = "xg_stacking_iim"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        num_models = len(config.cloud_config.names)
+        self.models = [XGBClassifier() for _ in range(num_models)]
+
+        # For the final model, we need to init it according to the correct number of inputs. The final model will need a
+        # different number of inputs which is num_classes * num_models
+        input_size = num_models * kwargs.get("num_classes")
+        kwargs['input_shape'] = input_size
+        self.final_model = DenseInternalModel(**kwargs)
 
 
 class StackingXGDenseInternalModel(StackingInternalModel):
+    name = "xg_and_nn_stacking_iim"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -225,7 +243,6 @@ class StackingXGDenseInternalModel(StackingInternalModel):
         input_size = num_models * 2 * kwargs.get("num_classes")
         kwargs['input_shape'] = input_size
         self.final_model = DenseInternalModel(**kwargs)
-        self.name = "stacking_nn_with_xg_models"
 
     def fit(self, X: list, y):
 

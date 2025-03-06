@@ -115,7 +115,7 @@ class FeatureEngineeringPipeline(object):
                     # We are then creating a prediction vector for each new encoded sample (image)
                     predictions = cloud_model.predict(images)
 
-                    predictions = np.vstack(predictions) # Create one feature vector of all concatenated predictions
+                    predictions = np.vstack(list(predictions)) # Create one feature vector of all concatenated predictions
 
                     datasets[idx].append(np.hstack([predictions, embeddings_samples]))  # Shape - |CMLS|, (1,|Embedding| * Number of noise samples)
 

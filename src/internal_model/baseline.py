@@ -7,7 +7,6 @@ from keras.src.metrics import F1Score
 from xgboost import XGBClassifier
 
 from src.internal_model.model import DenseInternalModel, TabularInternalModel
-from src.utils.config import config
 from src.utils.constansts import IIM_MODELS
 
 class EmbeddingBaseline(DenseInternalModel):

@@ -48,7 +48,7 @@ class Config(BaseModel):
                                                            use_preds=True, use_embedding=True, use_labels=False,
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING)
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
-        CLOUD_MODELS.INCEPTION, CLOUD_MODELS.Xception, CLOUD_MODELS.DENSENET, CLOUD_MODELS.EFFICIENTNET
+        CLOUD_MODELS.INCEPTION, CLOUD_MODELS.DENSENET, CLOUD_MODELS.EFFICIENTNET
     ])
     iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET])
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()

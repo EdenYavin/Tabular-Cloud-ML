@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 class Batch:
 
-    def __init__(self, X:pd.DataFrame | NDArray[np.float_], y: list | NDArray[np.int8], size=1):
+    def __init__(self, X:pd.DataFrame | NDArray[float], y: list | NDArray[np.int8], size=1):
         self.data = X
         self.y = y
         self.size = size
@@ -43,8 +43,8 @@ class IIMFeatures(BaseModel):
     # Enable arbitrary types in the model configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    features: NDArray[np.float_]
-    labels: NDArray[np.float_] | list[float]
+    features: NDArray[float]
+    labels: NDArray[float] | list[float]
 
 class IIMDataset(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -53,8 +53,8 @@ class IIMDataset(BaseModel):
 
 class EmbeddingBaselineFeatures(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    embeddings: NDArray[np.float_]
-    labels: NDArray[np.float_] | list[float]
+    embeddings: NDArray[float]
+    labels: NDArray[float] | list[float]
 
 class EmbeddingBaselineDataset(BaseModel):
     train: EmbeddingBaselineFeatures
@@ -62,8 +62,8 @@ class EmbeddingBaselineDataset(BaseModel):
 
 class PredictionBaselineFeatures(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    predictions: NDArray[np.float_]
-    labels: NDArray[np.float_] | list[float]
+    predictions: NDArray[float]
+    labels: NDArray[float] | list[float]
 
 class PredictionBaselineDataset(BaseModel):
     train: PredictionBaselineFeatures

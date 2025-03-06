@@ -64,15 +64,15 @@ class EfficientNetCloudModel(KerasApplicationCloudModel):
 class DenseNetCloudModel(KerasApplicationCloudModel):
     name = "densenet"
     def __init__(self, **kwargs):
-        super().__init__(input_shape=(224,224,3), preprocess_input=efficientnet_v2_preprocess)
+        super().__init__(input_shape=(224,224,3), preprocess_input=densenet_preprocess)
 
     def get_model(self):
         return DenseNet201(weights='imagenet')
 
-class XceptionCloudModel(CloudModel):
+class XceptionCloudModel(KerasApplicationCloudModel):
     name = "xception"
     def __init__(self, **kwargs):
-        super().__init__(input_shape=(299,299,3), preprocess_input=efficientnet_v2_preprocess)
+        super().__init__(input_shape=(299,299,3), preprocess_input=xception_preprocess_input)
 
     def get_model(self):
         return Xception(weights='imagenet')

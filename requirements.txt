@@ -1,6 +1,6 @@
 absl-py==2.1.0
 aiohappyeyeballs==2.4.0
-aiohttp==3.10.5
+aiohttp==3.11.13
 aiosignal==1.3.1
 annotated-types==0.7.0
 anyio==4.4.0
@@ -79,7 +79,6 @@ kiwisolver==1.4.7
 lark==1.2.2
 lazypredict-nightly==0.3.2
 libclang==18.1.1
-lightgbm==4.5.0
 llvmlite==0.43.0
 lm-format-enforcer==0.10.6
 loguru==0.7.3
@@ -91,7 +90,7 @@ matplotlib-inline==0.1.7
 mdurl==0.1.2
 mistral_common==1.3.4
 mistune==3.0.2
-ml-dtypes==0.4.1
+ml-dtypes==0.3.2
 mlxtend==0.23.1
 mpmath==1.3.0
 msgpack==1.1.0
@@ -107,7 +106,7 @@ networkx==3.3
 notebook==7.2.2
 notebook_shim==0.2.4
 numba==0.60.0
-numpy==2.0.2
+numpy==1.26.4
 nvidia-ml-py==12.560.30
 openai==1.44.1
 opt-einsum==3.3.0
@@ -125,6 +124,7 @@ platformdirs==4.3.6
 prometheus-fastapi-instrumentator==7.0.0
 prometheus_client==0.20.0
 prompt_toolkit==3.0.47
+propcache==0.3.0
 protobuf==4.25.4
 psutil==6.0.0
 ptyprocess==0.7.0
@@ -162,12 +162,11 @@ smart-open==7.0.4
 sniffio==1.3.1
 soupsieve==2.6
 stack-data==0.6.3
-starlette==0.38.5
 sympy==1.13.2
 tab2img==0.0.2
-tensorboard==2.18.0
+tensorboard==2.16.2
 tensorboard-data-server==0.7.2
-tensorflow==2.18.0
+tensorflow==2.16.2
 tensorflow-io-gcs-filesystem==0.37.1
 tensorflow-macos==2.16.2
 tensorflow-metal==1.2.0
@@ -202,5 +201,5 @@ Werkzeug==3.0.4
 wrapt==1.16.0
 xgboost==2.1.1
 xxhash==3.5.0
-yarl==1.11.1
+yarl==1.18.3
 zipp==3.20.1

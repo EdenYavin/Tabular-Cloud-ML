@@ -5,7 +5,7 @@ from src.cloud.vision import (XceptionCloudModel,
       InceptionCloudModel, EfficientNetCloudModel, DenseNetCloudModel
       )
 from src.cloud.tabular import EnsembleCloudModel, TabularCloudModel, NeuralNetCloudModel
-from src.cloud.llm import SequenceClassificationLLMCloudModel
+from src.cloud.llm import SequenceClassificationLLMCloudModel, BertLLMCloudModel
 
 CLOUD_MODELS = {
     NeuralNetCloudModel.name: NeuralNetCloudModel,
@@ -19,4 +19,5 @@ CLOUD_MODELS = {
     InceptionCloudModel.name: InceptionCloudModel,
     DenseNetCloudModel.name: DenseNetCloudModel,
     SequenceClassificationLLMCloudModel.name: SequenceClassificationLLMCloudModel,
+    BertLLMCloudModel.name: BertLLMCloudModel
 }

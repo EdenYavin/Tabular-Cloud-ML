@@ -41,7 +41,6 @@ class FeatureEngineeringPipeline(object):
         X_emb_train = self._get_embeddings(X_train)
         X_emb_test = self._get_embeddings(X_test)
 
-
         Xs_train, new_y_train, X_pred_train = self._get_features(X_emb_train, y_train, is_test=False)
         Xs_test, new_y_test, X_pred_test = self._get_features(X_emb_test, y_test, is_test=True)
 

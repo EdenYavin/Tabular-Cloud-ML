@@ -72,6 +72,11 @@ class ExperimentHandler:
                 datasets, emb_baseline, pred_baseline, = datasets_creator.create(X_sample, y_sample, X_test, y_test)
                 logger.debug("Finished Creating the dataset")
 
+                # Log size for the final report
+                train_shape = X_sample.shape
+                test_shape = X_test.shape
+                del X_test, X_sample, y_test, y_sample
+
                 internal_models = [
                     StackingDenseInternalModel(
                         num_classes=raw_dataset.get_n_classes(),
@@ -94,7 +99,7 @@ class ExperimentHandler:
                     baseline_model = EmbeddingBaselineModelFactory.get_model(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=emb_baseline.train.embeddings.shape[1],
-                        type=IIM_MODELS.NEURAL_NET # The base line will be only neural network
+                        type=IIM_MODELS.NEURAL_NET # The baseline will be only neural network
                     )
                     baseline_model.fit(
                         emb_baseline.train.embeddings, emb_baseline.train.labels,
@@ -120,9 +125,9 @@ class ExperimentHandler:
                     except Exception as e:
                         logger.error("Error while evaluating the Prediction baseline model. Skipping the baseline")
                         logger.error(e)
-                        baseline_emb_acc, baseline_pred_f1 = -1, -1
+                        baseline_pred_acc, baseline_pred_f1 = -1, -1
 
-                    logger.debug(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {datasets[0].train.features.shape}, Test: {datasets[0].test.features.shape}")
+                    logger.debug(f"#### EVALUATING INTERNAL MODEL: {iim_model.name} ####\nDataset Shape: Train - {datasets[0].train.features.shape}, Test: {datasets[0].test.features.shape}")
 
                     iim_model.fit(
                         X=[dataset.train.features for dataset in datasets],y=datasets[0].train.labels,
@@ -146,7 +151,8 @@ class ExperimentHandler:
                                 {
                                     "exp_name": [self.experiment_name],
                                     "dataset": [dataset_name],
-                                    "train_size_ratio": [config.dataset_config.split_ratio],
+                                    "train_size": [str(train_shape)],
+                                    "test_size": [str(test_shape)],
                                     "n_pred_vectors": [n_pred_vectors],
                                     "n_noise_sample": [1],
                                     "iim_model": [iim_model.name],

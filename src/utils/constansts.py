@@ -31,6 +31,7 @@ class CLOUD_MODELS(str, enum.Enum):
     INCEPTION = "inception"
     EFFICIENTNET = "efficientnet"
     DENSENET = "densenet"
+    SEQUENCE_CLASSIFICATION_LLM = "sequence_classification_llm"
 
 class DATASETS(str, enum.Enum):
     HELOC = "heloc"

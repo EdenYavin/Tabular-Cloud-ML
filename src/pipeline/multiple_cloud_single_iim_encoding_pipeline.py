@@ -19,16 +19,14 @@ class FeatureEngineeringPipeline(object):
     def __init__(self, dataset_name, cloud_models, encryptor, embeddings_model,
                  n_pred_vectors, n_noise_samples, metadata = None):
 
-        self.cloud_model: CloudModel = cloud_models
+        self.cloud_models: list[CloudModel] = cloud_models
         self.encryptor: Encryptors = encryptor
         self.n_pred_vectors = n_pred_vectors
-        self.n_noise_samples = n_noise_samples or 0
-        self.name = dataset_name
+        self.n_noise_samples = n_noise_samples
         self.split_ratio = config.dataset_config.split_ratio
         self.use_embedding = config.experiment_config.use_embedding
         self.use_noise_labels = config.experiment_config.use_labels
         self.use_predictions = config.experiment_config.use_preds
-        self.force_run = config.pipeline_config.force_to_create_again
         self.raw_metadata = metadata
         self.embeddings_model = embeddings_model
         self.db = EmbeddingDBFactory.get_db(dataset_name, self.embeddings_model)
@@ -36,12 +34,6 @@ class FeatureEngineeringPipeline(object):
 
     def create(self, X_train, y_train, X_test, y_test) -> PredictionsDataset:
 
-        name = f"{self.name}_one_hot"
-
-        if dataset := load_cache_file(dataset_name=name, split_ratio=self.split_ratio):
-            if not self.force_run:
-                logger.info(f"Dataset {self.name} was already processed before, loading cache")
-                return dataset
 
         X_train, new_y_train, X_emb_train, X_pred_train = self._get_new_features(X_train, y_train, is_test=False)
         X_test, new_y_test, X_emb_test, X_pred_test = self._get_new_features(X_test, y_test, is_test=True)
@@ -62,7 +54,6 @@ class FeatureEngineeringPipeline(object):
             test_predictions=PredictionBaselineFeatures(predictions=X_pred_test, labels=new_y_test),
         )
 
-        save_cache_file(dataset_name=name, split_ratio=self.split_ratio, data=dataset)
         self.db.save()
         return dataset
 
@@ -123,17 +114,15 @@ class FeatureEngineeringPipeline(object):
                 images = self.encryptor.encode(mini_batch, number_of_new_samples) # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as feautres
                 # image = (encrypted_data * 10000).astype(np.uint8)
 
-                # We are then creating a prediction vector for each new encoded sample (image)
-                predictions = self.cloud_model.predict(images)
+                for cloud_model in self.cloud_models:
+                    # We are then creating a prediction vector for each new encoded sample (image)
+                    predictions = cloud_model.predict(images)
+                    predictions = np.vstack(predictions) # Create one feature vector of all concatenated predictions
 
-            predictions = np.vstack(predictions) # Create one feature vector of all concatenated predictions
-            embeddings_samples = np.vstack([mini_batch for _ in range(number_of_new_samples)]) # Duplicate the embeddings as the number of predictions
-            if self.use_predictions:
-                observation.append(predictions) # Shape - |CMLS|
-            if self.use_embedding:
-                observation.append(embeddings_samples) # Shape - (1,|Embedding| * Number of noise samples)
-            if self.use_noise_labels and noise_labels.shape[0] > 0:
-                observation.append(noise_labels[batch.start: batch.end]) # Shape - |V| * Number of noise samples
+                    embeddings_samples = np.vstack([mini_batch for _ in range(number_of_new_samples)]) # Duplicate the embeddings as the number of predictions
+
+                    observation.append(predictions) # Shape - |CMLS|
+                    observation.append(embeddings_samples) # Shape - (1,|Embedding| * Number of noise samples)
 
             observations.append(np.hstack(observation))
             embeddings_for_baseline.append(mini_batch)

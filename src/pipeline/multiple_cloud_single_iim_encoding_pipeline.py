@@ -109,6 +109,10 @@ class FeatureEngineeringPipeline(object):
 
             observation = []
 
+            embeddings_samples = np.vstack([mini_batch for _ in range(
+                number_of_new_samples)])  # Duplicate the embeddings as the number of predictions
+            embeddings_for_baseline.append(mini_batch)
+
             with tf.device(GPU_DEVICE):
 
                 images = self.encryptor.encode(mini_batch, number_of_new_samples) # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as feautres
@@ -119,13 +123,10 @@ class FeatureEngineeringPipeline(object):
                     predictions = cloud_model.predict(images)
                     predictions = np.vstack(predictions) # Create one feature vector of all concatenated predictions
 
-                    embeddings_samples = np.vstack([mini_batch for _ in range(number_of_new_samples)]) # Duplicate the embeddings as the number of predictions
-
                     observation.append(predictions) # Shape - |CMLS|
                     observation.append(embeddings_samples) # Shape - (1,|Embedding| * Number of noise samples)
 
-            observations.append(np.hstack(observation))
-            embeddings_for_baseline.append(mini_batch)
-            predictions_for_baseline.append(predictions)
+                    observations.append(np.hstack(observation))
+                    predictions_for_baseline.append(predictions)
 
         return np.vstack(observations), np.vstack(new_y), np.vstack(embeddings_for_baseline), np.vstack(predictions_for_baseline)

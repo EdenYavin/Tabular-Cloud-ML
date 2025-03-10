@@ -24,7 +24,7 @@ class RawDataExperimentDatabase:
         self.db_path = os.path.join(db_path, f"{dataset.name}_dataset.json")
         if os.path.exists(self.db_path):
             self.db = json.load(open(self.db_path, "r"))
-            self.empty = False if config.dataset_config.split_ratio in self.db else True
+            self.empty = False if str(config.dataset_config.split_ratio) in self.db else True
         else:
             self.db = {config.dataset_config.split_ratio: {}}
             self.empty = True

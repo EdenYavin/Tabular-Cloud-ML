@@ -1,14 +1,18 @@
 import json, pickle
+from pathlib import Path
+
 from loguru import logger
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
 import os
 
+from src.cloud import CloudModel
 from src.dataset.base import RawDataset
 from src.utils.config import config
 from src.utils.constansts import (DATA_CACHE_PATH, DB_EMBEDDING_TOKEN, DB_LABEL_TOKEN, DB_RAW_FEATURES_TOKEN,
                                   DB_TRAIN_INDEX_TOKEN, DB_TEST_INDEX_TOKEN, DB_IMM_TRAIN_INDEX_TOKEN,
+                                    CLOUD_PRED_CACHE_DIR_NAME
                                   )
 
 
@@ -22,9 +26,10 @@ class RawDataExperimentDatabase:
         db_path = os.path.join(DATA_CACHE_PATH, dataset.name)
         os.makedirs(db_path, exist_ok=True)
         self.db_path = os.path.join(db_path, f"{dataset.name}_dataset.json")
+        self.key = str(config.dataset_config.split_ratio)
         if os.path.exists(self.db_path):
             self.db = json.load(open(self.db_path, "r"))
-            self.empty = False if str(config.dataset_config.split_ratio) in self.db else True
+            self.empty = False if self.key in self.db else True
         else:
             self.db = {config.dataset_config.split_ratio: {}}
             self.empty = True
@@ -56,14 +61,14 @@ class RawDataExperimentDatabase:
             new_data[DB_IMM_TRAIN_INDEX_TOKEN] = X_sample.index.tolist()
             new_data[DB_TEST_INDEX_TOKEN] = X_test.index.tolist()
 
-            self.db[config.dataset_config.split_ratio] = new_data
+            self.db[self.key] = new_data
 
             logger.info(f"#### CREATED NEW INDEX FOR {config.dataset_config.split_ratio} - INDEX SIZE {len(X_sample)}")
 
             self._save()
 
         else:
-            indexes = self.db[config.dataset_config.split_ratio]
+            indexes = self.db[self.key]
             logger.info(f"LOAD INDEX {config.dataset_config.split_ratio} - INDEX SIZE {len(DB_IMM_TRAIN_INDEX_TOKEN)}")
             # Get the existing indices and create new dataframes
             X_train = pd.DataFrame(X.loc[indexes[DB_TRAIN_INDEX_TOKEN]])
@@ -102,8 +107,8 @@ class ExperimentDatabase:
             del self.db
 
         except Exception as e:
-            print(str(e))
-            print("Skipping saving")
+            logger.error(str(e))
+            logger.warning("Skipping saving")
 
     def load(self):
 
@@ -139,6 +144,30 @@ class ExperimentDatabase:
 
     def set_embedding(self, idx, value):
         self.db.setdefault(idx, {}).setdefault(DB_EMBEDDING_TOKEN, value)
+
+
+class CloudPredictionDataDatabase:
+
+    def __init__(self, dataset_name):
+        self.dataset_name = dataset_name
+        path = Path(DATA_CACHE_PATH) / dataset_name / CLOUD_PRED_CACHE_DIR_NAME
+        os.makedirs(path, exist_ok=True)
+        self.path = path
+
+
+    def get_predictions(self, cloud_model: CloudModel, batch: np.ndarray, index: int):
+
+        cache_dir= self.path / cloud_model.name
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_file = cache_dir / f"{index}.npy"
+        if os.path.exists(cache_file):
+            # Load the cached processed batch from disk if it exists.
+            return np.load(cache_file)
+        else:
+            # Process the batch and save the result to disk.
+            processed_batch = cloud_model.predict(batch)
+            np.save(cache_file, processed_batch)
+            return processed_batch
 
 
 class EmbeddingDBFactory:

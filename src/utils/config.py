@@ -52,12 +52,12 @@ class Config(BaseModel):
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         CLOUD_MODELS.INCEPTION, CLOUD_MODELS.DENSENET, CLOUD_MODELS.EFFICIENTNET
     ])
-    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.XGBOOST])
+    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET])
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(
                                                   split_ratio=1,
                                                   names=[
-                                                     DATASETS.AIRLINE_SATISFACTION
+                                                     DATASETS.HELOC
                                                   ]
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)

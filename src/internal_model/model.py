@@ -242,7 +242,7 @@ class StackingXGDenseInternalModel(StackingInternalModel):
         # different number of inputs which is num_classes * num_models
         input_size = num_models * 2 * kwargs.get("num_classes")
         kwargs['input_shape'] = input_size
-        self.final_model = XGBClassifier() #DenseInternalModel(**kwargs)
+        self.final_model = DenseInternalModel(**kwargs)
 
     def fit(self, X: list, y):
 

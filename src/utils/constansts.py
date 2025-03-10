@@ -95,6 +95,8 @@ GLOBAL_EMB_REPORT_PATH = os.path.join(OUTPUT_DIR_PATH, GLOBAL_EMB_REPORT_NAME)
 DATA_CACHE_PATH = os.path.join(STORE_PATH, "dataset")
 os.makedirs(DATA_CACHE_PATH, exist_ok=True)
 
+CLOUD_PRED_CACHE_DIR_NAME = "cloud_cache"
+
 # ---------------------
 # CLOUD MODELS SECTIONS
 # ---------------------

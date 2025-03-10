@@ -1,23 +1,21 @@
-import pandas as pd
 from loguru import logger
 
-from src.pipeline.stacking_encoding_pipeline import FeatureEngineeringPipeline
+from src.pipeline.stacking_encoding_pipeline import StackingFeatureEngineeringPipeline
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
-from src.utils.constansts import IIM_MODELS
 from src.internal_model.model import StackingDenseInternalModel, StackingXGDenseInternalModel, StackingXGInternalModel
 from src.internal_model.baseline import EmbeddingBaselineModelFactory
 from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
 from src.utils.config import config
 from src.dataset.loader import DataLoader
+from src.experiments.base import ExperimentHandler
 
-class ExperimentHandler:
+class StackingExperimentHandler(ExperimentHandler):
 
     def __init__(self):
-        self.experiment_name = "stacking_multiple_clouds"
-        self.n_pred_vectors = config.experiment_config.n_pred_vectors
+        super().__init__("stacking_multiple_clouds")
 
     def run_experiment(self):
 
@@ -27,9 +25,6 @@ class ExperimentHandler:
         if type(self.n_pred_vectors) is int:
             self.n_pred_vectors = [self.n_pred_vectors]
 
-
-        # Create a final report with average metrics
-        final_report = pd.DataFrame()
 
         # Data loader to lazy load each dataset in the experiment
         data_loader = DataLoader()
@@ -48,10 +43,6 @@ class ExperimentHandler:
             X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
             logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
 
-
-            logger.debug("#### GETTING CLOUD DATASET FULL BASELINE ####")
-            cloud_acc, cloud_f1 = raw_dataset.get_cloud_model_baseline(X_train, X_test, y_train, y_test)
-
             logger.debug("#### GETTING RAW BASELINE PREDICTION ####")
             raw_baseline_acc, raw_baseline_f1 = raw_dataset.get_baseline(X_sample, X_test, y_sample, y_test)
 
@@ -60,7 +51,7 @@ class ExperimentHandler:
                 logger.debug(f"CREATING THE CLOUD-TRAINSET FROM {raw_dataset.name},"
                       f" WITH {n_pred_vectors} PREDICTION VECTORS")
 
-                datasets_creator = FeatureEngineeringPipeline(
+                datasets_creator = StackingFeatureEngineeringPipeline(
                     dataset_name=raw_dataset.name,
                     cloud_models=cloud_models,
                     encryptor=encryptor,
@@ -77,14 +68,14 @@ class ExperimentHandler:
                 del X_test, X_sample, y_test, y_sample
 
                 internal_models = [
-                    # StackingDenseInternalModel(
-                    #     num_classes=raw_dataset.get_n_classes(),
-                    #     input_shape=datasets[0].train.features.shape[1],
-                    # ),
-                    # StackingXGDenseInternalModel(
-                    #     num_classes=raw_dataset.get_n_classes(),
-                    #     input_shape=datasets[0].train.features.shape[1],
-                    # ),
+                    StackingDenseInternalModel(
+                        num_classes=raw_dataset.get_n_classes(),
+                        input_shape=datasets[0].train.features.shape[1],
+                    ),
+                    StackingXGDenseInternalModel(
+                        num_classes=raw_dataset.get_n_classes(),
+                        input_shape=datasets[0].train.features.shape[1],
+                    ),
                     StackingXGInternalModel(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=datasets[0].train.features.shape[1],
@@ -93,12 +84,12 @@ class ExperimentHandler:
                 ]
 
                 for iim_model in internal_models:
-                    logger.info(f"############# USING {IIM_MODELS.NEURAL_NET} FOR ALL BASELINES #############")
+                    logger.info(f"############# USING {config.iim_config.name} FOR ALL BASELINES #############")
                     logger.debug(f"#### EVALUATING EMBEDDING BASELINE MODEL ####\nDataset Shape: Train - {emb_baseline.train.embeddings.shape}, Test: {emb_baseline.test.embeddings.shape}")
                     baseline_model = EmbeddingBaselineModelFactory.get_model(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=emb_baseline.train.embeddings.shape[1],
-                        type=IIM_MODELS.NEURAL_NET # The baseline will be only neural network
+                        type=config.iim_config.name[0]#IIM_MODELS.NEURAL_NET # The baseline will be only neural network
                     )
                     baseline_model.fit(
                         emb_baseline.train.embeddings, emb_baseline.train.labels,
@@ -113,7 +104,7 @@ class ExperimentHandler:
                         baseline_model = EmbeddingBaselineModelFactory.get_model(
                             num_classes=raw_dataset.get_n_classes(),
                             input_shape=pred_baseline.train.predictions.shape[1],
-                            type=IIM_MODELS.NEURAL_NET
+                            type=config.iim_config.name[0]
                         )
                         baseline_model.fit(
                             pred_baseline.train.predictions, pred_baseline.train.labels,
@@ -135,41 +126,15 @@ class ExperimentHandler:
                         X=[dataset.test.features for dataset in datasets],y=datasets[0].test.labels
                     )
 
-                    logger.info(f"""
-                          Cloud: {cloud_acc}, {cloud_f1}\n
-                          Raw Baseline: {raw_baseline_acc}, {raw_baseline_f1}\n
-                          Emb Baseline: {baseline_emb_acc}, {baseline_emb_f1}\n
-                          Prediction Baseline: {baseline_pred_acc}, {baseline_pred_f1}\n
-                          IIM {iim_model.name}: {test_acc}, {test_f1}\n
-                          """)
-
-                    final_report = pd.concat(
-                        [
-                            final_report,
-                            pd.DataFrame(
-                                {
-                                    "exp_name": [self.experiment_name],
-                                    "dataset": [raw_dataset.name],
-                                    "train_size": [str(train_shape)],
-                                    "test_size": [str(test_shape)],
-                                    "n_pred_vectors": [n_pred_vectors],
-                                    "n_noise_sample": [1],
-                                    "iim_model": [iim_model.name],
-                                    "embedding": [embedding_model.name],
-                                    "encryptor": [encryptor.name],
-                                    "cloud_model": [str([cloud_model.name for cloud_model in cloud_models])],
-                                    "raw_baseline_acc": [raw_baseline_acc],
-                                    "raw_baseline_f1": [raw_baseline_f1],
-                                    "emb_baseline_acc": [baseline_emb_acc],
-                                    "emb_baseline_f1": [baseline_emb_f1],
-                                    "pred_baseline_acc": [baseline_pred_acc],
-                                    "pred_baseline_f1": [baseline_pred_f1],
-                                    "iim_test_acc": [test_acc],
-                                    "iim_test_f1": [test_f1]
-                                }
-                            )
-                        ])
+                    self.log_results(
+                        raw_dataset.name, train_shape, test_shape,
+                        str([cloud_model.name for cloud_model in cloud_models]),
+                        raw_baseline_acc, raw_baseline_f1,
+                        baseline_emb_acc, baseline_emb_f1,
+                        baseline_pred_acc, baseline_pred_f1,
+                        test_acc, test_f1
+                    )
 
                 del datasets  # Free up space
 
-        return final_report
+        return self.report

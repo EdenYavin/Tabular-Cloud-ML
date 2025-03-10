@@ -48,15 +48,17 @@ class Config(BaseModel):
     experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False,
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
-                                                           stacking=False)
+                                                           stacking=True)
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         CLOUD_MODELS.INCEPTION, CLOUD_MODELS.DENSENET, CLOUD_MODELS.EFFICIENTNET
     ])
-    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET])
+    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.XGBOOST])
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(
                                                   split_ratio=1,
-                                                  names=[DATASETS.LOAD_APPROVAL, DATASETS.BANK_MARKETING]
+                                                  names=[
+                                                     DATASETS.AIRLINE_SATISFACTION
+                                                  ]
                                                   )
     pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)

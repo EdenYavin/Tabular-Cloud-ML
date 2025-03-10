@@ -20,6 +20,8 @@ class DataSplitter:
 
 
 class RawDataset:
+    name: str
+
     def __init__(self, **kwargs):
 
         self.X, self.y = None, None

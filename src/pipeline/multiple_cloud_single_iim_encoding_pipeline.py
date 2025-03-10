@@ -1,4 +1,5 @@
 import pandas as pd
+from keras.src.layers import minimum
 from keras.src.utils import to_categorical
 from tqdm import tqdm
 import numpy as np
@@ -100,33 +101,32 @@ class FeatureEngineeringPipeline(object):
             # with the same number of labels. We do so by duplicate the labels for each new augmentation.
             # For example if we encode x_1 to 3 new samples x_enc_1_1, x_enc_1_2, x_enc_1_2 and the original
             # label for x_1 was 1, than we add [1,1,1] to y_train.
-            # For y_test, we just duplicate it
+            # This is also true in regard to the number of cloud models we use, each new pred vector will be
+            # a new sample
+            # For y_test, we just duplicate it based on the cloud models alone
             for label in labels:
                 if not is_test:
-                    [new_y.append(label) for _ in range(number_of_new_samples)]
+                    [new_y.append(label) for _ in range(number_of_new_samples * len(self.cloud_models))]
                 else:
-                    new_y.append(label)
+                    [new_y.append(label) for _ in range(len(self.cloud_models))]
 
-            observation = []
 
             embeddings_samples = np.vstack([mini_batch for _ in range(
                 number_of_new_samples)])  # Duplicate the embeddings as the number of predictions
-            embeddings_for_baseline.append(mini_batch)
+            embeddings_for_baseline.append(embeddings_samples)  # Embeddings should be appended once
 
             with tf.device(GPU_DEVICE):
 
                 images = self.encryptor.encode(mini_batch, number_of_new_samples) # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as feautres
-                # image = (encrypted_data * 10000).astype(np.uint8)
 
                 for cloud_model in self.cloud_models:
                     # We are then creating a prediction vector for each new encoded sample (image)
                     predictions = cloud_model.predict(images)
                     predictions = np.vstack(predictions) # Create one feature vector of all concatenated predictions
 
-                    observation.append(predictions) # Shape - |CMLS|
-                    observation.append(embeddings_samples) # Shape - (1,|Embedding| * Number of noise samples)
+                    observation =  np.hstack([predictions, mini_batch])
 
-                    observations.append(np.hstack(observation))
+                    observations.append(observation)
                     predictions_for_baseline.append(predictions)
 
         return np.vstack(observations), np.vstack(new_y), np.vstack(embeddings_for_baseline), np.vstack(predictions_for_baseline)

@@ -46,8 +46,10 @@ class CloudModel:
 
 
 class KerasApplicationCloudModel(ABC):
+
+    input_shape: tuple
+
     def __init__(self, **kwargs):
-        self.input_shape = kwargs.get("input_shape")
         self.output_shape = (1, 1000)
         self.preprocess_input = kwargs.get("preprocess_input")
         self.model = self.get_model()

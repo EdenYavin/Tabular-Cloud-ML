@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import os
 
-from src.cloud import CloudModel
+from src.cloud import CloudModel, CLOUD_MODELS
 from src.dataset.base import RawDataset
 from src.utils.config import config
 from src.utils.constansts import (DATA_CACHE_PATH, DB_EMBEDDING_TOKEN, DB_LABEL_TOKEN, DB_RAW_FEATURES_TOKEN,
@@ -153,19 +153,27 @@ class CloudPredictionDataDatabase:
         path = Path(DATA_CACHE_PATH) / dataset_name / CLOUD_PRED_CACHE_DIR_NAME
         os.makedirs(path, exist_ok=True)
         self.path = path
+        self.cloud_model: CloudModel | None = None
 
-
-    def get_predictions(self, cloud_model: CloudModel, batch: np.ndarray, index: int):
-
-        cache_dir= self.path / cloud_model.name
+    def get_predictions(self, cloud_model_name: str, batch: np.ndarray, index: int, is_test: bool):
+        train_test_dir = "train" if not is_test else "test"
+        cache_dir = self.path / cloud_model_name / train_test_dir
         os.makedirs(cache_dir, exist_ok=True)
         cache_file = cache_dir / f"{index}.npy"
         if os.path.exists(cache_file):
             # Load the cached processed batch from disk if it exists.
             return np.load(cache_file)
         else:
+            # Lazy loading, we only load the cloud model if have not seen it before and
+            # use it for the entire batches. We switch models once we see a new model
+            if not self.cloud_model:
+                self.cloud_model = CLOUD_MODELS[cloud_model_name]()
+            elif cloud_model_name != self.cloud_model.name:
+                del self.cloud_model # Unload the previous model to free up memory
+                self.cloud_model = CLOUD_MODELS[cloud_model_name]()
+
             # Process the batch and save the result to disk.
-            processed_batch = cloud_model.predict(batch)
+            processed_batch = self.cloud_model.predict(batch)
             np.save(cache_file, processed_batch)
             return processed_batch
 

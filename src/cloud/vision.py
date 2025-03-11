@@ -1,10 +1,12 @@
 
-from keras.api.applications import ResNet50V2, VGG16, Xception
+from keras.api.applications import ResNet50V2, VGG16, Xception, MobileNetV2
 from keras.api.applications.xception import preprocess_input as xception_preprocess_input
 from keras.api.applications.vgg16 import preprocess_input as vgg_preprocess
 from keras.api.applications.efficientnet_v2 import preprocess_input as efficientnet_v2_preprocess, EfficientNetV2B3
 from keras.api.applications.densenet import preprocess_input as densenet_preprocess, DenseNet201
 from keras.api.applications.inception_v3 import preprocess_input as inception_v3_preprocess, InceptionV3
+from keras.api.applications.mobilenet import preprocess_input as mobilenet_preprocess
+
 from keras import Model, Sequential
 from keras.src.layers import GlobalAveragePooling2D, Conv2D, Activation, BatchNormalization, Dropout, MaxPooling2D, \
     Flatten, Dense
@@ -43,73 +45,66 @@ class ResNetEmbeddingCloudModel:
         return -1, -1
 
 
-class InceptionCloudModel(KerasApplicationCloudModel):
-    name = "inception"
+class MobileNetCloudModel(KerasApplicationCloudModel):
+    name = "mobile_net"
+    input_shape = (224, 224, 3)
 
     def __init__(self, **kwargs):
-        super().__init__(input_shape=(299,299,3), preprocess_input=inception_v3_preprocess, **kwargs)
+        super().__init__(preprocess_input=mobilenet_preprocess, **kwargs)
+
+    def get_model(self):
+        return MobileNetV2(weights='imagenet')
+
+class InceptionCloudModel(KerasApplicationCloudModel):
+    name = "inception"
+    input_shape = (299, 299, 3)
+
+    def __init__(self, **kwargs):
+        super().__init__(preprocess_input=inception_v3_preprocess, **kwargs)
 
     def get_model(self):
         return InceptionV3(weights='imagenet')
 
 class EfficientNetCloudModel(KerasApplicationCloudModel):
     name = "efficientnet"
+    input_shape = (300, 300, 3)
 
     def __init__(self, **kwargs):
-        super().__init__(input_shape=(300,300,3), preprocess_input=efficientnet_v2_preprocess)
+        super().__init__( preprocess_input=efficientnet_v2_preprocess)
 
     def get_model(self):
         return EfficientNetV2B3(weights='imagenet')
 
 class DenseNetCloudModel(KerasApplicationCloudModel):
     name = "densenet"
+    input_shape = (224, 224, 3)
+
     def __init__(self, **kwargs):
-        super().__init__(input_shape=(224,224,3), preprocess_input=densenet_preprocess)
+        super().__init__( preprocess_input=densenet_preprocess)
 
     def get_model(self):
         return DenseNet201(weights='imagenet')
 
 class XceptionCloudModel(KerasApplicationCloudModel):
     name = "xception"
+    input_shape = (299, 299, 3)
+
     def __init__(self, **kwargs):
-        super().__init__(input_shape=(299,299,3), preprocess_input=xception_preprocess_input)
+        super().__init__(preprocess_input=xception_preprocess_input)
 
     def get_model(self):
         return Xception(weights='imagenet')
 
 
-class VGG16CloudModel(CloudModel):
+class VGG16CloudModel(KerasApplicationCloudModel):
     name = "vgg16"
+    input_shape = (299, 299, 3)
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.model = self.get_model()
-        self.input_shape = config.cloud_config.input_shape
-        self.output_shape = (1,1000)
-
-    def fit(self, X_train, y_train, **kwargs):
-        pass
+        super().__init__(preprocess_input=vgg_preprocess)
 
     def get_model(self):
-
-        model = VGG16(weights='imagenet')
-        return model
-
-    def predict(self, X):
-        X = self.preprocess(X)
-        predictions = self.model.predict(X, verbose=None)
-        return predictions
-
-    def preprocess(self, X):
-        # Resize the inputs to always be 224, small or big.
-        resize_X = tf.image.resize_with_crop_or_pad(X, 224, 224)
-
-        X = vgg_preprocess(resize_X)
-
-        return X
-
-    def evaluate(self, X, y):
-        return -1, -1
+        return VGG16(weights='imagenet')
 
 
 class VGG16Cifar100CloudModel(CloudModel):

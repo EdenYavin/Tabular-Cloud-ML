@@ -4,7 +4,6 @@ import pandas as pd
 from keras.src.utils import to_categorical
 from tqdm import tqdm
 
-from src.cloud import CloudModel
 from src.domain.dataset import IIMFeatures, IIMDataset, PredictionBaselineFeatures, PredictionBaselineDataset, \
     EmbeddingBaselineFeatures, EmbeddingBaselineDataset
 from src.encryptor.base import Encryptors
@@ -14,10 +13,9 @@ from src.utils.db import EmbeddingDBFactory, CloudPredictionDataDatabase
 
 class FeatureEngineeringPipeline(ABC):
 
-    def __init__(self, dataset_name, cloud_models, encryptor: Encryptors, embeddings_model,
+    def __init__(self, dataset_name, encryptor: Encryptors, embeddings_model,
                  n_pred_vectors, metadata = None):
 
-        self.cloud_models: list[CloudModel] = cloud_models
         self.n_pred_vectors = n_pred_vectors
         self.name = dataset_name
         self.use_embedding = config.experiment_config.use_embedding

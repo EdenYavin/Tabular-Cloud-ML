@@ -2,7 +2,8 @@ from src.cloud.base import CloudModel
 from src.cloud.vision import (XceptionCloudModel,
       ResNetEmbeddingCloudModel,
       VGG16CloudModel, VGG16Cifer10CloudModel, VGG16Cifar100CloudModel,
-      InceptionCloudModel, EfficientNetCloudModel, DenseNetCloudModel
+      InceptionCloudModel, EfficientNetCloudModel, DenseNetCloudModel,
+        MobileNetCloudModel
       )
 from src.cloud.tabular import EnsembleCloudModel, TabularCloudModel, NeuralNetCloudModel
 from src.cloud.llm import SequenceClassificationLLMCloudModel, BertLLMCloudModel
@@ -18,6 +19,7 @@ CLOUD_MODELS = {
     EfficientNetCloudModel.name: EfficientNetCloudModel,
     InceptionCloudModel.name: InceptionCloudModel,
     DenseNetCloudModel.name: DenseNetCloudModel,
+    MobileNetCloudModel.name: MobileNetCloudModel,
     SequenceClassificationLLMCloudModel.name: SequenceClassificationLLMCloudModel,
     BertLLMCloudModel.name: BertLLMCloudModel
 }

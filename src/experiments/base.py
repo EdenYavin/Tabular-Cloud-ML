@@ -17,7 +17,9 @@ class ExperimentHandler(ABC):
                     raw_baseline_acc: float, raw_baseline_f1: float,
                     embeddings_baseline_acc: float, embeddings_baseline_f1: float,
                     prediction_baseline_acc: float, prediction_baseline_f1: float,
-                    iim_baseline_acc: float, iim_baseline_f1: float):
+                    iim_baseline_acc: float, iim_baseline_f1: float,
+                    iim_model_name: str = None
+                    ):
 
         logger.info(f"""
                  Raw Baseline: {raw_baseline_acc}, {raw_baseline_f1}\n
@@ -26,6 +28,7 @@ class ExperimentHandler(ABC):
                  IIM {config.iim_config.name}: {iim_baseline_acc}, {iim_baseline_f1}\n
                  """)
 
+        iim_name = " ".join([iim for iim in config.iim_config.name]) if not iim_model_name else iim_model_name
         new_row = pd.DataFrame({
             "exp_name": [self.experiment_name],
             "dataset": [dataset_name],
@@ -33,7 +36,7 @@ class ExperimentHandler(ABC):
             "test_size": [str(test_shape)],
             "n_pred_vectors": [self.n_pred_vectors],
             "n_noise_sample": [1],
-            "iim_model": [" ".join([iim for iim in config.iim_config.name])],
+            "iim_model": [iim_name],
             "embedding": [config.embedding_config.name],
             "encryptor": [config.encoder_config.name],
             "cloud_model": [cloud_models_names],
@@ -46,7 +49,7 @@ class ExperimentHandler(ABC):
             "iim_test_acc": [iim_baseline_acc],
             "iim_test_f1": [iim_baseline_f1]
         })
-        self.report = self.report.concat([self.report, new_row])
+        self.report = pd.concat([self.report, new_row])
 
     @abstractmethod
     def run_experiment(self):

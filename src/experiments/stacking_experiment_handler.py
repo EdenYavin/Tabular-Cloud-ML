@@ -29,13 +29,12 @@ class StackingExperimentHandler(ExperimentHandler):
         # Data loader to lazy load each dataset in the experiment
         data_loader = DataLoader()
 
-        # Load the cloud models
-        cloud_models: list[CloudModel] = [CLOUD_MODELS[name]() for name in config.cloud_config.names]
+        cloud_input_shape = CLOUD_MODELS[config.cloud_config.names[0]].input_shape
 
         for raw_dataset in data_loader:
 
             embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=raw_dataset.name)
-            encryptor = Encryptors(output_shape=cloud_models[0].input_shape,
+            encryptor = Encryptors(output_shape=cloud_input_shape,
                                    number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,
                                    enc_base_cls=EncryptorFactory.get_model_cls()
                                    )
@@ -53,7 +52,6 @@ class StackingExperimentHandler(ExperimentHandler):
 
                 datasets_creator = StackingFeatureEngineeringPipeline(
                     dataset_name=raw_dataset.name,
-                    cloud_models=cloud_models,
                     encryptor=encryptor,
                     embeddings_model=embedding_model,
                     n_pred_vectors=n_pred_vectors,
@@ -128,11 +126,12 @@ class StackingExperimentHandler(ExperimentHandler):
 
                     self.log_results(
                         raw_dataset.name, train_shape, test_shape,
-                        str([cloud_model.name for cloud_model in cloud_models]),
+                        str([cloud_model for cloud_model in config.cloud_config.names]),
                         raw_baseline_acc, raw_baseline_f1,
                         baseline_emb_acc, baseline_emb_f1,
                         baseline_pred_acc, baseline_pred_f1,
-                        test_acc, test_f1
+                        test_acc, test_f1,
+                        iim_model.name
                     )
 
                 del datasets  # Free up space

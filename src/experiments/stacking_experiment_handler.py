@@ -4,7 +4,7 @@ from src.pipeline.stacking_encoding_pipeline import StackingFeatureEngineeringPi
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
-from src.internal_model.model import StackingDenseInternalModel, StackingXGDenseInternalModel, StackingXGInternalModel
+from src.internal_model.model import StackingDenseInternalModel, StackingMixedInternalModel, StackingXGInternalModel
 from src.internal_model.baseline import EmbeddingBaselineModelFactory
 from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
@@ -65,12 +65,17 @@ class StackingExperimentHandler(ExperimentHandler):
                 test_shape = X_test.shape
                 del X_test, X_sample, y_test, y_sample
 
+                logger.info(f"############# USING {config.iim_config.name} FOR ALL BASELINES #############")
+                baseline_emb_acc, baseline_emb_f1 = self.get_embedding_baseline(raw_dataset, emb_baseline)
+                baseline_pred_acc, baseline_pred_f1 = self.get_prediction_baseline(raw_dataset, pred_baseline)
+
+
                 internal_models = [
                     StackingDenseInternalModel(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=datasets[0].train.features.shape[1],
                     ),
-                    StackingXGDenseInternalModel(
+                    StackingMixedInternalModel(
                         num_classes=raw_dataset.get_n_classes(),
                         input_shape=datasets[0].train.features.shape[1],
                     ),
@@ -82,38 +87,7 @@ class StackingExperimentHandler(ExperimentHandler):
                 ]
 
                 for iim_model in internal_models:
-                    logger.info(f"############# USING {config.iim_config.name} FOR ALL BASELINES #############")
-                    logger.debug(f"#### EVALUATING EMBEDDING BASELINE MODEL ####\nDataset Shape: Train - {emb_baseline.train.embeddings.shape}, Test: {emb_baseline.test.embeddings.shape}")
-                    baseline_model = EmbeddingBaselineModelFactory.get_model(
-                        num_classes=raw_dataset.get_n_classes(),
-                        input_shape=emb_baseline.train.embeddings.shape[1],
-                        type=config.iim_config.name[0]#IIM_MODELS.NEURAL_NET # The baseline will be only neural network
-                    )
-                    baseline_model.fit(
-                        emb_baseline.train.embeddings, emb_baseline.train.labels,
-                    )
-                    baseline_emb_acc, baseline_emb_f1 = baseline_model.evaluate(
-                        emb_baseline.test.embeddings, emb_baseline.test.labels
-                    )
 
-                    logger.debug(f"#### EVALUATING PREDICTIONS BASELINE MODEL ####\nDataset Shape: Train - {pred_baseline.train.predictions.shape}, Test: {pred_baseline.test.predictions.shape}")
-
-                    try:
-                        baseline_model = EmbeddingBaselineModelFactory.get_model(
-                            num_classes=raw_dataset.get_n_classes(),
-                            input_shape=pred_baseline.train.predictions.shape[1],
-                            type=config.iim_config.name[0]
-                        )
-                        baseline_model.fit(
-                            pred_baseline.train.predictions, pred_baseline.train.labels,
-                        )
-                        baseline_pred_acc, baseline_pred_f1 = baseline_model.evaluate(
-                            pred_baseline.test.predictions, pred_baseline.test.labels
-                        )
-                    except Exception as e:
-                        logger.error("Error while evaluating the Prediction baseline model. Skipping the baseline")
-                        logger.error(e)
-                        baseline_pred_acc, baseline_pred_f1 = -1, -1
 
                     logger.debug(f"#### EVALUATING INTERNAL MODEL: {iim_model.name} ####\nDataset Shape: Train - {datasets[0].train.features.shape}, Test: {datasets[0].test.features.shape}")
 

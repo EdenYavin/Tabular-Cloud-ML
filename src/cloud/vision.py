@@ -98,7 +98,7 @@ class XceptionCloudModel(KerasApplicationCloudModel):
 
 class VGG16CloudModel(KerasApplicationCloudModel):
     name = "vgg16"
-    input_shape = (299, 299, 3)
+    input_shape = (224, 224, 3)
 
     def __init__(self, **kwargs):
         super().__init__(preprocess_input=vgg_preprocess)

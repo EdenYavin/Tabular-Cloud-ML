@@ -3,6 +3,7 @@ from keras.src.callbacks import LearningRateScheduler, EarlyStopping
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
+from sklearn.linear_model import LogisticRegression
 from keras.src.models import Model
 from keras.src.layers import Dense, Dropout, Input,  BatchNormalization, concatenate
 from keras.src.metrics import F1Score
@@ -229,14 +230,15 @@ class StackingXGInternalModel(StackingInternalModel):
         self.final_model = DenseInternalModel(**kwargs)
 
 
-class StackingXGDenseInternalModel(StackingInternalModel):
-    name = "xg_and_nn_stacking_iim"
+class StackingMixedInternalModel(StackingInternalModel):
+    name = "logistic_xg_boost_stacking_iim"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         num_models = len(config.cloud_config.names)
-        self.nn_models = [DenseInternalModel(**kwargs) for _ in range(num_models)]
+        # self.nn_models = [DenseInternalModel(**kwargs) for _ in range(num_models)]
         self.xg_models = [XGBClassifier() for _ in range(num_models)]
+        self.ll_models = [LogisticRegression() for _ in range(num_models)]
 
         # For the final model, we need to init it according to the correct number of inputs. The final model will need a
         # different number of inputs which is num_classes * num_models
@@ -248,7 +250,7 @@ class StackingXGDenseInternalModel(StackingInternalModel):
 
         # Fit each model on its corresponding dataset
         for i, x in enumerate(X):
-            self.nn_models[i].fit(x, y)
+            self.ll_models[i].fit(x, np.argmax(y, axis=1))
 
         for i, x in enumerate(X):
             self.xg_models[i].fit(x, y)
@@ -256,7 +258,7 @@ class StackingXGDenseInternalModel(StackingInternalModel):
         # Collect predictions from each model
         meta_features = []
         for i, x in enumerate(X):
-            preds = self.nn_models[i].predict_proba(x)
+            preds = self.ll_models[i].predict_proba(x)
             meta_features.append(preds)
 
         for i, x in enumerate(X):
@@ -274,7 +276,7 @@ class StackingXGDenseInternalModel(StackingInternalModel):
         # Collect predictions from each model
         meta_features = []
         for i, x in enumerate(X):
-            preds = self.nn_models[i].predict_proba(x)
+            preds = self.ll_models[i].predict_proba(x)
             meta_features.append(preds)
 
         for i, x in enumerate(X):

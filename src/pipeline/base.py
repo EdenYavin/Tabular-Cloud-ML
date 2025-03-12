@@ -26,7 +26,7 @@ class FeatureEngineeringPipeline(ABC):
         self.encryptor = encryptor
         self.cloud_db = CloudPredictionDataDatabase(dataset_name)
 
-    def create(self, X_train, y_train, X_test, y_test) -> tuple[list[IIMDataset], EmbeddingBaselineDataset, PredictionBaselineDataset]:
+    def create(self, X_train, y_train, X_test, y_test) -> tuple[list[IIMDataset] | IIMDataset, EmbeddingBaselineDataset, PredictionBaselineDataset]:
 
         X_emb_train = self._get_embeddings(X_train)
         X_emb_test = self._get_embeddings(X_test)
@@ -51,16 +51,22 @@ class FeatureEngineeringPipeline(ABC):
             test=PredictionBaselineFeatures(predictions=X_pred_test, labels=new_y_test)
         )
 
-        datasets = [
-                    IIMDataset(
-                    train=IIMFeatures(features=x_train, labels=y_train),
-                    test=IIMFeatures(features=x_test, labels=y_test)
-                )
-            for x_train, x_test in zip(Xs_train, Xs_test)
-            ]
+        if config.experiment_config.stacking:
+            # For stacking we create a new dataset for each stack model
+            dataset = [
+                        IIMDataset(
+                        train=IIMFeatures(features=x_train, labels=y_train),
+                        test=IIMFeatures(features=x_test, labels=y_test)
+                    )
+                for x_train, x_test in zip(Xs_train, Xs_test)
+                ]
+        else:
+            # For non stacking we create only one dataset for one internal model
+            dataset = IIMDataset(train=IIMFeatures(features=Xs_train, labels=y_train),
+                                 test=IIMFeatures(features=Xs_test, labels=y_test))
 
         self.embedding_db.save()
-        return datasets, embeddings_baseline, pred_baseline
+        return dataset, embeddings_baseline, pred_baseline
 
     def _get_embeddings(self, X):
         X = pd.DataFrame(X)

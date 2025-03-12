@@ -26,8 +26,8 @@ def post_process(embeddings: np.ndarray):
     return processed_embeddings
 
 def preprocess(X: np.ndarray) -> list[str]:
-    means = np.mean(X, axis=(1, 2, 3))[...,np.newaxis]
-    X_str = [",".join(str(x)).replace("[", "").replace("]", "").strip(",") for x in means]
+    X = np.log(np.mean(X, axis=(1, 2, 3))[...,np.newaxis])
+    X_str = [str(x).replace("[", "").replace("]", "").strip(",") for x in X]
     return X_str
 
 class SequenceClassificationLLMCloudModel(CloudModel):
@@ -41,8 +41,6 @@ class SequenceClassificationLLMCloudModel(CloudModel):
         self.labels = None
         self.output_shape = (1, 1000)
         self.input_shape = (2,2)
-
-
 
     def predict(self, X: np.ndarray, batch_size: int = 32):
 
@@ -77,7 +75,7 @@ class SequenceClassificationLLMCloudModel(CloudModel):
 
 
 class BertLLMCloudModel(CloudModel):
-    name = "bert_llm"
+    name = "next_token_llm"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

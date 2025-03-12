@@ -32,7 +32,7 @@ class CLOUD_MODELS(str, enum.Enum):
     EFFICIENTNET = "efficientnet"
     DENSENET = "densenet"
     SEQUENCE_CLASSIFICATION_LLM = "sequence_classification_llm"
-    BERT_LLM = "bert_llm"
+    NEXT_TOKEN_LLM = "next_token_llm"
     MOBILE_NET = "mobile_net"
 
 class DATASETS(str, enum.Enum):

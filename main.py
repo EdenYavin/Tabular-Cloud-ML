@@ -1,9 +1,8 @@
 import src.utils.constansts as consts
-from src.experiments.single_experiment_handler import ExperimentHandler
 from src.experiments.k_fold_handler import KFoldExperimentHandler
 from src.experiments.global_embedding_experiment import GlobalEmbeddingExperimentHandler
 from src.experiments.stacking_experiment_handler import StackingExperimentHandler
-from src.experiments.multiple_cm_experiment_handler import ExperimentHandler as MultipleCmExperimentHandler
+from src.experiments.multiple_cm_experiment_handler import NoStackingExperimentHandler as MultipleCmExperimentHandler
 from src.utils.config import config
 import pandas as pd
 import os
@@ -25,14 +24,8 @@ def main():
         if len(config.cloud_config.names) > 1 and config.experiment_config.stacking:
             experiment_handler = StackingExperimentHandler()
 
-        elif len(config.cloud_config.names) > 1:
-            experiment_handler = MultipleCmExperimentHandler()
-
-        elif config.experiment_config.k_folds == 1:
-            experiment_handler = ExperimentHandler()
-
         else:
-            experiment_handler = KFoldExperimentHandler()
+            experiment_handler = MultipleCmExperimentHandler()
 
         new_report_lines = experiment_handler.run_experiment()
         report_path = consts.REPORT_PATH

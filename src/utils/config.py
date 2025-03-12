@@ -11,9 +11,6 @@ class Config(BaseModel):
     class EncoderConfig(BaseModel):
         name: str = Field(description="Name of encryptor / encoder model to use", default=ENCODERS_TYPES.DCONV)
 
-    class PipelineConfig(BaseModel):
-        force_to_create_again: bool = Field(description="Flag to indicate if dataset should be created again", default=True)
-
 
     class DatasetConfig(BaseModel):
         names: list = Field(description="The datasets to run the experiments on")
@@ -31,7 +28,6 @@ class Config(BaseModel):
 
     class CloudModelsConfig(BaseModel):
         names: list[str] = Field(description="Cloud model to use", default=[CLOUD_MODELS.VGG16])
-        input_shape: float = Field(description="Shape of the input cloud model", default=(128, 128, 3))
 
     class ExperimentConfig(BaseModel):
         use_labels: bool = Field(description="A flag to indicate if the noise labels should be used in training the IIM")
@@ -41,17 +37,16 @@ class Config(BaseModel):
         n_noise_samples: int = Field(description="Number samples to sample from the dataset and use as noise")
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
         exp_type: str = Field(description="type of the experiment - embedding learning, or prediction learning")
-        stacking: bool = Field(description="Flag to indicate if the stacking should be used in training the IIM")
+        stacking: bool = Field(description="A flag to indicate if the stacking should be used in training the IIM")
 
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False,
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
-                                                           stacking=True)
+                                                           stacking=False)
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
-        CLOUD_MODELS.INCEPTION, CLOUD_MODELS.DENSENET, CLOUD_MODELS.EFFICIENTNET,
-        CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception, CLOUD_MODELS.VGG16
+        CLOUD_MODELS.SEQUENCE_CLASSIFICATION_LLM
     ])
     iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET])
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
@@ -61,7 +56,6 @@ class Config(BaseModel):
                                                      DATASETS.HELOC
                                                   ]
                                                   )
-    pipeline_config: PipelineConfig = PipelineConfig(force_to_create_again=True)
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV)
 

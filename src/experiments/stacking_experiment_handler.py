@@ -1,11 +1,10 @@
 from loguru import logger
 
 from src.pipeline.stacking_encoding_pipeline import StackingFeatureEngineeringPipeline
-from src.cloud import CloudModel, CLOUD_MODELS
+from src.cloud import CLOUD_MODELS
 from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
 from src.internal_model.model import StackingDenseInternalModel, StackingMixedInternalModel, StackingXGInternalModel
-from src.internal_model.baseline import EmbeddingBaselineModelFactory
 from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
 from src.utils.config import config

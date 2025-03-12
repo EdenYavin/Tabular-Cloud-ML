@@ -235,14 +235,15 @@ class StackingMixedInternalModel(StackingInternalModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        num_models = len(config.cloud_config.names)
-        # self.nn_models = [DenseInternalModel(**kwargs) for _ in range(num_models)]
-        self.xg_models = [XGBClassifier() for _ in range(num_models)]
-        self.ll_models = [LogisticRegression() for _ in range(num_models)]
+        num_cloud_models = len(config.cloud_config.names)
+        self.nn_models = [DenseInternalModel(**kwargs) for _ in range(num_cloud_models)]
+        self.xg_models = [XGBClassifier() for _ in range(num_cloud_models)]
+        self.ll_models = [LogisticRegression() for _ in range(num_cloud_models)]
 
+        num_models = len(self.nn_models) + len(self.xg_models) + len(self.ll_models)
         # For the final model, we need to init it according to the correct number of inputs. The final model will need a
         # different number of inputs which is num_classes * num_models
-        input_size = num_models * 2 * kwargs.get("num_classes")
+        input_size = num_models * kwargs.get("num_classes")
         kwargs['input_shape'] = input_size
         self.final_model = DenseInternalModel(**kwargs)
 
@@ -255,6 +256,9 @@ class StackingMixedInternalModel(StackingInternalModel):
         for i, x in enumerate(X):
             self.xg_models[i].fit(x, y)
 
+        for i, x in enumerate(X):
+            self.nn_models[i].fit(x, y)
+
         # Collect predictions from each model
         meta_features = []
         for i, x in enumerate(X):
@@ -263,6 +267,10 @@ class StackingMixedInternalModel(StackingInternalModel):
 
         for i, x in enumerate(X):
             preds = self.xg_models[i].predict_proba(x)
+            meta_features.append(preds)
+
+        for i, x in enumerate(X):
+            preds = self.nn_models[i].predict_proba(x)
             meta_features.append(preds)
 
         # Stack predictions horizontally (axis=1) to form the meta-features
@@ -283,6 +291,9 @@ class StackingMixedInternalModel(StackingInternalModel):
             preds = self.xg_models[i].predict_proba(x)
             meta_features.append(preds)
 
+        for i, x in enumerate(X):
+            preds = self.nn_models[i].predict_proba(x)
+            meta_features.append(preds)
 
         # Stack predictions horizontally (axis=1) to form the meta-features
         meta_features = np.hstack(meta_features)

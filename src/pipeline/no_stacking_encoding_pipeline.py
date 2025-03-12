@@ -34,25 +34,27 @@ class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
                     # For the training set creation we can create multiple encoded images for each input
                     # and by doing so augmenting the training set beyond the original size.
                     # For the testing, we can't create new samples
-                    number_of_new_samples = (
-                        self.n_pred_vectors if not is_test
-                        else 1
-                    )
+                    if not is_test:
+                        number_of_new_samples = (
+                            self.n_pred_vectors * self.encryptor.number_of_encryptors_to_init
+                        )
+                        number_of_samples_encoding = self.n_pred_vectors
+                    else:
+                        number_of_new_samples = 1
+                        number_of_samples_encoding = 1
+
                     # Because we are potentially expanding X_train we should also expand y_train
                     # with the same number of labels. We do so by duplicate the labels for each new augmentation.
                     # For example if we encode x_1 to 3 new samples x_enc_1_1, x_enc_1_2, x_enc_1_2 and the original
                     # label for x_1 was 1, than we add [1,1,1] to y_train.
                     # For y_test, we just duplicate it based on the number of encryptors
                     for label in labels:
-                        if not is_test:
-                            [new_y.append(label) for _ in range(number_of_new_samples * self.encryptor.number_of_encryptors_to_init)]
-                        else:
-                            [new_y.append(label) for _ in range(self.encryptor.number_of_encryptors_to_init)]
+                        [new_y.append(label) for _ in range(number_of_new_samples)]
 
 
                     with tf.device(GPU_DEVICE):
                         # Run the models on the GPU
-                        images = self.encryptor.encode(mini_batch, number_of_new_samples) # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as features
+                        images = self.encryptor.encode(mini_batch, number_of_samples_encoding) # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as features
                         predictions = self.cloud_db.get_predictions(cloud_model, images, batch.progress.n, is_test)
 
 

@@ -96,7 +96,6 @@ GLOBAL_EMB_REPORT_PATH = os.path.join(OUTPUT_DIR_PATH, GLOBAL_EMB_REPORT_NAME)
 DATA_CACHE_PATH = os.path.join(STORE_PATH, "dataset")
 os.makedirs(DATA_CACHE_PATH, exist_ok=True)
 
-CLOUD_PRED_CACHE_DIR_NAME = "cloud_cache"
 
 # ---------------------
 # CLOUD MODELS SECTIONS
@@ -107,6 +106,7 @@ CONFIG_CLOUD_MODELS_PATH_TOKEN = "path"
 LLM_CACHE_DIR = "llm_cache"
 LLM_CACHE_PATH = os.path.join(STORE_PATH, LLM_CACHE_DIR)
 os.makedirs(LLM_CACHE_PATH, exist_ok=True)
+CLOUD_PRED_CACHE_DIR_NAME = "cloud_cache"
 LLM_PRED_VECTOR_TYPE_CONFIG_TOKEN = 'logits'
 LLM_TOP_K_CONFIG_TOKEN = "top_k"
 VGG16_CIFAR10_MODEL_PATH = os.path.join(MODELS_PATH, "cifar10vgg.h5")
@@ -170,6 +170,8 @@ CONFIG_ENCRYPTOR_NAME_TOKEN = "name"
 CPU_DEVICE = '/CPU:0'
 GPU_DEVICE = (CPU_DEVICE if len(tf.config.get_visible_devices()) == 1
               else '/GPU:0')
+ENCRYPTOR_MODEL_FILE_NAME = 'encryptor.h5'
+ENCRYPTOR_MODEL_FILE_PATH = os.path.join(STORE_PATH, ENCRYPTOR_MODEL_FILE_NAME)
 
 # ---------------------
 # EXPERIMENT SECTIONS

@@ -62,8 +62,8 @@ class FeatureEngineeringPipeline(ABC):
                 ]
         else:
             # For non stacking we create only one dataset for one internal model
-            dataset = IIMDataset(train=IIMFeatures(features=Xs_train, labels=y_train),
-                                 test=IIMFeatures(features=Xs_test, labels=y_test))
+            dataset = IIMDataset(train=IIMFeatures(features=Xs_train, labels=new_y_train),
+                                 test=IIMFeatures(features=Xs_test, labels=new_y_test))
 
         self.embedding_db.save()
         return dataset, embeddings_baseline, pred_baseline

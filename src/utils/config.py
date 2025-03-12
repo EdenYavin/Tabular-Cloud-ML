@@ -11,7 +11,6 @@ class Config(BaseModel):
     class EncoderConfig(BaseModel):
         name: str = Field(description="Name of encryptor / encoder model to use", default=ENCODERS_TYPES.DCONV)
 
-
     class DatasetConfig(BaseModel):
         names: list = Field(description="The datasets to run the experiments on")
         split_ratio : float = Field(description="How much of the original train set (90%) will be used to train the IIM")
@@ -53,7 +52,7 @@ class Config(BaseModel):
     dataset_config: DatasetConfig = DatasetConfig(
                                                   split_ratio=1,
                                                   names=[
-                                                     DATASETS.HELOC
+                                                     DATASETS.ADULT
                                                   ]
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)

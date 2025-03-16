@@ -7,7 +7,7 @@ from src.encryptor import EncryptorFactory
 from src.internal_model.base import InternalInferenceModelFactory
 from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
-from src.dataset import DATASETS, RawDataset
+from src.dataset import DatasetFactory, RawDataset
 from src.utils.config import config
 from loguru import logger
 from src.experiments.base import ExperimentHandler
@@ -31,10 +31,10 @@ class NoStackingExperimentHandler(ExperimentHandler):
 
 
         for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
-            raw_dataset: RawDataset = DATASETS[dataset_name]()
+            raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
 
 
-            embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name.value)
+            embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name)
             encryptor = Encryptors(output_shape=cloud_models[0].input_shape,
                                    number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,
                                    enc_base_cls=EncryptorFactory.get_model_cls()
@@ -58,7 +58,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
                     n_pred_vectors=n_pred_vectors,
                     metadata=raw_dataset.metadata
                 )
-                dataset, emb_baseline, pred_baseline, = dataset_creator.create(X_sample, y_sample, X_test, y_test)
+                dataset, emb_baseline_dataset, pred_baseline_dataset, = dataset_creator.create(X_sample, y_sample, X_test, y_test)
                 logger.debug("Finished Creating the dataset")
 
 
@@ -68,8 +68,11 @@ class NoStackingExperimentHandler(ExperimentHandler):
                 del X_test, X_sample, y_test, y_sample
 
                 logger.info(f"############# USING {config.iim_config.name} FOR ALL BASELINES #############")
-                baseline_emb_acc, baseline_emb_f1 = self.get_embedding_baseline(raw_dataset, emb_baseline)
-                baseline_pred_acc, baseline_pred_f1 = self.get_prediction_baseline(raw_dataset, pred_baseline)
+                baseline_emb_acc, baseline_emb_f1 = self.get_embedding_baseline(raw_dataset, emb_baseline_dataset)
+                del emb_baseline_dataset # Free up memory
+
+                baseline_pred_acc, baseline_pred_f1 = self.get_prediction_baseline(raw_dataset, pred_baseline_dataset)
+                del pred_baseline_dataset # Free up memory
 
                 logger.debug(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
                 internal_model = InternalInferenceModelFactory().get_model(

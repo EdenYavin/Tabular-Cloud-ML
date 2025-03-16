@@ -68,6 +68,10 @@ class RawDataset:
 
 
     def get_baseline(self, X_train, X_test, y_train, y_test):
+        """
+        The method trains a model on the raw dataset to get a baseline
+        on the raw dataset.
+        """
 
         # if self.baseline_model == XGBOOST_BASELINE:
         clf = XGBClassifier()

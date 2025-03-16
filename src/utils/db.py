@@ -12,7 +12,7 @@ from src.dataset.base import RawDataset
 from src.utils.config import config
 from src.utils.constansts import (DATA_CACHE_PATH, DB_EMBEDDING_TOKEN, DB_LABEL_TOKEN, DB_RAW_FEATURES_TOKEN,
                                   DB_TRAIN_INDEX_TOKEN, DB_TEST_INDEX_TOKEN, DB_IMM_TRAIN_INDEX_TOKEN,
-                                    CLOUD_PRED_CACHE_DIR_NAME
+                                  CLOUD_PRED_CACHE_DIR_NAME, DATASETS
                                   )
 
 
@@ -148,7 +148,7 @@ class ExperimentDatabase:
 
 class CloudPredictionDataDatabase:
 
-    def __init__(self, dataset_name):
+    def __init__(self, dataset_name: str):
         self.dataset_name = dataset_name
         path = Path(DATA_CACHE_PATH) / dataset_name / CLOUD_PRED_CACHE_DIR_NAME
         os.makedirs(path, exist_ok=True)

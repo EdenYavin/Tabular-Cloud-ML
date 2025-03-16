@@ -138,6 +138,7 @@ DB_RAW_FEATURES_TOKEN = "X"
 DB_LABEL_TOKEN = "y"
 XGBOOST_BASELINE = "xgboost"
 NEURAL_NET_BASELINE = "neural_network"
+DATASET_NAME_TOKEN = "dataset_name"
 
 LARGE_DATASETS = [
     # DATASETS WITH 50K Samples and above
@@ -151,6 +152,28 @@ HARD_DATASETS = [
     # DATASETS where the IIM score an accuracy of below 0.75
     DATASETS.ADULT,
     DATASETS.HELOC
+]
+
+ALL_DATASETS = [
+    DATASETS.AIRLINE_SATISFACTION,
+    DATASETS.RAIN,
+    DATASETS.BANK_MARKETING,
+    DATASETS.LOAD_APPROVAL,
+    DATASETS.ADULT,
+    DATASETS.HELOC
+]
+
+PLMB_DATASETS = [
+    "agaricus_lepiota",
+    "mushroom",
+    "magic",
+    "ring",
+    "twonorm",
+]
+
+PMLB_DATASETS_IMBALANCE = [
+    "clean2",
+    "coil2000"
 ]
 
 # ---------------------

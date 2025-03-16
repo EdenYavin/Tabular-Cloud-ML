@@ -1,8 +1,7 @@
 import src.utils.constansts as consts
-from src.experiments.k_fold_handler import KFoldExperimentHandler
 from src.experiments.global_embedding_experiment import GlobalEmbeddingExperimentHandler
 from src.experiments.stacking_experiment_handler import StackingExperimentHandler
-from src.experiments.multiple_cm_experiment_handler import NoStackingExperimentHandler as MultipleCmExperimentHandler
+from src.experiments.no_stacking_experiment_handler import NoStackingExperimentHandler as MultipleCmExperimentHandler
 from src.utils.config import config
 import pandas as pd
 import os

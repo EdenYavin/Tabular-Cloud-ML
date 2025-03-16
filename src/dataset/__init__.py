@@ -7,7 +7,7 @@ from src.dataset.rain import RainDataset
 from src.dataset.load_approval import LoadApprovalDataset
 from src.dataset.airline import AirlineSatisfaction
 from src.dataset.base import RawDataset
-
+from src.dataset.pmlb import PMLBDataset
 
 DATASETS = {
     HelocDataset.name: HelocDataset,
@@ -19,3 +19,13 @@ DATASETS = {
     LoadApprovalDataset.name: LoadApprovalDataset,
     AirlineSatisfaction.name: AirlineSatisfaction,
 }
+
+class DatasetFactory:
+
+    @staticmethod
+    def get_dataset(dataset_name) -> RawDataset:
+        if dataset_name in DATASETS:
+            return DATASETS[dataset_name]()
+
+        else:
+            return PMLBDataset(dataset_name=dataset_name)

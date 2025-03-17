@@ -46,7 +46,7 @@ class Config(BaseModel):
     experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False,
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
-                                                           stacking=False)
+                                                           stacking=True)
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
         CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16

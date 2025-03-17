@@ -33,7 +33,8 @@ class StackingExperimentHandler(ExperimentHandler):
         for raw_dataset in data_loader:
 
             embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=raw_dataset.name)
-            encryptor = Encryptors(output_shape=cloud_input_shape,
+            encryptor = Encryptors(dataset_name=raw_dataset.name,
+                                   output_shape=cloud_input_shape,
                                    number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,
                                    enc_base_cls=EncryptorFactory.get_model_cls()
                                    )

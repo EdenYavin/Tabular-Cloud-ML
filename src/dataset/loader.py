@@ -1,25 +1,21 @@
 from loguru import logger
 import tqdm
-from src.dataset import DATASETS
+from src.dataset import DatasetFactory
 from src.utils.config import config
 
 class DataLoader:
+
+
     def __init__(self):
-        """
-        Initializes the DataLoader with a list of dataset names.
-
-        :param dataset_names: List of dataset names to load.
-        """
-        self.datasets = {k:v for k,v in DATASETS.items() if k in config.dataset_config.names}
-
+        self.factory = DatasetFactory()
 
     def __iter__(self):
         """
         Returns an iterator that yields datasets one at a time.
         """
-        for name, cls in tqdm.tqdm(self.datasets.items(), total=len(self.datasets), desc="Datasets Progress", unit="dataset"):
+        for name in tqdm.tqdm(config.dataset_config.names, total=len(config.dataset_config.names), desc="Datasets Progress", unit="dataset"):
             logger.info(f"\n####### LOADING DATASET: {name} ########\n")
-            yield cls()
+            yield self.factory.get_dataset(name)
 
 # Example usage
 if __name__ == "__main__":

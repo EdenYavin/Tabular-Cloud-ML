@@ -163,7 +163,7 @@ ALL_DATASETS = [
     DATASETS.HELOC
 ]
 
-PLMB_DATASETS = [
+PMLB_DATASETS = [
     "agaricus_lepiota",
     "mushroom",
     "magic",
@@ -193,8 +193,11 @@ CONFIG_ENCRYPTOR_NAME_TOKEN = "name"
 CPU_DEVICE = '/CPU:0'
 GPU_DEVICE = (CPU_DEVICE if len(tf.config.get_visible_devices()) == 1
               else '/GPU:0')
+
 ENCRYPTOR_MODEL_FILE_NAME = 'encryptor.h5'
-ENCRYPTOR_MODEL_FILE_PATH = os.path.join(STORE_PATH, ENCRYPTOR_MODEL_FILE_NAME)
+ENCRYPTOR_MODELS_DIR_NAME = "encryptor"
+ENCRYPTOR_MODELS_DIR_PATH = os.path.join(STORE_PATH, ENCRYPTOR_MODELS_DIR_NAME)
+os.makedirs(ENCRYPTOR_MODELS_DIR_PATH, exist_ok=True)
 
 # ---------------------
 # EXPERIMENT SECTIONS

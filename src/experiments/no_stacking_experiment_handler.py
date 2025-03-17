@@ -35,7 +35,8 @@ class NoStackingExperimentHandler(ExperimentHandler):
 
 
             embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name)
-            encryptor = Encryptors(output_shape=cloud_models[0].input_shape,
+            encryptor = Encryptors(dataset_name=dataset_name,
+                                   output_shape=cloud_models[0].input_shape,
                                    number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,
                                    enc_base_cls=EncryptorFactory.get_model_cls()
                                    )

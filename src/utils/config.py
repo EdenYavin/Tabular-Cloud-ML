@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from src.utils.constansts import (EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, EXPERIMENTS,
                                   HARD_DATASETS, LARGE_DATASETS, ALL_DATASETS,
-                                    PLMB_DATASETS
+                                    PMLB_DATASETS_IMBALANCE, PMLB_DATASETS_IMBALANCE
                                   )
 
 
@@ -48,14 +48,13 @@ class Config(BaseModel):
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
                                                            stacking=False)
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
-        CLOUD_MODELS.NEXT_TOKEN_LLM,CLOUD_MODELS.SEQUENCE_CLASSIFICATION_LLM,
         CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
         CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16
     ])
     iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET])
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(split_ratio=1,
-                                                  names=PLMB_DATASETS
+                                                  names=PMLB_DATASETS_IMBALANCE
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV)

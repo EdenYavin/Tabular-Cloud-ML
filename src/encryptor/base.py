@@ -3,6 +3,9 @@ from keras.api.models import load_model
 import os
 
 from src.utils.constansts import ENCRYPTOR_MODELS_DIR_PATH
+from src.utils.config import config
+
+embedding_name = config.embedding_config.name
 
 class BaseEncryptor:
 
@@ -26,7 +29,7 @@ class BaseEncryptor:
 
     def encode(self, inputs) -> np.array:
 
-        model_path = os.path.join(ENCRYPTOR_MODELS_DIR_PATH, f"{self.dataset_name}.h5")
+        model_path = os.path.join(ENCRYPTOR_MODELS_DIR_PATH, f"{self.dataset_name}_{embedding_name}.h5")
         if self.model is None:
             if os.path.exists(model_path):
                 self.model = load_model(model_path)

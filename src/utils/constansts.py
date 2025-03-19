@@ -8,6 +8,7 @@ class EMBEDDING_TYPES(str, enum.Enum):
     IMAGE = "image_embedding"
     DNN = "dnn_embedding"
     SPARSE_AE = "sparse_ae"
+    RAW_EMBEDDING = "raw_data_embedding"
 
 
 class ENCODERS_TYPES(str, enum.Enum):

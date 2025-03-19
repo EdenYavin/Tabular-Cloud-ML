@@ -249,9 +249,9 @@ class StackingMixedInternalModel(StackingInternalModel):
 
     def fit(self, X: list, y):
 
-        # Fit each model on its corresponding dataset
-        for i, x in enumerate(X):
-            self.ll_models[i].fit(x, np.argmax(y, axis=1))
+        # # Fit each model on its corresponding dataset
+        # for i, x in enumerate(X):
+        #     self.ll_models[i].fit(x, np.argmax(y, axis=1))
 
         for i, x in enumerate(X):
             self.xg_models[i].fit(x, y)
@@ -283,9 +283,9 @@ class StackingMixedInternalModel(StackingInternalModel):
 
         # Collect predictions from each model
         meta_features = []
-        for i, x in enumerate(X):
-            preds = self.ll_models[i].predict_proba(x)
-            meta_features.append(preds)
+        # for i, x in enumerate(X):
+        #     preds = self.ll_models[i].predict_proba(x)
+        #     meta_features.append(preds)
 
         for i, x in enumerate(X):
             preds = self.xg_models[i].predict_proba(x)

@@ -10,6 +10,7 @@ import os
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.dataset.base import RawDataset
 from src.utils.config import config
+from src.embeddings.model import RawDataEmbedding
 from src.utils.constansts import (DATA_CACHE_PATH, DB_EMBEDDING_TOKEN, DB_LABEL_TOKEN, DB_RAW_FEATURES_TOKEN,
                                   DB_TRAIN_INDEX_TOKEN, DB_TEST_INDEX_TOKEN, DB_IMM_TRAIN_INDEX_TOKEN,
                                   CLOUD_PRED_CACHE_DIR_NAME, DATASETS
@@ -78,7 +79,7 @@ class RawDataExperimentDatabase:
             X_test = pd.DataFrame(X.loc[indexes[DB_TEST_INDEX_TOKEN]])
             y_test = pd.Series(y.loc[indexes[DB_TEST_INDEX_TOKEN]])
 
-        return X_train, X_test, X_sample, y_train, y_test, y_sample
+        return X_train.values, X_test.values, X_sample.values, y_train.values, y_test.values, y_sample.values
 
 
 class ExperimentDatabase:
@@ -120,6 +121,11 @@ class ExperimentDatabase:
             return {}
 
     def get_embedding(self, samples):
+
+        if type(self.embedding_model) is RawDataEmbedding:
+            # Special case to not waste resources
+            return self.embedding_model(samples)
+
         if not self.db:
             self.db = self.load()
 

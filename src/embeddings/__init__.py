@@ -1,5 +1,5 @@
 from src.utils.config import config
-from src.embeddings.model import DNNEmbedding, ImageEmbedding, SparseAE
+from src.embeddings.model import DNNEmbedding, ImageEmbedding, SparseAE, RawDataEmbedding
 
 
 class EmbeddingsFactory:
@@ -7,7 +7,8 @@ class EmbeddingsFactory:
     EMBEDDINGS = {
         DNNEmbedding.name: DNNEmbedding,
         ImageEmbedding.name: ImageEmbedding,
-        SparseAE.name: SparseAE
+        SparseAE.name: SparseAE,
+        RawDataEmbedding.name: RawDataEmbedding
     }
 
     @staticmethod

@@ -154,3 +154,11 @@ class ImageEmbedding(nn.Module):
         return embeddings.numpy()[0]
 
 
+class RawDataEmbedding(nn.Module):
+    name = "raw_data_embedding"
+
+    def __init__(self, **kwargs):
+        super(RawDataEmbedding, self).__init__()
+
+    def forward(self, x):
+        return x

@@ -161,4 +161,4 @@ class RawDataEmbedding(nn.Module):
         super(RawDataEmbedding, self).__init__()
 
     def forward(self, x):
-        return x
+        return x.astype(np.float32)

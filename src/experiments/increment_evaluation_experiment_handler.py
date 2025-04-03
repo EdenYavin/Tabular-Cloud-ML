@@ -1,7 +1,7 @@
 from tqdm import tqdm
 from tqdm.auto import trange
 
-from src.pipeline.no_stacking_encoding_pipeline import NoStackingFeatureEngineeringPipeline as FeatureEngineeringPipeline
+from src.pipeline.increment_evaluation_pipeline import IncrementEvalFeatureEngineeringPipeline as FeatureEngineeringPipeline
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
@@ -113,12 +113,8 @@ class IncrementEvalExperimentHandler(ExperimentHandler):
                     dataset_name=dataset_name,
                     encryptor=encryptor,
                     embeddings_model=embedding_model,
-                    n_pred_vectors=1,
-                    metadata=increment_batch_iterator.metadata
                 )
                 dataset, emb_baseline_dataset, pred_baseline_dataset, = dataset_creator.create(X_train, y_train, X_test, y_test)
-
-
 
 
                 logger.info(f"############# USING {config.iim_config.name} FOR ALL BASELINES #############")

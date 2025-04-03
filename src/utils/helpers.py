@@ -10,7 +10,8 @@ from PIL import Image, ImageDraw, ImageFont
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
 import tensorflow as tf
 
-
+def get_num_classes(y: np.ndarray) -> int:
+    return len(np.unique(y))
 
 def batch(list_: list, size: int) -> Generator[list, None, None]:
     list_ = np.vstack(list_)

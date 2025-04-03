@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from src.utils.constansts import (EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, EXPERIMENTS,
                                   HARD_DATASETS, LARGE_DATASETS, ALL_DATASETS,
-                                    PMLB_DATASETS_IMBALANCE, PMLB_DATASETS
+                                    PMLB_DATASETS_IMBALANCE, PMLB_DATASETS, DATASETS
                                   )
 
 
@@ -45,7 +45,7 @@ class Config(BaseModel):
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_noise_samples=0,n_pred_vectors=1,k_folds=1,
                                                            use_preds=True, use_embedding=True, use_labels=False,
-                                                           exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
+                                                           exp_type=EXPERIMENTS.INCREMENT_EVALUATION,
                                                            stacking=False)
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
@@ -54,7 +54,8 @@ class Config(BaseModel):
     iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET])
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(split_ratio=1,
-                                                  names=ALL_DATASETS
+                                                  names=[DATASETS.AIRLINE_SATISFACTION, DATASETS.ADULT, DATASETS.LOAD_APPROVAL,
+                                                         ] + PMLB_DATASETS
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.RAW_EMBEDDING)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV)

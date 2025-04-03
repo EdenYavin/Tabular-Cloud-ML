@@ -50,6 +50,7 @@ class DATASETS(str, enum.Enum):
 class EXPERIMENTS(str, enum.Enum):
     GLOBAL_EMBEDDINGS = "global_embeddings"
     PREDICTIONS_LEARNING = "predictions_learning"
+    INCREMENT_EVALUATION = "increment_eval"
 
 WINDOWS_OS_STR = "nt"
 IS_WINDOWS_OS = (os.name == WINDOWS_OS_STR)
@@ -93,6 +94,9 @@ REPORT_PATH = os.path.join(OUTPUT_DIR_PATH, REPORT_NAME)
 
 GLOBAL_EMB_REPORT_NAME = "global_emb_report.csv"
 GLOBAL_EMB_REPORT_PATH = os.path.join(OUTPUT_DIR_PATH, GLOBAL_EMB_REPORT_NAME)
+
+EVAL_DATASET_REPORT_NAME = "increment_eval.csv"
+EVAL_DATASET_REPORT_PATH = os.path.join(OUTPUT_DIR_PATH, EVAL_DATASET_REPORT_NAME)
 
 DATA_CACHE_PATH = os.path.join(STORE_PATH, "dataset")
 os.makedirs(DATA_CACHE_PATH, exist_ok=True)

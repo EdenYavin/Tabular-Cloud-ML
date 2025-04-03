@@ -106,6 +106,7 @@ class ExperimentDatabase:
                 pickle.dump(self.db, f)
 
             del self.db
+            self.db = {}
 
         except Exception as e:
             logger.error(str(e))

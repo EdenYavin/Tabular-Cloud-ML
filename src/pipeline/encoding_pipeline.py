@@ -17,7 +17,7 @@ from src.utils.db import EmbeddingDBFactory
 class FeatureEngineeringPipeline(object):
 
     def __init__(self, dataset_name, cloud_models, encryptor, embeddings_model,
-                 n_pred_vectors, n_noise_samples, metadata = None):
+                 n_pred_vectors, n_noise_samples = None, metadata = None):
 
         self.cloud_model: CloudModel = cloud_models
         self.encryptor: Encryptors = encryptor

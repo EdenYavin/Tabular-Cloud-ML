@@ -1,26 +1,39 @@
 from abc import ABC, abstractmethod
+
+import numpy as np
 from loguru import logger
 import pandas as pd
+import os
 
-from src.dataset import RawDataset
 from src.domain.dataset import PredictionBaselineDataset, EmbeddingBaselineDataset
 from src.internal_model.baseline import EmbeddingBaselineModelFactory
 from src.utils.config import config
+from src.utils.constansts import REPORT_PATH
+from src.utils.helpers import get_num_classes
 
 
 class ExperimentHandler(ABC):
 
-    def __init__(self, experiment_name: str):
+    def __init__(self, experiment_name: str, report_path: str = REPORT_PATH):
         self.experiment_name: str = experiment_name
         self.n_pred_vectors = config.experiment_config.n_pred_vectors
-        self.report = pd.DataFrame()
+        self.report_path = report_path
+        if os.path.exists(self.report_path):
+            try:
+                self.report = pd.read_csv(report_path, index_col="Unnamed: 0")
+            except Exception:
+                self.report = pd.DataFrame()
+        else:
+            self.report = pd.DataFrame()
 
-    def get_embedding_baseline(self, raw_dataset: RawDataset, dataset: EmbeddingBaselineDataset) -> tuple[float, float]:
+    def get_embedding_baseline(self, dataset: EmbeddingBaselineDataset) -> tuple[float, float]:
         logger.debug(
             f"#### EVALUATING EMBEDDING BASELINE MODEL ####\n"
             f"Dataset Shape: Train - {dataset.train.embeddings.shape}, Test: {dataset.test.embeddings.shape}")
+
+        num_classes = get_num_classes(dataset.train.labels)
         baseline_model = EmbeddingBaselineModelFactory.get_model(
-            num_classes=raw_dataset.get_n_classes(),
+            num_classes=num_classes,
             input_shape=dataset.train.embeddings.shape[1],
             type=config.iim_config.name[0]  # IIM_MODELS.NEURAL_NET # The baseline will be only neural network
         )
@@ -33,15 +46,16 @@ class ExperimentHandler(ABC):
 
         return baseline_emb_acc, baseline_emb_f1
 
-    def get_prediction_baseline(self, raw_dataset: RawDataset, dataset: PredictionBaselineDataset) -> tuple[float, float]:
+    def get_prediction_baseline(self, dataset: PredictionBaselineDataset) -> tuple[float, float]:
 
         logger.debug(
             f"#### EVALUATING PREDICTIONS BASELINE MODEL ####\n"
             f"Dataset Shape: Train - {dataset.train.predictions.shape}, Test: {dataset.test.predictions.shape}")
 
         try:
+            num_classes = get_num_classes(dataset.train.labels)
             baseline_model = EmbeddingBaselineModelFactory.get_model(
-                num_classes=raw_dataset.get_n_classes(),
+                num_classes=num_classes,
                 input_shape=dataset.train.predictions.shape[1],
                 type=config.iim_config.name[0]
             )
@@ -60,43 +74,64 @@ class ExperimentHandler(ABC):
 
     def log_results(self,
                     dataset_name: str, train_shape: tuple, test_shape: tuple, cloud_models_names,
-                    raw_baseline_acc: float, raw_baseline_f1: float,
                     embeddings_baseline_acc: float, embeddings_baseline_f1: float,
                     prediction_baseline_acc: float, prediction_baseline_f1: float,
                     iim_baseline_acc: float, iim_baseline_f1: float,
-                    iim_model_name: str = None
+                    iim_model_name: str = None,
+                    raw_baseline_acc: float = None, raw_baseline_f1: float = None,
                     ):
 
         iim_name = " ".join([iim for iim in config.iim_config.name]) if not iim_model_name else iim_model_name
 
-        logger.info(f"""
-                 Raw Baseline: {raw_baseline_acc}, {raw_baseline_f1}\n
-                 Emb Baseline: {embeddings_baseline_acc}, {embeddings_baseline_f1}\n
-                 Prediction Baseline: {prediction_baseline_acc}, {prediction_baseline_f1}\n
-                 IIM {iim_name}: {iim_baseline_acc}, {iim_baseline_f1}\n
-                 """)
+        log_msg = ""
+        if raw_baseline_acc:
+            log_msg += f"Raw Baseline: {raw_baseline_acc}, {raw_baseline_f1}\n"
 
-        new_row = pd.DataFrame({
+        log_msg += f"""
+         Emb Baseline: {embeddings_baseline_acc}, {embeddings_baseline_f1}\n
+         Prediction Baseline: {prediction_baseline_acc}, {prediction_baseline_f1}\n
+         IIM {iim_name}: {iim_baseline_acc}, {iim_baseline_f1}\n
+        """
+
+        logger.info(log_msg)
+
+        new_row = {
             "exp_name": [self.experiment_name],
             "dataset": [dataset_name],
             "train_size": [str(train_shape)],
             "test_size": [str(test_shape)],
             "n_pred_vectors": [self.n_pred_vectors],
-            "n_noise_sample": [1],
             "iim_model": [iim_name],
             "embedding": [config.embedding_config.name],
             "encryptor": [config.encoder_config.name],
             "cloud_model": [cloud_models_names],
-            "raw_baseline_acc": [raw_baseline_acc],
-            "raw_baseline_f1": [raw_baseline_f1],
             "emb_baseline_acc": [embeddings_baseline_acc],
             "emb_baseline_f1": [embeddings_baseline_f1],
             "pred_baseline_acc": [prediction_baseline_acc],
             "pred_baseline_f1": [prediction_baseline_f1],
             "iim_test_acc": [iim_baseline_acc],
             "iim_test_f1": [iim_baseline_f1]
-        })
+        }
+        if raw_baseline_acc:
+            new_row["raw_baseline_acc"] = [raw_baseline_acc],
+            new_row["raw_baseline_f1"] = [raw_baseline_f1],
+
+        new_row = pd.DataFrame(new_row)
         self.report = pd.concat([self.report, new_row])
+
+        # Save results every 5 rows
+        if len(self.report) == 5:
+            self.save()
+
+    def save(self):
+        logger.info(f"Saving report to {self.report_path}")
+        self.report.to_csv(self.report_path, index=False)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.save()
 
     @abstractmethod
     def run_experiment(self):

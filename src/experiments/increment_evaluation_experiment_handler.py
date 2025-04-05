@@ -85,7 +85,6 @@ class IncrementEvalExperimentHandler(ExperimentHandler):
 
         assert len(config.cloud_config.names) >= 1
 
-
         datasets = config.dataset_config.names
 
         cloud_models: list[CloudModel] = [CLOUD_MODELS[name]() for name in config.cloud_config.names]
@@ -101,6 +100,15 @@ class IncrementEvalExperimentHandler(ExperimentHandler):
 
                 logger.info(f"#### CURRENT DATASET BATCH SIZE: TRAIN: {train_shape} TEST: {test_shape}")
 
+                mask = ((self.report.dataset == dataset_name) &
+                        (self.report.train_size == str(train_shape)) &
+                        (self.report.test_size == str(test_shape)) &
+                        (self.report.embedding == config.embedding_config.name)
+                        )
+                if self.report[mask].shape[0] > 0:
+                    # Experiment was already logged, skip it
+                    logger.warning("Experiment was already logged, skipping")
+                    continue
 
                 embedding_model = EmbeddingsFactory().get_model(X=X_train, y=y_train, dataset_name=dataset_name)
                 encryptor = Encryptors(dataset_name=dataset_name,
@@ -140,8 +148,8 @@ class IncrementEvalExperimentHandler(ExperimentHandler):
                 self.log_results(
                     dataset_name, train_shape, test_shape,
                     str([cloud_model for cloud_model in config.cloud_config.names]),
-                    baseline_pred_acc, baseline_pred_f1,
                     baseline_emb_acc, baseline_emb_f1,
+                    baseline_pred_acc, baseline_pred_f1,
                     test_acc, test_f1,
                     internal_model.name
                 )

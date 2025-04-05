@@ -54,7 +54,7 @@ class Config(BaseModel):
     iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET])
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
     dataset_config: DatasetConfig = DatasetConfig(split_ratio=1,
-                                                  names=[DATASETS.AIRLINE_SATISFACTION, DATASETS.ADULT, DATASETS.LOAD_APPROVAL,
+                                                  names=[DATASETS.ADULT, DATASETS.LOAD_APPROVAL,
                                                          ] + PMLB_DATASETS
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.RAW_EMBEDDING)

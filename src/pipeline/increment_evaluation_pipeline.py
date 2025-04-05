@@ -9,7 +9,6 @@ from src.domain.dataset import Batch, EmbeddingBaselineDataset, EmbeddingBaselin
 from src.embeddings import RawDataEmbedding
 from src.encryptor.base import Encryptors
 from src.utils.constansts import GPU_DEVICE
-from src.pipeline.base import FeatureEngineeringPipeline
 from src.utils.config import config
 from src.utils.db import CloudPredictionDataDatabase
 
@@ -22,7 +21,7 @@ class IncrementEvalFeatureEngineeringPipeline:
         self.use_predictions = config.experiment_config.use_preds
         self.embedding_model = embeddings_model
         self.encryptor = encryptor
-        self.cloud_db = CloudPredictionDataDatabase(dataset_name)
+        self.cloud_db = CloudPredictionDataDatabase(dataset_name.value)
         self.n_pred_vectors = n_pred_vectors
 
     def create(self, X_train, y_train, X_test, y_test) -> tuple[list[IIMDataset] | IIMDataset, EmbeddingBaselineDataset, PredictionBaselineDataset]:

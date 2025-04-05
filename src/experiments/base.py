@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 
-import numpy as np
 from loguru import logger
 import pandas as pd
 import os
@@ -20,8 +19,9 @@ class ExperimentHandler(ABC):
         self.report_path = report_path
         if os.path.exists(self.report_path):
             try:
-                self.report = pd.read_csv(report_path, index_col="Unnamed: 0")
-            except Exception:
+                self.report = pd.read_csv(report_path)
+            except Exception as e:
+                logger.error(f"Error loading report: {e} \n Starting a new one")
                 self.report = pd.DataFrame()
         else:
             self.report = pd.DataFrame()
@@ -120,7 +120,7 @@ class ExperimentHandler(ABC):
         self.report = pd.concat([self.report, new_row])
 
         # Save results every 5 rows
-        if len(self.report) == 5:
+        if len(self.report) // 5:
             self.save()
 
     def save(self):

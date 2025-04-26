@@ -17,7 +17,10 @@ from src.experiments.base import ExperimentHandler
 class NoStackingExperimentHandler(ExperimentHandler):
 
     def __init__(self):
-        super().__init__("no_stacking_multiple_clouds")
+        use_embed = "emb" if config.experiment_config.use_embedding else "no_emb"
+        use_cloud = "cloud_vec" if config.experiment_config.use_preds else "no_cloud_vec"
+        exp_name = f"no_stacking_{use_embed}_{use_cloud}"
+        super().__init__(exp_name)
 
     def run_experiment(self):
 

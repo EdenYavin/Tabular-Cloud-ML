@@ -1,3 +1,5 @@
+from typing import Callable
+
 import numpy as np
 from keras.api.models import load_model
 import os
@@ -11,10 +13,10 @@ class BaseEncryptor:
 
     name: str
 
-    def __init__(self, dataset_name: str, input_shape=None, output_shape=None):
+    def __init__(self, dataset_name: str,output_shape=None):
         self.model = None
         self.output_shape = output_shape
-        self.input_shape = input_shape
+        self.input_shape = None
         self.dataset_name = dataset_name
 
     def build_generator(self, input_shape, output_shape):
@@ -27,16 +29,22 @@ class BaseEncryptor:
     def load_model(self, filename):
         self.model = load_model(filename)  # For Keras models
 
+    def switch_key(self):
+        del self.model
+        self.model = self.build_generator(self.input_shape, self.output_shape)
+
     def encode(self, inputs) -> np.array:
+
+        self.input_shape = inputs.shape[1:]
+        self.output_shape = self.output_shape or (1, inputs.shape[2])
 
         model_path = os.path.join(ENCRYPTOR_MODELS_DIR_PATH, f"{self.dataset_name}_{embedding_name}.h5")
         if self.model is None:
             if os.path.exists(model_path):
                 self.model = load_model(model_path)
             else:
-                input_shape = inputs.shape[1:]
-                output_shape = self.output_shape or (1, inputs.shape[2])
-                self.model = self.build_generator(input_shape, output_shape)
+
+                self.model = self.build_generator(self.input_shape, self.output_shape)
                 self.save_model(model_path)
 
         return self.model(inputs).numpy()
@@ -56,6 +64,10 @@ class Encryptors:
         self.enc_base_cls = enc_base_cls
         self.name =  enc_base_cls.name
         self.dataset_name = dataset_name
+
+    def switch_key(self):
+        for model in self.models:
+            model.switch_key()
 
     def encode(self, inputs, number_of_encoder_to_use=1) -> np.array:
         if self.models is None:

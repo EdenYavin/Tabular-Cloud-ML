@@ -12,7 +12,8 @@ class EncryptorFactory:
 
     @staticmethod
     def get_model(**kwargs):
-        return EncryptorFactory.ENCRYPTORS.get(config.encoder_config.name)(**kwargs)
+       return EncryptorFactory.ENCRYPTORS.get(config.encoder_config.name)(**kwargs)
+
 
     @staticmethod
     def get_model_cls():

@@ -167,7 +167,7 @@ class CloudPredictionDataDatabase:
         cache_dir = self.path / cloud_model_name / train_test_dir
         os.makedirs(cache_dir, exist_ok=True)
         cache_file = cache_dir / f"{index}.npy"
-        if os.path.exists(cache_file):
+        if os.path.exists(cache_file) and not config.encoder_config.rotating_key: # For rotating key we will have to always use the model
             # Load the cached processed batch from disk if it exists.
             return np.load(cache_file)
         else:

@@ -21,7 +21,7 @@ class IncrementEvalFeatureEngineeringPipeline:
         self.use_predictions = config.experiment_config.use_preds
         self.embedding_model = embeddings_model
         self.encryptor = encryptor
-        self.cloud_db = CloudPredictionDataDatabase(dataset_name.value)
+        self.cloud_db = CloudPredictionDataDatabase(dataset_name)
         self.n_pred_vectors = n_pred_vectors
 
     def create(self, X_train, y_train, X_test, y_test) -> tuple[list[IIMDataset] | IIMDataset, EmbeddingBaselineDataset, PredictionBaselineDataset]:

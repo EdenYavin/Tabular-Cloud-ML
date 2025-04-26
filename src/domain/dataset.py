@@ -69,6 +69,7 @@ class PredictionBaselineDataset(BaseModel):
     train: PredictionBaselineFeatures
     test: PredictionBaselineFeatures
 
+
 class PredictionsDataset(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     train_iim_features: IIMFeatures

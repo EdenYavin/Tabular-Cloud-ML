@@ -4,20 +4,31 @@ import numpy as np
 import tensorflow as tf
 
 from src.domain.dataset import Batch
+from src.embeddings import ClipEmbedding
+from src.encryptor.base import Encryptors
 from src.utils.constansts import GPU_DEVICE
 from src.pipeline.base import FeatureEngineeringPipeline
 from src.utils.config import config
-
+from loguru import logger
 
 
 class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
 
+    def __init__(self, dataset_name, encryptor: Encryptors, embeddings_model,
+                 n_pred_vectors, metadata = None):
+        super().__init__(dataset_name, encryptor, embeddings_model, n_pred_vectors, metadata)
+        self.triangulation_embedding = None
+        if config.encoder_config.rotating_key:
+            logger.info(f"Triangulation model is on, using {ClipEmbedding.name}")
+            self.triangulation_embedding = ClipEmbedding()
 
     def _get_features(self, embeddings, y, is_test):
         num_of_cloud_models = len(config.cloud_config.names)
         observations = []
         predictions_for_baseline = [] # Will be used for the baseline
         new_y = []
+
+        triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
 
         with tqdm(total=num_of_cloud_models, desc="Processing models") as pbar:
             for idx, cloud_model in enumerate(config.cloud_config.names):
@@ -51,18 +62,38 @@ class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
                     for label in labels:
                         [new_y.append(label) for _ in range(number_of_new_samples)]
 
-
                     with tf.device(GPU_DEVICE):
+
+                        observation = []
+
+                        if config.experiment_config.use_embedding:
+                            observation.append(mini_batch)
+
+
                         # Run the models on the GPU
-                        images = self.encryptor.encode(mini_batch, number_of_samples_encoding) # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as features
-                        predictions = self.cloud_db.get_predictions(cloud_model, images, batch.progress.n, is_test)
+                        # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as features
+                        images = self.encryptor.encode(mini_batch, number_of_samples_encoding)
+                        if config.experiment_config.use_preds:
+                            predictions = self.cloud_db.get_predictions(cloud_model, images, batch.progress.n, is_test)
+                            observation.append(predictions)
 
+                        if config.encoder_config.rotating_key:
 
-                    # We are then creating a prediction vector for each new encoded sample (image)
-                    predictions = np.vstack(predictions) # Create one feature vector of all concatenated predictions
-                    observation =  np.hstack([predictions, mini_batch])
+                            # embed the encrypted samples
+                            x_tag = self.triangulation_embedding.forward(images)
+                            observation.append(x_tag)
 
-                    observations.append(observation)
+                            # Add the new triangulation samples' embedding as well:
+                            # 1. Encrypt them
+                            y_tag = self.encryptor.encode(triangulation_samples)
+                            # 2. Embed the encryption
+                            y_tag = self.triangulation_embedding(y_tag)
+                            observation.append(np.vstack([np.hstack([x, y_tag.flatten()]) for x in x_tag])) # Triangulation features vector = X', Y_1', Y_2',...
+
+                            # Rotate the key for the next sample to be encoded by a new key
+                            self.encryptor.switch_key()
+
+                    observations.append(np.hstack(observation))
                     predictions_for_baseline.append(predictions)
 
         return np.vstack(observations), np.vstack(new_y), np.vstack(predictions_for_baseline)

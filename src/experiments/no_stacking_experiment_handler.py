@@ -1,3 +1,4 @@
+import numpy as np
 from tqdm import tqdm
 
 from src.pipeline.no_stacking_encoding_pipeline import NoStackingFeatureEngineeringPipeline as FeatureEngineeringPipeline
@@ -38,7 +39,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
             encryptor = Encryptors(dataset_name=dataset_name,
                                    output_shape=cloud_models[0].input_shape,
                                    number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,
-                                   enc_base_cls=EncryptorFactory.get_model_cls()
+                                   enc_base_cls=EncryptorFactory.get_model_cls(),
                                    )
 
             X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
@@ -49,7 +50,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
 
             for n_pred_vectors in self.n_pred_vectors:
 
-                logger.debug(f"CREATING THE CLOUD-TRAINSET FROM {dataset_name},"
+                logger.debug(f"CREATING THE CLOUD TRAIN SET FROM {dataset_name},"
                       f" WITH {n_pred_vectors} PREDICTION VECTORS")
 
                 dataset_creator = FeatureEngineeringPipeline(
@@ -59,9 +60,11 @@ class NoStackingExperimentHandler(ExperimentHandler):
                     n_pred_vectors=n_pred_vectors,
                     metadata=raw_dataset.metadata
                 )
-                dataset, emb_baseline_dataset, pred_baseline_dataset, = dataset_creator.create(X_sample, y_sample, X_test, y_test)
-                logger.debug("Finished Creating the dataset")
 
+                dataset, emb_baseline_dataset, pred_baseline_dataset= (
+                    dataset_creator.create(X_sample, y_sample, X_test, y_test)
+                )
+                logger.debug("Finished Creating the dataset")
 
                 # Log size for the final report
                 train_shape = X_sample.shape
@@ -69,10 +72,10 @@ class NoStackingExperimentHandler(ExperimentHandler):
                 del X_test, X_sample, y_test, y_sample
 
                 logger.info(f"############# USING {config.iim_config.name} FOR ALL BASELINES #############")
-                baseline_emb_acc, baseline_emb_f1 = self.get_embedding_baseline(raw_dataset, emb_baseline_dataset)
+                baseline_emb_acc, baseline_emb_f1 = self.get_embedding_baseline(emb_baseline_dataset)
                 del emb_baseline_dataset # Free up memory
 
-                baseline_pred_acc, baseline_pred_f1 = self.get_prediction_baseline(raw_dataset, pred_baseline_dataset)
+                baseline_pred_acc, baseline_pred_f1 = self.get_prediction_baseline(pred_baseline_dataset)
                 del pred_baseline_dataset # Free up memory
 
                 logger.debug(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")

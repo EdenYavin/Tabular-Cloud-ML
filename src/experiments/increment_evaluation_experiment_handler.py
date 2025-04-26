@@ -91,7 +91,7 @@ class IncrementEvalExperimentHandler(ExperimentHandler):
 
 
         for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
-            increment_batch_iterator = IncrementDatasetBatch(dataset_name, number_of_folds=10)
+            increment_batch_iterator = IncrementDatasetBatch(dataset_name, number_of_folds=5)
 
             for X_train, X_test, y_train, y_test in increment_batch_iterator:
                 # Log size for the final report
@@ -110,7 +110,7 @@ class IncrementEvalExperimentHandler(ExperimentHandler):
                     logger.warning("Experiment was already logged, skipping")
                     continue
 
-                embedding_model = EmbeddingsFactory().get_model(X=X_train, y=y_train, dataset_name=dataset_name)
+                embedding_model = EmbeddingsFactory().get_model(X=X_train, y=y_train, dataset_name=dataset_name, force=True)
                 encryptor = Encryptors(dataset_name=dataset_name,
                                        output_shape=cloud_models[0].input_shape,
                                        number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,

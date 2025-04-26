@@ -110,37 +110,6 @@ class DCEncryptor(BaseEncryptor):
         return G
 
 
-    def build_generator_old(self, input_shape, output_shape):
-
-        input_layer = Input(shape=input_shape)
-        x = Flatten()(input_layer)
-
-        x = Dense(7*7*256, use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = LeakyReLU()(x)
-
-        x = Reshape((7, 7, 256))(x)
-        x = Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = LeakyReLU()(x)
-
-        x = Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = LeakyReLU()(x)
-
-        x = Conv2DTranspose(32, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = LeakyReLU()(x)
-
-        x = Conv2DTranspose(16, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = LeakyReLU()(x)
-
-        output_image = Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='sigmoid')(x)
-
-        return Model(inputs=input_layer, outputs=output_image)
-
-
 class DC32x32Encryptor(BaseEncryptor):
 
     name = "dc32x32"

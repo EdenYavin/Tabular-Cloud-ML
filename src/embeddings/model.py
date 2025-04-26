@@ -10,6 +10,9 @@ import tensorflow as tf
 from tab2img.converter import Tab2Img
 from keras.src.callbacks import EarlyStopping
 from keras.src.utils import to_categorical
+from loguru import logger
+from transformers import CLIPProcessor, CLIPModel
+import torch
 from src.utils.helpers import create_image_from_numbers, expand_matrix_to_img_size
 from src.utils.config import config
 from src.utils.constansts import CPU_DEVICE, EMBEDDING_MODEL_PATH
@@ -66,13 +69,15 @@ class SparseAE(nn.Module):
     def __init__(self, **kwargs):
         super(SparseAE, self).__init__()
         X = kwargs.get("X")
+        force = kwargs.get("force", False) # Flag to force creating a new model.
         dataset_name = kwargs.get("dataset_name", None)
         path = EMBEDDING_MODEL_PATH / f"{dataset_name}_sparse.h5" or ""
 
-        if path.exists():
+        if path.exists() and not force:
             self.model = keras.models.load_model(path)
         else:
-            self.model = self._get_trained_model(X)
+            logger.info("Creating new sparse autoencoder model}")
+            self.model = self._get_trained_model(X.astype(float))
             self.model.save(path)
 
         self.output_shape = (1, 64)
@@ -151,6 +156,27 @@ class ImageEmbedding(nn.Module):
 
         embeddings = self.model(preprocess_input(image))
         return embeddings.numpy()[0]
+
+class ClipEmbedding(nn.Module):
+
+    name = "clip_embedding"
+
+    def __init__(self, **kwargs):
+        super(ClipEmbedding, self).__init__()
+        model_id = "openai/clip-vit-base-patch32"
+        self.input_shape = (224, 224)
+        self.model = CLIPModel.from_pretrained(model_id)
+        self.processor = CLIPProcessor.from_pretrained(model_id)
+        self.output_shape = (1, 512)
+
+
+    def forward(self, x):
+
+        image_input = self.processor(images=x, return_tensors="pt")["pixel_values"]
+        with torch.no_grad():
+            embeddings = self.model.get_image_features(pixel_values=image_input)
+        # embedding is your flat vector (e.g., 512-dim)[6]
+        return embeddings.numpy()
 
 
 class RawDataEmbedding(nn.Module):

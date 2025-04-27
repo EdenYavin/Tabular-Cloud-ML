@@ -78,8 +78,12 @@ class NoStackingExperimentHandler(ExperimentHandler):
                 baseline_emb_acc, baseline_emb_f1 = self.get_embedding_baseline(emb_baseline_dataset)
                 del emb_baseline_dataset # Free up memory
 
-                baseline_pred_acc, baseline_pred_f1 = self.get_prediction_baseline(pred_baseline_dataset)
-                del pred_baseline_dataset # Free up memory
+                if len(pred_baseline_dataset.train.predictions) > 0:
+                    # If we are not using the use_pred flag in the config, the prediction dataset will be empty
+                    baseline_pred_acc, baseline_pred_f1 = self.get_prediction_baseline(pred_baseline_dataset)
+                    del pred_baseline_dataset # Free up memory
+                else:
+                    baseline_pred_acc, baseline_pred_f1 = 0, 0
 
                 logger.debug(f"#### EVALUATING INTERNAL MODEL ####\nDataset Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
                 internal_model = InternalInferenceModelFactory().get_model(

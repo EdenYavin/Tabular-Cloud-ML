@@ -172,7 +172,7 @@ class ClipEmbedding(nn.Module):
 
     def forward(self, x):
 
-        image_input = self.processor(images=x, return_tensors="pt")["pixel_values"]
+        image_input = self.processor(images=x, return_tensors="pt", do_rescale=False)["pixel_values"]
         with torch.no_grad():
             embeddings = self.model.get_image_features(pixel_values=image_input)
         # embedding is your flat vector (e.g., 512-dim)[6]

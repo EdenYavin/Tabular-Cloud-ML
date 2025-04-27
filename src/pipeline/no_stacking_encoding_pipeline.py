@@ -76,6 +76,7 @@ class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
                         if config.experiment_config.use_preds:
                             predictions = self.cloud_db.get_predictions(cloud_model, images, batch.progress.n, is_test)
                             observation.append(predictions)
+                            predictions_for_baseline.append(predictions)
 
                         if config.encoder_config.rotating_key:
 
@@ -94,6 +95,10 @@ class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
                             self.encryptor.switch_key()
 
                     observations.append(np.hstack(observation))
-                    predictions_for_baseline.append(predictions)
 
-        return np.vstack(observations), np.vstack(new_y), np.vstack(predictions_for_baseline)
+        if len(predictions_for_baseline) > 0:
+            predictions_for_baseline = np.vstack(predictions_for_baseline)
+        else:
+            predictions_for_baseline = np.array(list())
+
+        return np.vstack(observations), np.vstack(new_y), predictions_for_baseline

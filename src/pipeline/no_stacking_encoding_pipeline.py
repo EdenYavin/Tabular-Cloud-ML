@@ -66,10 +66,6 @@ class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
 
                         observation = []
 
-                        if config.experiment_config.use_embedding:
-                            observation.append(mini_batch)
-
-
                         # Run the models on the GPU
                         # We are encrypting each sample N times, where N is the number of prediction vectors we want to use as features
                         images = self.encryptor.encode(mini_batch, number_of_samples_encoding)
@@ -77,6 +73,9 @@ class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
                             predictions = self.cloud_db.get_predictions(cloud_model, images, batch.progress.n, is_test)
                             observation.append(predictions)
                             predictions_for_baseline.append(predictions)
+
+                        if config.experiment_config.use_embedding:
+                            observation.append(mini_batch)
 
                         if config.encoder_config.rotating_key:
 

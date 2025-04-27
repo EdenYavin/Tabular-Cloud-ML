@@ -99,13 +99,12 @@ class NoStackingExperimentHandler(ExperimentHandler):
                 )
 
                 self.log_results(
-                    raw_dataset.name, train_shape, test_shape,
-                    str([cloud_model for cloud_model in config.cloud_config.names]),
-                    raw_baseline_acc, raw_baseline_f1,
-                    baseline_emb_acc, baseline_emb_f1,
-                    baseline_pred_acc, baseline_pred_f1,
-                    test_acc, test_f1,
-                    internal_model.name
+                    dataset_name=raw_dataset.name, train_shape=train_shape, test_shape=test_shape,
+                    cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
+                    embeddings_baseline_acc=baseline_emb_acc, embeddings_baseline_f1=baseline_emb_f1,
+                    prediction_baseline_acc=baseline_pred_acc, prediction_baseline_f1=baseline_pred_f1,
+                    iim_baseline_acc=test_acc, iim_baseline_f1=test_f1,
+                    iim_model_name=internal_model.name,
                 )
 
             del dataset # Free up space

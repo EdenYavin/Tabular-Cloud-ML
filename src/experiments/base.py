@@ -35,7 +35,7 @@ class ExperimentHandler(ABC):
         baseline_model = EmbeddingBaselineModelFactory.get_model(
             num_classes=num_classes,
             input_shape=dataset.train.embeddings.shape[1],
-            type=config.iim_config.name[0]  # IIM_MODELS.NEURAL_NET # The baseline will be only neural network
+            type=config.iim_config.name[0]
         )
         baseline_model.fit(
             dataset.train.embeddings, dataset.train.labels,

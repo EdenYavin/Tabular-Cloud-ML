@@ -1,4 +1,3 @@
-import numpy as np
 from tqdm import tqdm
 
 from src.pipeline.no_stacking_encoding_pipeline import NoStackingFeatureEngineeringPipeline as FeatureEngineeringPipeline
@@ -19,7 +18,8 @@ class NoStackingExperimentHandler(ExperimentHandler):
     def __init__(self):
         use_embed = "emb" if config.experiment_config.use_embedding else "no_emb"
         use_cloud = "cloud_vec" if config.experiment_config.use_preds else "no_cloud_vec"
-        exp_name = f"no_stacking_{use_embed}_{use_cloud}"
+        use_rotate_key = "rotate_key" if config.encoder_config.rotating_key else "no_rotate_key"
+        exp_name = f"no_stacking_{use_rotate_key}_{use_embed}_{use_cloud}"
         super().__init__(exp_name)
 
     def run_experiment(self):
@@ -105,6 +105,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
                     prediction_baseline_acc=baseline_pred_acc, prediction_baseline_f1=baseline_pred_f1,
                     iim_baseline_acc=test_acc, iim_baseline_f1=test_f1,
                     iim_model_name=internal_model.name,
+                    raw_baseline_acc=raw_baseline_acc, raw_baseline_f1=raw_baseline_f1
                 )
 
             del dataset # Free up space

@@ -74,6 +74,7 @@ class SparseAE(nn.Module):
         path = EMBEDDING_MODEL_PATH / f"{dataset_name}_sparse.h5" or ""
 
         if path.exists() and not force:
+            logger.info(f"Loading sparse autoencoder model from {path}.")
             self.model = keras.models.load_model(path)
         else:
             logger.info("Creating new sparse autoencoder model}")

@@ -18,7 +18,7 @@ def main():
 
     elif config.experiment_config.exp_type == consts.EXPERIMENTS.PREDICTIONS_LEARNING:
 
-        if len(config.cloud_config.names) > 1 and config.experiment_config.stacking:
+        if len(config.cloud_config.names) > 1 and config.iim_config.stacking:
             experiment_handler = StackingExperimentHandler
 
         else:

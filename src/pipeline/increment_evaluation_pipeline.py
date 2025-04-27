@@ -49,7 +49,7 @@ class IncrementEvalFeatureEngineeringPipeline:
             test=PredictionBaselineFeatures(predictions=X_pred_test, labels=new_y_test)
         )
 
-        if config.experiment_config.stacking:
+        if config.iim_config.stacking:
             # For stacking we create a new dataset for each stack model
             dataset = [
                         IIMDataset(

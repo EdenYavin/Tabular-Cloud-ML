@@ -1,4 +1,3 @@
-from typing import Callable
 
 import numpy as np
 from keras.api.models import load_model

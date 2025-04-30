@@ -28,8 +28,8 @@ class FeatureEngineeringPipeline(ABC):
 
     def create(self, X_train, y_train, X_test, y_test) -> tuple[list[IIMDataset] | IIMDataset, EmbeddingBaselineDataset, PredictionBaselineDataset]:
 
-        X_emb_train = self._get_embeddings(X_train)
-        X_emb_test = self._get_embeddings(X_test)
+        X_emb_train = self._get_embeddings(X_train, is_test=False)
+        X_emb_test = self._get_embeddings(X_test, is_test=True)
 
         Xs_train, new_y_train, X_pred_train = self._get_features(X_emb_train, y_train, is_test=False)
         Xs_test, new_y_test, X_pred_test = self._get_features(X_emb_test, y_test, is_test=True)
@@ -68,13 +68,8 @@ class FeatureEngineeringPipeline(ABC):
         self.embedding_db.save()
         return dataset, embeddings_baseline, pred_baseline
 
-    def _get_embeddings(self, X):
-        X = pd.DataFrame(X)
-
-        embeddings = []
-        for idx, row in tqdm(X.iterrows(), total=len(X), position=0, leave=True, desc="Embedding Dataset"):
-
-            embeddings.append(self.embedding_db.get_embedding(pd.DataFrame(row).T))
+    def _get_embeddings(self, X, is_test=False):
+        embeddings = self.embedding_db.get_embedding(X, is_test)
         return np.vstack(embeddings)
 
     @abstractmethod

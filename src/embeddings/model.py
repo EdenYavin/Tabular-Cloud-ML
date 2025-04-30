@@ -71,13 +71,13 @@ class SparseAE(nn.Module):
         X = kwargs.get("X")
         force = kwargs.get("force", False) # Flag to force creating a new model.
         dataset_name = kwargs.get("dataset_name", None)
-        path = EMBEDDING_MODEL_PATH / f"{dataset_name}_sparse.h5" or ""
+        path = EMBEDDING_MODEL_PATH / f"{dataset_name}_sparse.keras" or ""
 
         if path.exists() and not force:
-            logger.info(f"Loading sparse autoencoder model from {path}.")
+            logger.info(f"Loading sparse autoencoder model from {path}")
             self.model = keras.models.load_model(path)
         else:
-            logger.info("Creating new sparse autoencoder model}")
+            logger.info("Creating new sparse autoencoder model")
             self.model = self._get_trained_model(X.astype(float))
             self.model.save(path)
 

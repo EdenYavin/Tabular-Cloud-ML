@@ -7,7 +7,7 @@ import os
 from src.domain.dataset import PredictionBaselineDataset, EmbeddingBaselineDataset
 from src.internal_model.baseline import EmbeddingBaselineModelFactory
 from src.utils.config import config
-from src.utils.constansts import REPORT_PATH
+from src.utils.constansts import REPORT_PATH, EXPERIMENTS
 from src.utils.helpers import get_num_classes
 
 
@@ -120,7 +120,7 @@ class ExperimentHandler(ABC):
         self.report = pd.concat([self.report, new_row])
 
         # Save results every 5 rows
-        if len(self.report) // 5:
+        if len(self.report)  // 5 and config.experiment_config.exp_type == EXPERIMENTS.INCREMENT_EVALUATION:
             self.save()
 
     def save(self):

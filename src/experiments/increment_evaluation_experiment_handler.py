@@ -100,15 +100,16 @@ class IncrementEvalExperimentHandler(ExperimentHandler):
 
                 logger.info(f"#### CURRENT DATASET BATCH SIZE: TRAIN: {train_shape} TEST: {test_shape}")
 
-                mask = ((self.report.dataset == dataset_name) &
-                        (self.report.train_size == str(train_shape)) &
-                        (self.report.test_size == str(test_shape)) &
-                        (self.report.embedding == config.embedding_config.name)
-                        )
-                if self.report[mask].shape[0] > 0:
-                    # Experiment was already logged, skip it
-                    logger.warning("Experiment was already logged, skipping")
-                    continue
+                if len(self.report) > 0:
+                    mask = ((self.report.dataset == dataset_name) &
+                            (self.report.train_size == str(train_shape)) &
+                            (self.report.test_size == str(test_shape)) &
+                            (self.report.embedding == config.embedding_config.name)
+                            )
+                    if self.report[mask].shape[0] > 0:
+                        # Experiment was already logged, skip it
+                        logger.warning("Experiment was already logged, skipping")
+                        continue
 
                 embedding_model = EmbeddingsFactory().get_model(X=X_train, y=y_train, dataset_name=dataset_name, force=True)
                 encryptor = Encryptors(dataset_name=dataset_name,

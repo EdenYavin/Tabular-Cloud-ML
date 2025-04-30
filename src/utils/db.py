@@ -1,6 +1,6 @@
 import json, pickle
 from pathlib import Path
-
+from tqdm import tqdm
 from loguru import logger
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -70,7 +70,6 @@ class RawDataExperimentDatabase:
 
         else:
             indexes = self.db[self.key]
-            logger.info(f"LOAD INDEX {config.dataset_config.split_ratio} - INDEX SIZE {len(DB_IMM_TRAIN_INDEX_TOKEN)}")
             # Get the existing indices and create new dataframes
             X_train = pd.DataFrame(X.loc[indexes[DB_TRAIN_INDEX_TOKEN]])
             y_train = pd.Series(y.loc[indexes[DB_TRAIN_INDEX_TOKEN]])
@@ -78,6 +77,8 @@ class RawDataExperimentDatabase:
             y_sample = pd.Series(y.loc[indexes[DB_IMM_TRAIN_INDEX_TOKEN]])
             X_test = pd.DataFrame(X.loc[indexes[DB_TEST_INDEX_TOKEN]])
             y_test = pd.Series(y.loc[indexes[DB_TEST_INDEX_TOKEN]])
+            logger.info(f"{self.dataset.name} LOADED INDEX {config.dataset_config.split_ratio} - INDEX SIZE {len(X_sample)}")
+
 
         return X_train.values, X_test.values, X_sample.values, y_train.values, y_test.values, y_sample.values
 
@@ -121,7 +122,9 @@ class ExperimentDatabase:
         else:
             return {}
 
-    def get_embedding(self, samples):
+    def get_embedding(self, samples, is_test=False):
+
+        key = DB_TRAIN_INDEX_TOKEN if not is_test else DB_TEST_INDEX_TOKEN
 
         if type(self.embedding_model) is RawDataEmbedding:
             # Special case to not waste resources
@@ -131,26 +134,15 @@ class ExperimentDatabase:
             self.db = self.load()
 
         embeddings = []
-        for i, sample in samples.iterrows():
-            embedding = self.db.get(i, {}).get(DB_EMBEDDING_TOKEN, None)
+        for i, sample in tqdm(enumerate(samples), total=len(samples), position=0, leave=True, desc=f"{key} Embedding Dataset"):
+            embedding = self.db.get(key, {}).get(i, None)
             if embedding is None:
-                embedding = self.embedding_model(sample.values.reshape(1, -1))
-                self.set_embedding(i, embedding)
+                embedding = self.embedding_model(sample.reshape(1, -1))
+                self.db.setdefault(key, {}).setdefault(i, embedding)
 
             embeddings.append(embedding)
 
-        embeddings = np.vstack(embeddings)
-
-        return embeddings
-
-    def set_label(self, idx, value):
-        self.db[idx][DB_LABEL_TOKEN] = value
-
-    def set_feature(self, idx, value):
-        self.db[idx][DB_RAW_FEATURES_TOKEN] = value
-
-    def set_embedding(self, idx, value):
-        self.db.setdefault(idx, {}).setdefault(DB_EMBEDDING_TOKEN, value)
+        return np.vstack(embeddings)
 
 
 class CloudPredictionDataDatabase:

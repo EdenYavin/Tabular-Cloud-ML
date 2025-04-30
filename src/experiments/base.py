@@ -95,20 +95,21 @@ class ExperimentHandler(ABC):
 
         logger.info(log_msg)
 
+        train_samples = config.experiment_config.n_triangulation_samples if config.encoder_config.rotating_key else 0
         new_row = {
             "exp_name": [self.experiment_name],
+            "triangulation_samples": [train_samples],
             "dataset": [dataset_name],
             "train_size": [str(train_shape)],
             "test_size": [str(test_shape)],
-            "n_pred_vectors": [self.n_pred_vectors],
             "iim_model": [iim_name],
             "embedding": [config.embedding_config.name],
             "encryptor": [config.encoder_config.name],
             "cloud_model": [cloud_models_names],
-            "emb_baseline_acc": [embeddings_baseline_acc],
-            "emb_baseline_f1": [embeddings_baseline_f1],
             "pred_baseline_acc": [prediction_baseline_acc],
             "pred_baseline_f1": [prediction_baseline_f1],
+            "emb_baseline_acc": [embeddings_baseline_acc],
+            "emb_baseline_f1": [embeddings_baseline_f1],
             "iim_test_acc": [iim_baseline_acc],
             "iim_test_f1": [iim_baseline_f1]
         }

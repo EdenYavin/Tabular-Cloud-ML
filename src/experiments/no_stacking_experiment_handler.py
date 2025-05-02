@@ -12,6 +12,12 @@ from src.utils.config import config
 from loguru import logger
 from src.experiments.base import ExperimentHandler
 
+logger.remove()  # Remove the default logger
+logger.add(
+    sink="sys.stdout",  # Output to console
+    format="{time} | {level} | {name}:{function}:{line} - {extra} - {message} "
+)
+
 
 class NoStackingExperimentHandler(ExperimentHandler):
 

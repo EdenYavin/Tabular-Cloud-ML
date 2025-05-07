@@ -111,11 +111,11 @@ class ExperimentHandler(ABC):
             "emb_baseline_acc": [embeddings_baseline_acc],
             "emb_baseline_f1": [embeddings_baseline_f1],
             "iim_test_acc": [iim_baseline_acc],
-            "iim_test_f1": [iim_baseline_f1]
+            "iim_test_f1": [iim_baseline_f1],
         }
         if raw_baseline_acc:
-            new_row["raw_baseline_acc"] = [raw_baseline_acc],
-            new_row["raw_baseline_f1"] = [raw_baseline_f1],
+            new_row["raw_baseline_acc"] = [raw_baseline_acc]
+            new_row["raw_baseline_f1"] = [raw_baseline_f1]
 
         new_row = pd.DataFrame(new_row)
         self.report = pd.concat([self.report, new_row])

@@ -29,6 +29,7 @@ class Config(BaseModel):
 
     class IIMConfig(BaseModel):
         name: list[str] | str = Field(description="IIM model to use. Can be multiple models", default=IIM_MODELS.NEURAL_NET)
+        stacking: bool = Field(description="A flag to indicate if the stacking should be used in training the IIM")
 
     class CloudModelsConfig(BaseModel):
         names: list[str] = Field(description="Cloud model to use", default=[CLOUD_MODELS.VGG16])
@@ -40,22 +41,21 @@ class Config(BaseModel):
         n_triangulation_samples: int = Field(description="Number samples to sample from the dataset to use for the triangulation")
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
         exp_type: str = Field(description="type of the experiment - embedding learning, or prediction learning")
-        stacking: bool = Field(description="A flag to indicate if the stacking should be used in training the IIM")
 
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5,n_pred_vectors=1,k_folds=1,
-                                                           use_preds=True, use_embedding=True,
+                                                           use_preds=True, use_embedding=False,
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
-                                                           stacking=False)
+                                                           )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
-        CLOUD_MODELS.EFFICIENTNET#, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
-        #CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16
+        CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
+        CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16
     ])
-    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET])
+    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.BIGGER_NEURAL_NET], stacking=False)
     neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
-    dataset_config: DatasetConfig = DatasetConfig(split_ratio=1,
-                                                  names=[DATASETS.HELOC]
+    dataset_config: DatasetConfig = DatasetConfig(split_ratio=0.01,
+                                                  names=PMLB_DATASETS
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV, rotating_key=True)

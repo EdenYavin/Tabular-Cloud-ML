@@ -7,7 +7,7 @@ from src.pipeline.golbal_embedding_pipeline import FeatureEngineeringPipeline
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
-from src.internal_model.base import InternalInferenceModelFactory
+from src.internal_model import InternalInferenceModelFactory
 from src.embeddings import EmbeddingsFactory
 from src.dataset import DATASETS, RawDataset
 from src.utils.config import config

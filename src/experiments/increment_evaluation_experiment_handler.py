@@ -5,7 +5,7 @@ from src.pipeline.increment_evaluation_pipeline import IncrementEvalFeatureEngin
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
-from src.internal_model.base import InternalInferenceModelFactory
+from src.internal_model import InternalInferenceModelFactory
 from src.embeddings import EmbeddingsFactory
 from src.utils.constansts import EVAL_DATASET_REPORT_PATH
 from src.utils.db import RawSplitDBFactory

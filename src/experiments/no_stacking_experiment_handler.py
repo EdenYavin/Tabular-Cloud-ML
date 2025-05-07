@@ -4,20 +4,13 @@ from src.pipeline.no_stacking_encoding_pipeline import NoStackingFeatureEngineer
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
-from src.internal_model.base import InternalInferenceModelFactory
+from src.internal_model import InternalInferenceModelFactory
 from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
 from src.dataset import DatasetFactory, RawDataset
 from src.utils.config import config
 from loguru import logger
 from src.experiments.base import ExperimentHandler
-
-logger.remove()  # Remove the default logger
-logger.add(
-    sink="sys.stdout",  # Output to console
-    format="{time} | {level} | {name}:{function}:{line} - {extra} - {message} "
-)
-
 
 class NoStackingExperimentHandler(ExperimentHandler):
 
@@ -44,7 +37,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
             with logger.contextualize(dataset=dataset_name):
 
                 raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
-
+                n_classes = raw_dataset.get_n_classes()
 
                 embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name)
                 encryptor = Encryptors(dataset_name=dataset_name,
@@ -56,8 +49,8 @@ class NoStackingExperimentHandler(ExperimentHandler):
                 X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
                 logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
 
-                logger.debug("#### GETTING RAW BASELINE PREDICTION ####")
-                raw_baseline_acc, raw_baseline_f1 = raw_dataset.get_baseline(X_sample, X_test, y_sample, y_test)
+                # logger.debug("#### GETTING RAW BASELINE PREDICTION ####")
+                # raw_baseline_acc, raw_baseline_f1 = raw_dataset.get_baseline(X_sample, X_test, y_sample, y_test)
 
                 for n_pred_vectors in self.n_pred_vectors:
 
@@ -80,7 +73,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
                     # Log size for the final report
                     train_shape = X_sample.shape
                     test_shape = X_test.shape
-                    del X_test, X_sample, y_test, y_sample
+                    del X_test, X_sample, y_test, y_sample, dataset_creator, raw_dataset
 
                     logger.info(f"############# USING {config.iim_config.name} FOR ALL BASELINES #############")
                     baseline_emb_acc, baseline_emb_f1 = self.get_embedding_baseline(emb_baseline_dataset)
@@ -95,7 +88,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
 
                     logger.debug(f"#### EVALUATING INTERNAL MODEL ####\nDataset {dataset_name} Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
                     internal_model = InternalInferenceModelFactory().get_model(
-                        num_classes=raw_dataset.get_n_classes(),
+                        num_classes=n_classes,
                         input_shape=dataset.train.features.shape[1],
                         type=config.iim_config.name[0]
                     )
@@ -107,13 +100,12 @@ class NoStackingExperimentHandler(ExperimentHandler):
                     )
 
                     self.log_results(
-                        dataset_name=raw_dataset.name, train_shape=train_shape, test_shape=test_shape,
+                        dataset_name=dataset_name, train_shape=train_shape, test_shape=test_shape,
                         cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
                         embeddings_baseline_acc=baseline_emb_acc, embeddings_baseline_f1=baseline_emb_f1,
                         prediction_baseline_acc=baseline_pred_acc, prediction_baseline_f1=baseline_pred_f1,
                         iim_baseline_acc=test_acc, iim_baseline_f1=test_f1,
                         iim_model_name=internal_model.name,
-                        raw_baseline_acc=raw_baseline_acc, raw_baseline_f1=raw_baseline_f1
                     )
 
             del dataset # Free up space

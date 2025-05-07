@@ -20,6 +20,7 @@ class ENCODERS_TYPES(str, enum.Enum):
 
 class IIM_MODELS(str, enum.Enum):
     NEURAL_NET = "neural_network"
+    BIGGER_NEURAL_NET = "big_neural_network"
     XGBOOST = "xgboost"
 
 class CLOUD_MODELS(str, enum.Enum):
@@ -169,10 +170,10 @@ ALL_DATASETS = [
 ]
 
 PMLB_DATASETS = [
-    "agaricus_lepiota",
-    "mushroom",
-    "magic",
-    "ring",
+    # "agaricus_lepiota",
+    # "mushroom",
+    # "magic",
+    # "ring",
     "twonorm",
 ]
 

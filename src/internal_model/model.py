@@ -1,6 +1,4 @@
 
-from keras.src.callbacks import LearningRateScheduler, EarlyStopping
-from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
@@ -9,62 +7,17 @@ from keras.src.layers import Dense, Dropout, Input,  BatchNormalization, concate
 from keras.src.metrics import F1Score
 from keras.src import regularizers
 import numpy as np
+import tensorflow as tf
 
-
+from src.internal_model.base import NeuralNetworkInternalModel
 from src.utils.config import config
-from src.utils.constansts import IIM_MODELS, EXPERIMENTS
+from src.utils.constansts import IIM_MODELS
 
 models = {
     IIM_MODELS.XGBOOST.value: XGBClassifier,
 }
 
-class TabularInternalModel(BaseEstimator, ClassifierMixin):
-    def __init__(self, **kwargs):
-        self.model = kwargs.get('model')
-        self.name = "xgboost"
 
-    def fit(self, X, y):
-        self.model.fit(X, y)
-        return self
-
-    def predict(self, X):
-        return self.model.predict(X)
-
-    def predict_proba(self, X):
-        return self.model.predict_proba(X)
-
-    def evaluate(self, X, y):
-        pred = self.predict(X)
-        return accuracy_score(y, pred), f1_score(y, pred, average='weighted')
-
-
-
-class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
-
-    def __init__(self, **kwargs):
-        self.batch_size = config.neural_net_config.batch_size
-        self.dropout_rate = config.neural_net_config.dropout
-        self.epochs = config.neural_net_config.epochs
-        self.model: Model = None
-
-    def fit(self, X, y):
-        lr_scheduler = LearningRateScheduler(lambda epoch: 0.0001 * (0.9 ** epoch))
-        early_stopping = EarlyStopping(patience=2, monitor='loss')
-        self.model.fit(X, y, epochs=self.epochs, batch_size=self.batch_size, callbacks=[lr_scheduler, early_stopping])
-
-    def predict(self, X):
-        prediction = self.model.predict(X)
-        return np.argmax(prediction, axis=1)
-
-    def predict_proba(self, X):
-        return self.model.predict(X)
-
-    def evaluate(self, X, y):
-        if len(y.shape) == 2:
-            y = np.argmax(y, axis=1)
-
-        pred = self.predict(X)
-        return accuracy_score(y, pred), f1_score(y, pred, average='weighted')
 
 
 class DenseInternalModel(NeuralNetworkInternalModel):
@@ -94,6 +47,46 @@ class DenseInternalModel(NeuralNetworkInternalModel):
         model.compile(optimizer='adam',
                       loss='categorical_crossentropy',
                       metrics=['accuracy', F1Score()]
+                      )
+
+        return model
+
+class BiggerDense(DenseInternalModel):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "big_neural_network"
+
+    def get_model(self, num_classes, input_shape):
+        # Build the model
+        inputs = Input(shape=(input_shape,))  # Dynamic input shape
+
+        # Define the hidden layers
+        x = BatchNormalization()(inputs)
+        x = Dense(units=1024, activation='leaky_relu')(x)
+        x = Dropout(self.dropout_rate)(x)
+
+        x = BatchNormalization()(x)
+        x = Dense(units=512, activation='leaky_relu')(x)
+        x = Dropout(self.dropout_rate)(x)
+
+        x = BatchNormalization()(x)
+        x = Dense(units=256, activation='leaky_relu')(x)
+        x = Dropout(self.dropout_rate)(x)
+
+        x = BatchNormalization()(x)
+        x = Dense(units=128, activation='leaky_relu')(x)
+        x = Dropout(self.dropout_rate)(x)
+
+        # Define the output layer
+        outputs = Dense(units=num_classes, activation='softmax')(x)
+
+        # Create the model
+        model = Model(inputs=inputs, outputs=outputs)
+
+        # Compile the model with F1 Score
+        model.compile(optimizer='adam',
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy']#, F1Score()]
                       )
 
         return model

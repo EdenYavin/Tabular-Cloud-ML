@@ -91,7 +91,7 @@ matplotlib-inline==0.1.7
 mdurl==0.1.2
 mistral_common==1.3.4
 mistune==3.0.2
-ml-dtypes==0.3.2
+ml_dtypes==0.5.1
 mlxtend==0.23.1
 mpmath==1.3.0
 msgpack==1.1.0
@@ -170,9 +170,9 @@ stack-data==0.6.3
 statsmodels==0.14.4
 sympy==1.13.2
 tab2img==0.0.2
-tensorboard==2.16.2
+tensorboard==2.19.0
 tensorboard-data-server==0.7.2
-tensorflow==2.16.2
+tensorflow==2.19.0
 tensorflow-io-gcs-filesystem==0.37.1
 tensorflow-macos==2.16.2
 tensorflow-metal==1.2.0

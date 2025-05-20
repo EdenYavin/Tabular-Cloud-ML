@@ -11,15 +11,12 @@ from src.dataset import DatasetFactory, RawDataset
 from src.utils.config import config
 from loguru import logger
 from src.experiments.base import ExperimentHandler
+from src.utils.helpers import get_experiment_name
 
 class NoStackingExperimentHandler(ExperimentHandler):
 
     def __init__(self):
-        use_embed = "emb" if config.experiment_config.use_embedding else "no_emb"
-        use_cloud = "cloud_vec" if config.experiment_config.use_preds else "no_cloud_vec"
-        use_rotate_key = "rotate_key" if config.encoder_config.rotating_key else "no_rotate_key"
-        exp_name = f"no_stacking_{use_rotate_key}_{use_embed}_{use_cloud}"
-        super().__init__(exp_name)
+        super().__init__(get_experiment_name())
 
     def run_experiment(self):
 
@@ -40,11 +37,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
                 n_classes = raw_dataset.get_n_classes()
 
                 embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name)
-                encryptor = Encryptors(dataset_name=dataset_name,
-                                       output_shape=cloud_models[0].input_shape,
-                                       number_of_encryptors_to_init=config.experiment_config.n_pred_vectors,
-                                       enc_base_cls=EncryptorFactory.get_model_cls(),
-                                       )
+                encryptor = EncryptorFactory.get_model(dataset_name=dataset_name, output_shape=cloud_models[0].input_shape)
 
                 X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
                 logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
@@ -65,7 +58,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
                         metadata=raw_dataset.metadata
                     )
 
-                    dataset, emb_baseline_dataset, pred_baseline_dataset= (
+                    dataset, emb_baseline_dataset = (
                         dataset_creator.create(X_sample, y_sample, X_test, y_test)
                     )
                     logger.debug("Finished Creating the dataset")
@@ -79,12 +72,12 @@ class NoStackingExperimentHandler(ExperimentHandler):
                     baseline_emb_acc, baseline_emb_f1 = self.get_embedding_baseline(emb_baseline_dataset)
                     del emb_baseline_dataset # Free up memory
 
-                    if len(pred_baseline_dataset.train.predictions) > 0:
-                        # If we are not using the use_pred flag in the config, the prediction dataset will be empty
-                        baseline_pred_acc, baseline_pred_f1 = self.get_prediction_baseline(pred_baseline_dataset)
-                        del pred_baseline_dataset # Free up memory
-                    else:
-                        baseline_pred_acc, baseline_pred_f1 = 0, 0
+                    # if len(pred_baseline_dataset.train.predictions) > 0:
+                    #     # If we are not using the use_pred flag in the config, the prediction dataset will be empty
+                    #     baseline_pred_acc, baseline_pred_f1 = self.get_prediction_baseline(pred_baseline_dataset)
+                    #     del pred_baseline_dataset # Free up memory
+                    # else:
+                    #     baseline_pred_acc, baseline_pred_f1 = 0, 0
 
                     logger.debug(f"#### EVALUATING INTERNAL MODEL ####\nDataset {dataset_name} Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
                     internal_model = InternalInferenceModelFactory().get_model(
@@ -103,7 +96,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
                         dataset_name=dataset_name, train_shape=train_shape, test_shape=test_shape,
                         cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
                         embeddings_baseline_acc=baseline_emb_acc, embeddings_baseline_f1=baseline_emb_f1,
-                        prediction_baseline_acc=baseline_pred_acc, prediction_baseline_f1=baseline_pred_f1,
+                        prediction_baseline_acc=-1, prediction_baseline_f1=-1,
                         iim_baseline_acc=test_acc, iim_baseline_f1=test_f1,
                         iim_model_name=internal_model.name,
                     )

@@ -9,12 +9,14 @@ import os
 
 from src.cloud import CloudModel, CLOUD_MODELS
 from src.dataset.base import RawDataset
+from src.domain.dataset import IIMDataset
 from src.utils.config import config
 from src.embeddings.model import RawDataEmbedding
-from src.utils.constansts import (DATA_CACHE_PATH, DB_EMBEDDING_TOKEN, DB_LABEL_TOKEN, DB_RAW_FEATURES_TOKEN,
+from src.utils.constansts import (DATA_CACHE_PATH,
                                   DB_TRAIN_INDEX_TOKEN, DB_TEST_INDEX_TOKEN, DB_IMM_TRAIN_INDEX_TOKEN,
-                                  CLOUD_PRED_CACHE_DIR_NAME, DATASETS
+                                  CLOUD_PRED_CACHE_DIR_NAME
                                   )
+from src.utils.helpers import get_experiment_name
 
 
 class RawDataExperimentDatabase:
@@ -154,6 +156,16 @@ class CloudPredictionDataDatabase:
         self.path = path
         self.cloud_model: CloudModel | None = None
 
+    def get_dataset(self, is_test: bool = False):
+        train_test_dir = "train" if not is_test else "test"
+        cache_dir = self.path / train_test_dir
+        dataset = []
+        for file in os.listdir(cache_dir):
+            if file.endswith(".npy"):
+                dataset.append(np.load(cache_dir / file))
+
+        return np.vstack(dataset)
+
     def get_predictions(self, cloud_model_name: str, batch: np.ndarray, index: int, is_test: bool):
         train_test_dir = "train" if not is_test else "test"
         cache_dir = self.path / cloud_model_name / train_test_dir
@@ -175,6 +187,39 @@ class CloudPredictionDataDatabase:
             processed_batch = self.cloud_model.predict(batch)
             np.save(cache_file, processed_batch)
             return processed_batch
+
+
+class EncryptionDatasetDB:
+
+    def __init__(self, dataset_name: str):
+        self.dataset_name = dataset_name
+        self.path = Path(DATA_CACHE_PATH) / dataset_name / f"{get_experiment_name()}.pkl"
+
+    def is_db_exists(self):
+        return os.path.exists(self.path)
+
+    def get_dataset(self) -> IIMDataset:
+        if os.path.exists(self.path):
+            with open(self.path, "rb") as f:
+                return pickle.load(f)
+
+        return None
+
+    def get_shape(self) -> tuple:
+        return self.get_dataset().train.features.shape
+
+    def append(self, new_dataset: IIMDataset):
+
+        if os.path.exists(self.path):
+            with open(self.path, "rb") as f:
+                data: IIMDataset = pickle.load(f)
+
+            new_dataset.train.features = np.vstack([data.train.features, new_dataset.train.features])
+            new_dataset.train.labels = np.vstack([data.train.labels, new_dataset.train.labels])
+
+
+        with open(self.path, "wb") as f:
+            pickle.dump(new_dataset, f)
 
 
 class EmbeddingDBFactory:

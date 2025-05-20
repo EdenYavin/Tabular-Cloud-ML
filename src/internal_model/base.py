@@ -31,9 +31,9 @@ class TabularInternalModel(BaseEstimator, ClassifierMixin):
 class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
 
     def __init__(self, **kwargs):
-        self.batch_size = config.neural_net_config.batch_size
-        self.dropout_rate = config.neural_net_config.dropout
-        self.epochs = config.neural_net_config.epochs
+        self.batch_size = config.iim_config.neural_net_config.batch_size
+        self.dropout_rate = config.iim_config.neural_net_config.dropout
+        self.epochs = config.iim_config.neural_net_config.epochs
         self.model: Model = None
 
     def fit(self, X, y):
@@ -41,7 +41,7 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
         with tf.device('/GPU:0'):
             lr_scheduler = LearningRateScheduler(lambda epoch: 0.0001 * (0.9 ** epoch))
             early_stopping = EarlyStopping(patience=2, monitor='loss')
-            self.model.fit(X, y, epochs=self.epochs, batch_size=10,verbose=1, callbacks=[lr_scheduler, early_stopping])
+            self.model.fit(X, y, epochs=self.epochs, batch_size=10,verbose=2, callbacks=[lr_scheduler, early_stopping])
 
     def predict(self, X):
         prediction = self.model.predict(X)

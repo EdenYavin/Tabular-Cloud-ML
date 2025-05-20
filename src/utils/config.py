@@ -20,16 +20,19 @@ class Config(BaseModel):
         names: list = Field(description="The datasets to run the experiments on")
         split_ratio : float = Field(description="How much of the original train set (90%) will be used to train the IIM")
         one_hot: bool = Field(description="A flag to indicate if the ground truth labels should be one-hot encoded", default=False)
-        batch_size: int = Field(description="Batch size to accumulate", default=200)
-
-    class NEURAL_NET_CONFIG(BaseModel):
-        epochs: int = 100
-        batch_size: int = 64
-        dropout: float = 0.3
+        batch_size: int = Field(description="Batch size to accumulate", default=64)
 
     class IIMConfig(BaseModel):
+
+        class NEURAL_NET_CONFIG(BaseModel):
+            epochs: int = 100
+            batch_size: int = 64
+            dropout: float = 0.3
+
+        neural_net_config: NEURAL_NET_CONFIG = Field(description="Neural network config", default=NEURAL_NET_CONFIG())
         name: list[str] | str = Field(description="IIM model to use. Can be multiple models", default=IIM_MODELS.NEURAL_NET)
         stacking: bool = Field(description="A flag to indicate if the stacking should be used in training the IIM")
+
 
     class CloudModelsConfig(BaseModel):
         names: list[str] = Field(description="Cloud model to use", default=[CLOUD_MODELS.VGG16])
@@ -43,18 +46,16 @@ class Config(BaseModel):
         exp_type: str = Field(description="type of the experiment - embedding learning, or prediction learning")
 
 
-
-    experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5,n_pred_vectors=1,k_folds=1,
-                                                           use_preds=True, use_embedding=False,
+    experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5,n_pred_vectors=2,k_folds=1,
+                                                           use_preds=False, use_embedding=False,
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
         CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16
     ])
-    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.BIGGER_NEURAL_NET], stacking=False)
-    neural_net_config: NEURAL_NET_CONFIG = NEURAL_NET_CONFIG()
-    dataset_config: DatasetConfig = DatasetConfig(split_ratio=0.01,
+    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET], stacking=False)
+    dataset_config: DatasetConfig = DatasetConfig(split_ratio=1,
                                                   names=PMLB_DATASETS
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)

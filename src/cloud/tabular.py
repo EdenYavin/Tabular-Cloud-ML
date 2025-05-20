@@ -16,7 +16,7 @@ class NeuralNetCloudModel(CloudModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         num_classes = kwargs.get("num_classes", 2)
-        self.epochs = config.neural_net_config.epochs
+        self.epochs = config.iim_config.neural_net_config.epochs
         self.models = self.get_model(num_classes)
 
     def get_model(self, num_classes):

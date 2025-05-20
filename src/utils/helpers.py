@@ -7,8 +7,15 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
 from PIL import Image, ImageDraw, ImageFont
-from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
 import tensorflow as tf
+from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
+from src.utils.config import config
+
+def get_experiment_name() -> str:
+    use_embed = "emb" if config.experiment_config.use_embedding else "no_emb"
+    use_cloud = "cloud_vec" if config.experiment_config.use_preds else "no_cloud_vec"
+    use_rotate_key = "rotate_key" if config.encoder_config.rotating_key else "no_rotate_key"
+    return f"{use_rotate_key}_{use_embed}_{use_cloud}"
 
 def get_num_classes(y: np.ndarray) -> int:
     return len(np.unique(y))

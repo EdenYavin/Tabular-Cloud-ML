@@ -7,6 +7,7 @@ from src.domain.dataset import IIMFeatures, IIMDataset, PredictionBaselineFeatur
 from src.encryptor.base import BaseEncryptor
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory, CloudPredictionDataDatabase, EncryptionDatasetDB
+from src.utils.helpers import get_number_of_samples_to_make
 
 
 class FeatureEngineeringPipeline(ABC):
@@ -82,8 +83,7 @@ class FeatureEngineeringPipeline(ABC):
         else:
             current_num_samples = 0
         # Number of new samples:
-        # The size of the original dataset * the total number of cloud models (because each sample gets a prediction by a different model) * number of prediction vectors to generate from each model
-        number_of_new_samples_to_make = self.n_pred_vectors * original_num_samples * len(config.cloud_config.names)
+        number_of_new_samples_to_make = get_number_of_samples_to_make(original_num_samples)
 
         if 0 < number_of_new_samples_to_make <= current_num_samples:
             logger.warning(f"No need to create new dataset, the cache has a dataset with size: {current_num_samples}, "
@@ -122,7 +122,7 @@ class FeatureEngineeringPipeline(ABC):
                                  test=IIMFeatures(features=Xs_test, labels=new_y_test))
 
         self.embedding_db.save()
-        return dataset, embeddings_baseline#, pred_baseline
+        return self.encrypted_db.append(dataset), embeddings_baseline#, pred_baseline
 
     def _get_embeddings(self, X, is_test=False):
         embeddings = self.embedding_db.get_embedding(X, is_test)

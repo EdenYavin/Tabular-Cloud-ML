@@ -73,7 +73,7 @@ class ExperimentHandler(ABC):
         return baseline_pred_acc, baseline_pred_f1
 
     def log_results(self,
-                    dataset_name: str, train_shape: tuple, test_shape: tuple, cloud_models_names,
+                    dataset_name: str, train_shape: tuple, new_train_shape: tuple, test_shape: tuple, cloud_models_names,
                     embeddings_baseline_acc: float, embeddings_baseline_f1: float,
                     prediction_baseline_acc: float, prediction_baseline_f1: float,
                     iim_baseline_acc: float, iim_baseline_f1: float,
@@ -101,6 +101,7 @@ class ExperimentHandler(ABC):
             "triangulation_samples": [train_samples],
             "dataset": [dataset_name],
             "train_size": [str(train_shape)],
+            "new_train_size": [str(new_train_shape)],
             "test_size": [str(test_shape)],
             "iim_model": [iim_name],
             "embedding": [config.embedding_config.name],

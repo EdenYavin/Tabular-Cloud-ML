@@ -87,13 +87,15 @@ class NoStackingExperimentHandler(ExperimentHandler):
                     )
                     internal_model.fit(
                         X=dataset.train.features, y=dataset.train.labels,
+                        validation_data=(dataset.test.features, dataset.test.labels),
                     )
                     test_acc, test_f1 = internal_model.evaluate(
                         X=dataset.test.features, y=dataset.test.labels
                     )
 
                     self.log_results(
-                        dataset_name=dataset_name, train_shape=train_shape, test_shape=test_shape,
+                        dataset_name=dataset_name, train_shape=train_shape, new_train_shape=dataset.train.features.shape,
+                        test_shape=test_shape,
                         cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
                         embeddings_baseline_acc=baseline_emb_acc, embeddings_baseline_f1=baseline_emb_f1,
                         prediction_baseline_acc=-1, prediction_baseline_f1=-1,

@@ -208,7 +208,7 @@ class EncryptionDatasetDB:
     def get_shape(self) -> tuple:
         return self.get_dataset().train.features.shape
 
-    def append(self, new_dataset: IIMDataset):
+    def append(self, new_dataset: IIMDataset) -> IIMDataset:
 
         if os.path.exists(self.path):
             with open(self.path, "rb") as f:
@@ -220,6 +220,8 @@ class EncryptionDatasetDB:
 
         with open(self.path, "wb") as f:
             pickle.dump(new_dataset, f)
+
+        return new_dataset
 
 
 class EmbeddingDBFactory:

@@ -3,7 +3,7 @@ from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
 from keras.src.models import Model
-from keras.src.layers import Dense, Dropout, Input,  BatchNormalization, concatenate
+from keras.src.layers import Dense, Dropout, Input,  BatchNormalization, concatenate, LSTM
 from keras.src.metrics import F1Score
 from keras.src import regularizers
 import numpy as np
@@ -90,6 +90,25 @@ class BiggerDense(DenseInternalModel):
                       )
 
         return model
+
+class LSTMIIM(NeuralNetworkInternalModel):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "lstm"
+        num_classes = kwargs.get("num_classes")
+        input_shape = kwargs.get("input_shape")
+        self.model = self.get_model(num_classes=num_classes, input_shape=input_shape)
+
+    def get_model(self, num_classes, input_shape):
+        inputs = Input(shape=(1, input_shape[1]))  # Add timesteps dimension
+
+        x = LSTM(units=256, return_sequences=False)(inputs)  # Outputs full sequence
+
+        x = Dense(64, activation='leaky_relu')(x)
+        x = Dropout(config.iim_config.neural_net_config.dropout)(x)
+        outputs = Dense(num_classes, activation='softmax')(x)
+
+        return Model(inputs=inputs, outputs=outputs)
 
 
 class DoubleDenseInternalModel(NeuralNetworkInternalModel):

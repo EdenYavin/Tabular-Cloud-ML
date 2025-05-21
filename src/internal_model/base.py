@@ -36,12 +36,14 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
         self.epochs = config.iim_config.neural_net_config.epochs
         self.model: Model = None
 
-    def fit(self, X, y):
+    def fit(self, X, y, validation_data=None):
         tf.debugging.set_log_device_placement(True)
         with tf.device('/GPU:0'):
             lr_scheduler = LearningRateScheduler(lambda epoch: 0.0001 * (0.9 ** epoch))
             early_stopping = EarlyStopping(patience=2, monitor='loss', restore_best_weights=True)
-            self.model.fit(X, y, epochs=self.epochs, batch_size=10,verbose=2, callbacks=[lr_scheduler, early_stopping])
+            self.model.fit(X, y,
+                           validation_data=validation_data, epochs=self.epochs, batch_size=10,verbose=2,
+                           callbacks=[lr_scheduler, early_stopping])
 
     def predict(self, X):
         prediction = self.model.predict(X)

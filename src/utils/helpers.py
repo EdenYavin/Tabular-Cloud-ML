@@ -11,6 +11,20 @@ import tensorflow as tf
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
 from src.utils.config import config
 
+def get_number_of_samples_to_make(original_num_samples: int) -> int:
+    """
+    The size of the new dataset is:
+     1. original dataset * the total number of cloud models (because each sample gets a prediction by a different model) * number of prediction vectors to generate from each model
+        This is in case we use the cloud models
+    2. original dataset * num_pred_vec in case we are not using the cloud models
+    """
+    n_pred = config.experiment_config.n_pred_vectors
+    return (n_pred * original_num_samples * len(config.cloud_config.names)
+                                     if config.experiment_config.use_preds
+                                     else n_pred * original_num_samples
+                                     )
+
+
 def get_experiment_name() -> str:
     use_embed = "emb" if config.experiment_config.use_embedding else "no_emb"
     use_cloud = "cloud_vec" if config.experiment_config.use_preds else "no_cloud_vec"

@@ -210,13 +210,14 @@ class EncryptionDatasetDB:
 
     def append(self, new_dataset: IIMDataset) -> IIMDataset:
 
+        logger.info(f"Appending {new_dataset.train.features.shape[0]} samples to {self.dataset_name}")
         if os.path.exists(self.path):
             with open(self.path, "rb") as f:
                 data: IIMDataset = pickle.load(f)
 
             new_dataset.train.features = np.vstack([data.train.features, new_dataset.train.features])
             new_dataset.train.labels = np.vstack([data.train.labels, new_dataset.train.labels])
-
+            logger.info(f"New size after appending: {new_dataset.train.shape}")
 
         with open(self.path, "wb") as f:
             pickle.dump(new_dataset, f)

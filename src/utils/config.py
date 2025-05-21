@@ -46,7 +46,7 @@ class Config(BaseModel):
         exp_type: str = Field(description="type of the experiment - embedding learning, or prediction learning")
 
 
-    experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5,n_pred_vectors=10,k_folds=1,
+    experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5,n_pred_vectors=12,k_folds=1,
                                                            use_preds=False, use_embedding=False,
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
                                                            )

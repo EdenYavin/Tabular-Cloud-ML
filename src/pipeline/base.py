@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from keras.src.utils import to_categorical
-
+from loguru import logger
 from src.domain.dataset import IIMFeatures, IIMDataset, PredictionBaselineFeatures, PredictionBaselineDataset, \
     EmbeddingBaselineFeatures, EmbeddingBaselineDataset
 from src.encryptor.base import BaseEncryptor
@@ -86,8 +86,12 @@ class FeatureEngineeringPipeline(ABC):
         number_of_new_samples_to_make = self.n_pred_vectors * original_num_samples * len(config.cloud_config.names)
 
         if 0 < number_of_new_samples_to_make <= current_num_samples:
+            logger.warning(f"No need to create new dataset, the cache has a dataset with size: {current_num_samples}, "
+                           f"while the new dataset size is: {number_of_new_samples_to_make}")
             return self.encrypted_db.get_dataset(), embeddings_baseline
 
+        logger.info(f"Intend to create dataset with size: {number_of_new_samples_to_make},"
+                    f" as oppose to the current size: {current_num_samples}")
 
         # To make the dataset increase - we can duplicate the embeddings N times.
         # For example, the dataset is 1000 samples and we want 3000 samples, we can duplicate the embedding size to
@@ -97,10 +101,6 @@ class FeatureEngineeringPipeline(ABC):
 
         Xs_train, new_y_train, X_pred_train = self._get_features(new_train_embeddings, new_y_train, is_test=False)
         Xs_test, new_y_test, X_pred_test = self._get_features(X_emb_test, y_test, is_test=True)
-
-
-        new_y_test = to_categorical(new_y_test, num_classes=num_classes)
-        new_y_train = to_categorical(new_y_train, num_classes=num_classes)
 
         # pred_baseline = PredictionBaselineDataset(
         #     train=PredictionBaselineFeatures(predictions=X_pred_train, labels=new_y_train),

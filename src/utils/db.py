@@ -206,7 +206,7 @@ class EncryptionDatasetDB:
         return None
 
     def get_shape(self) -> tuple:
-        return self.get_dataset().train.features.shape
+        return self.get_dataset().train.features.shape if self.get_dataset() else (0, 0)
 
     def append(self, new_dataset: IIMDataset) -> IIMDataset:
 

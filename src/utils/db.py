@@ -217,7 +217,7 @@ class EncryptionDatasetDB:
 
             new_dataset.train.features = np.vstack([data.train.features, new_dataset.train.features])
             new_dataset.train.labels = np.vstack([data.train.labels, new_dataset.train.labels])
-            logger.info(f"New size after appending: {new_dataset.train.shape}")
+            logger.info(f"New size after appending: {new_dataset.train.features.shape}")
 
         with open(self.path, "wb") as f:
             pickle.dump(new_dataset, f)

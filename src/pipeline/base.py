@@ -94,9 +94,9 @@ class FeatureEngineeringPipeline(ABC):
                     f" as oppose to the current size: {current_num_samples}")
 
         # To make the dataset increase - we can duplicate the embeddings N times.
-        # For example, the dataset is 1000 samples and we want 3000 samples, we can duplicate the embedding size to
+        # For example, the dataset is 1000 samples, and we want 3000 samples, we can duplicate the embedding size to
         # be 3000. The first 1000 are already cached and will be retrieved instantly without going to the cloud
-        how_much_to_duplicate = number_of_new_samples_to_make // current_num_samples
+        how_much_to_duplicate = number_of_new_samples_to_make // current_num_samples if current_num_samples else 1
         new_train_embeddings = np.repeat(X_emb_train, how_much_to_duplicate, axis=0)
         new_y_train = np.repeat(y_train, how_much_to_duplicate, axis=0)
 

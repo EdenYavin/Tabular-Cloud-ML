@@ -5,9 +5,9 @@ from loguru import logger
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
-import os
+import os, tensorflow as tf
 
-from src.cloud import CloudModel, CLOUD_MODELS
+from src.cloud import CloudModelManager
 from src.dataset.base import RawDataset
 from src.domain.dataset import IIMDataset
 from src.utils.config import config
@@ -154,7 +154,7 @@ class CloudPredictionDataDatabase:
         path = Path(DATA_CACHE_PATH) / dataset_name / CLOUD_PRED_CACHE_DIR_NAME
         os.makedirs(path, exist_ok=True)
         self.path = path
-        self.cloud_model: CloudModel | None = None
+        self.cloud_model_manager = CloudModelManager()
 
     def get_dataset(self, is_test: bool = False):
         train_test_dir = "train" if not is_test else "test"
@@ -168,23 +168,18 @@ class CloudPredictionDataDatabase:
 
     def get_predictions(self, cloud_model_name: str, batch: np.ndarray, index: int, is_test: bool):
         train_test_dir = "train" if not is_test else "test"
-        cache_dir = self.path / cloud_model_name / train_test_dir
+        rotate_dir = "-rotate" if config.encoder_config.rotating_key else ""
+        cache_dir = self.path / cloud_model_name / f"{train_test_dir}{rotate_dir}"
         os.makedirs(cache_dir, exist_ok=True)
         cache_file = cache_dir / f"{index}.npy"
-        if os.path.exists(cache_file) and not config.encoder_config.rotating_key: # For rotating key we will have to always use the model
+        if os.path.exists(cache_file): # For rotating key we will have to always use the model
             # Load the cached processed batch from disk if it exists.
             return np.load(cache_file)
         else:
-            # Lazy loading, we only load the cloud model if have not seen it before and
+            # Lazy loading, we only load the cloud model if we have not seen it before and
             # use it for the entire batches. We switch models once we see a new model
-            if not self.cloud_model:
-                self.cloud_model = CLOUD_MODELS[cloud_model_name]()
-            elif cloud_model_name != self.cloud_model.name:
-                del self.cloud_model # Unload the previous model to free up memory
-                self.cloud_model = CLOUD_MODELS[cloud_model_name]()
-
             # Process the batch and save the result to disk.
-            processed_batch = self.cloud_model.predict(batch)
+            processed_batch = self.cloud_model_manager.predict(cloud_model_name, batch)
             np.save(cache_file, processed_batch)
             return processed_batch
 

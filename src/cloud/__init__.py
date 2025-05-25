@@ -1,3 +1,5 @@
+import keras, tensorflow as tf
+
 from src.cloud.base import CloudModel
 from src.cloud.vision import (XceptionCloudModel,
       ResNetEmbeddingCloudModel,
@@ -23,3 +25,26 @@ CLOUD_MODELS = {
     SequenceClassificationLLMCloudModel.name: SequenceClassificationLLMCloudModel,
     BertLLMCloudModel.name: BertLLMCloudModel
 }
+
+class CloudModelManager:
+    def __init__(self):
+        self.current_model_name = None
+        self.current_model = None
+
+    def get_model(self, model_name):
+        if self.current_model_name != model_name:
+            # Clean up previous model
+            if self.current_model is not None:
+                del self.current_model
+                import gc; gc.collect()
+                keras.backend.clear_session()
+            # Load new model
+            self.current_model = CLOUD_MODELS[model_name]()
+            self.current_model_name = model_name
+        return self.current_model
+
+    def predict(self, model_name, batch):
+        model = self.get_model(model_name)
+        # Ensure input is a tensor
+        batch_tensor = tf.convert_to_tensor(batch)
+        return model.predict(batch_tensor)

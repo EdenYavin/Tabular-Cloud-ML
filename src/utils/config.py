@@ -46,8 +46,8 @@ class Config(BaseModel):
         exp_type: str = Field(description="type of the experiment - embedding learning, or prediction learning")
 
 
-    experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5,n_pred_vectors=12,k_folds=1,
-                                                           use_preds=False, use_embedding=False,
+    experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5,n_pred_vectors=1, k_folds=1,
+                                                           use_preds=True, use_embedding=False,
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
@@ -56,7 +56,8 @@ class Config(BaseModel):
     ])
     iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET], stacking=False)
     dataset_config: DatasetConfig = DatasetConfig(split_ratio=1,
-                                                  names=PMLB_DATASETS
+                                                  names=PMLB_DATASETS,
+                                                  batch_size=500
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV, rotating_key=True)

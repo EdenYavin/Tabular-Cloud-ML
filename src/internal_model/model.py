@@ -102,13 +102,20 @@ class LSTMIIM(NeuralNetworkInternalModel):
     def get_model(self, num_classes, input_shape):
         inputs = Input(shape=(1, input_shape[1]))  # Add timesteps dimension
 
-        x = LSTM(units=256, return_sequences=False)(inputs)  # Outputs full sequence
-
+        x = LSTM(units=256, return_sequences=True)(inputs)  # Outputs full sequence
+        x = LSTM(units=128, return_sequences=False)(x)
         x = Dense(64, activation='leaky_relu')(x)
-        x = Dropout(config.iim_config.neural_net_config.dropout)(x)
         outputs = Dense(num_classes, activation='softmax')(x)
-
         return Model(inputs=inputs, outputs=outputs)
+
+    def fit(self, X, y, validation_data=None):
+        X = X.reshape(-1, 1, X.shape[1])
+        if validation_data:
+            X_val, y_val = validation_data
+            X_val = X_val.reshape(-1, 1, X_val.shape[1])
+            validation_data = (X_val, y_val)
+
+        super().fit(X, y, validation_data=validation_data)
 
 
 class DoubleDenseInternalModel(NeuralNetworkInternalModel):

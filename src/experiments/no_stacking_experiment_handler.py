@@ -2,7 +2,6 @@ from tqdm import tqdm
 
 from src.pipeline.no_stacking_encoding_pipeline import NoStackingFeatureEngineeringPipeline as FeatureEngineeringPipeline
 from src.cloud import CloudModel, CLOUD_MODELS
-from src.encryptor.base import Encryptors
 from src.encryptor import EncryptorFactory
 from src.internal_model import InternalInferenceModelFactory
 from src.embeddings import EmbeddingsFactory
@@ -64,7 +63,7 @@ class NoStackingExperimentHandler(ExperimentHandler):
                     logger.debug("Finished Creating the dataset")
 
                     # Log size for the final report
-                    train_shape = X_sample.shape
+                    train_shape = dataset_creator.original_train_size or X_sample.shape
                     test_shape = X_test.shape
                     del X_test, X_sample, y_test, y_sample, dataset_creator, raw_dataset
 
@@ -94,7 +93,9 @@ class NoStackingExperimentHandler(ExperimentHandler):
                     )
 
                     self.log_results(
-                        dataset_name=dataset_name, train_shape=train_shape, new_train_shape=dataset.train.features.shape,
+                        dataset_name=dataset_name,
+                        train_shape=train_shape,
+                        new_train_shape=dataset.train.features.shape,
                         test_shape=test_shape,
                         cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
                         embeddings_baseline_acc=baseline_emb_acc, embeddings_baseline_f1=baseline_emb_f1,

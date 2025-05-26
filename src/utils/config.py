@@ -47,20 +47,24 @@ class Config(BaseModel):
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5,n_pred_vectors=1, k_folds=1,
-                                                           use_preds=True, use_embedding=False,
+                                                           use_preds=True, use_embedding=True,
                                                            exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
         CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16
     ])
-    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET], stacking=False)
+    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET], stacking=False,
+                                      neural_net_config=IIMConfig.NEURAL_NET_CONFIG(
+                                          batch_size=10,
+                                          dropout=0
+                                      ))
     dataset_config: DatasetConfig = DatasetConfig(split_ratio=1,
                                                   names=PMLB_DATASETS,
                                                   batch_size=500
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)
-    encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV, rotating_key=True)
+    encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV, rotating_key=False)
 
 
 config = Config()

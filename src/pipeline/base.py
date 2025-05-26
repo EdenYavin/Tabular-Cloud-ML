@@ -25,6 +25,7 @@ class FeatureEngineeringPipeline(ABC):
         self.encryptor = encryptor
         self.cloud_db = CloudPredictionDataDatabase(dataset_name)
         self.encrypted_db = EncryptionDatasetDB(dataset_name)
+        self.original_train_size = None
 
     def _calculate_number_of_columns_to_append(self, embeddings):
         """
@@ -99,6 +100,7 @@ class FeatureEngineeringPipeline(ABC):
         how_much_to_duplicate = number_of_new_samples_to_make // current_num_samples if current_num_samples else 1
         new_train_embeddings = np.repeat(X_emb_train, how_much_to_duplicate, axis=0)
         new_y_train = np.repeat(y_train, how_much_to_duplicate, axis=0)
+        self.original_train_size = new_train_embeddings.shape
 
         Xs_train, new_y_train, X_pred_train = self._get_features(new_train_embeddings, new_y_train, is_test=False)
         Xs_test, new_y_test, X_pred_test = self._get_features(X_emb_test, y_test, is_test=True)

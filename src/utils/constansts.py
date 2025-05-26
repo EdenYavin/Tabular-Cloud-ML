@@ -174,8 +174,8 @@ PMLB_DATASETS = [
     # "agaricus_lepiota",
     # "mushroom",
     # "magic",
-    # "ring",
-    "twonorm",
+    "ring",
+    # "twonorm",
 ]
 
 PMLB_DATASETS_IMBALANCE = [

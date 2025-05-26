@@ -42,7 +42,9 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
             lr_scheduler = LearningRateScheduler(lambda epoch: 0.0001 * (0.9 ** epoch))
             early_stopping = EarlyStopping(patience=2, monitor='loss', restore_best_weights=True)
             self.model.fit(X, y,
-                           validation_data=validation_data, epochs=self.epochs, batch_size=10,verbose=2,
+                           validation_data=validation_data, epochs=self.epochs,
+                           batch_size=config.iim_config.neural_net_config.batch_size,
+                           verbose=2,
                            callbacks=[lr_scheduler, early_stopping])
 
     def predict(self, X):

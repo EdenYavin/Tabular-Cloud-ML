@@ -50,6 +50,8 @@ class DATASETS(str, enum.Enum):
 
 
 class EXPERIMENTS(str, enum.Enum):
+    DATASET_CREATION = "dataset_creation"
+    MODEL_TRAINING = "model_training"
     GLOBAL_EMBEDDINGS = "global_embeddings"
     PREDICTIONS_LEARNING = "predictions_learning"
     INCREMENT_EVALUATION = "increment_eval"
@@ -146,6 +148,8 @@ DB_LABEL_TOKEN = "y"
 XGBOOST_BASELINE = "xgboost"
 NEURAL_NET_BASELINE = "neural_network"
 DATASET_NAME_TOKEN = "dataset_name"
+DATASET_FILE_NAME = "dataset.pkl"
+BASELINE_DATASET_FILE_NAME = "embedding_baseline.pkl"
 
 LARGE_DATASETS = [
     # DATASETS WITH 50K Samples and above

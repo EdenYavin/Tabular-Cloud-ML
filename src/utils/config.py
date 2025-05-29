@@ -1,3 +1,5 @@
+import argparse
+
 from pydantic import BaseModel, Field
 from src.utils.constansts import (EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, EXPERIMENTS,
                                   HARD_DATASETS, LARGE_DATASETS, ALL_DATASETS,
@@ -32,10 +34,11 @@ class Config(BaseModel):
         neural_net_config: NEURAL_NET_CONFIG = Field(description="Neural network config", default=NEURAL_NET_CONFIG())
         name: list[str] | str = Field(description="IIM model to use. Can be multiple models", default=IIM_MODELS.NEURAL_NET)
         stacking: bool = Field(description="A flag to indicate if the stacking should be used in training the IIM")
+        train_baseline: bool = Field(description="A flag to indicate if the baseline should be used in training the IIM")
 
 
     class CloudModelsConfig(BaseModel):
-        names: list[str] = Field(description="Cloud model to use", default=[CLOUD_MODELS.VGG16])
+        names: list[str] = Field(description="Cloud model to use")
 
     class ExperimentConfig(BaseModel):
         use_preds: bool = Field(description="A flag to indicate if the predictions should be used in training the IIM")
@@ -48,13 +51,13 @@ class Config(BaseModel):
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5,n_pred_vectors=1, k_folds=1,
                                                            use_preds=True, use_embedding=True,
-                                                           exp_type=EXPERIMENTS.PREDICTIONS_LEARNING,
+                                                           exp_type=EXPERIMENTS.DATASET_CREATION,
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
         CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16
     ])
-    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET], stacking=False,
+    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET], stacking=False, train_baseline=False,
                                       neural_net_config=IIMConfig.NEURAL_NET_CONFIG(
                                           batch_size=10,
                                           dropout=0
@@ -64,7 +67,152 @@ class Config(BaseModel):
                                                   batch_size=500
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)
-    encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV, rotating_key=False)
+    encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV, rotating_key=True)
 
 
 config = Config()
+
+
+def add_config_arguments(parser: argparse.ArgumentParser, config_prefix: str = ""):
+    """Adds arguments to the parser based on the Config model."""
+
+    for field_name, field in Config.model_fields.items():
+        argument_name = f"--{config_prefix}{field_name.replace('_', '-')}"
+        argument_kwargs = {
+            "type": type(field.default) if type(field.default) != type(None) else str,
+            "default": field.default,
+            "help": field.description,
+        }
+
+        if field.annotation is bool:
+            argument_kwargs["action"] = "store_true" if not field.default else "store_false"
+            del argument_kwargs["type"]
+            del argument_kwargs["default"]
+        elif field.annotation is list:
+             argument_kwargs["action"] = "append"
+        parser.add_argument(argument_name, **argument_kwargs)
+
+    for field_name, field in Config.EmbeddingConfig.model_fields.items():
+        argument_name = f"--embedding-{field_name.replace('_', '-')}"
+        argument_kwargs = {
+            "type": type(field.default) if type(field.default) != type(None) else str,
+            "default": field.default,
+            "help": field.description,
+        }
+        parser.add_argument(argument_name, **argument_kwargs)
+
+    for field_name, field in Config.EncoderConfig.model_fields.items():
+        argument_name = f"--encoder-{field_name.replace('_', '-')}"
+        argument_kwargs = {
+            "type": type(field.default) if type(field.default) != type(None) else str,
+            "default": field.default,
+            "help": field.description,
+        }
+
+        if field.annotation is bool:
+            argument_kwargs["action"] = "store_true" if not field.default else "store_false"
+            del argument_kwargs["type"]
+            del argument_kwargs["default"]
+        parser.add_argument(argument_name, **argument_kwargs)
+
+    for field_name, field in Config.DatasetConfig.model_fields.items():
+        argument_name = f"--dataset-{field_name.replace('_', '-')}"
+        argument_kwargs = {
+            "type": type(field.default) if type(field.default) != type(None) else str,
+            "default": field.default,
+            "help": field.description,
+        }
+        if field.annotation is list:
+             argument_kwargs["action"] = "append"
+        parser.add_argument(argument_name, **argument_kwargs)
+
+    for field_name, field in Config.IIMConfig.model_fields.items():
+        argument_name = f"--iim-{field_name.replace('_', '-')}"
+        argument_kwargs = {
+            "type": type(field.default) if type(field.default) != type(None) else str,
+            "default": field.default,
+            "help": field.description,
+        }
+        if field.annotation is list:
+             argument_kwargs["action"] = "append"
+        if field_name == "neural_net_config":
+            for nn_field_name, nn_field in Config.IIMConfig.NEURAL_NET_CONFIG.model_fields.items():
+                argument_name = f"--iim-neural-net-{nn_field_name.replace('_', '-')}"
+                argument_kwargs_nn = {
+                    "type": type(nn_field.default) if type(nn_field.default) != type(None) else str,
+                    "default": nn_field.default,
+                    "help": nn_field.description,
+                }
+                parser.add_argument(argument_name, **argument_kwargs_nn)
+        else:
+            parser.add_argument(argument_name, **argument_kwargs)
+
+    for field_name, field in Config.CloudModelsConfig.model_fields.items():
+        argument_name = f"--cloud-{field_name.replace('_', '-')}"
+        argument_kwargs = {
+            "type": type(field.default) if type(field.default) != type(None) else str,
+            "default": field.default,
+            "help": field.description,
+        }
+        if field.annotation is list:
+             argument_kwargs["action"] = "append"
+        parser.add_argument(argument_name, **argument_kwargs)
+
+    for field_name, field in Config.ExperimentConfig.model_fields.items():
+        argument_name = f"--experiment-{field_name.replace('_', '-')}"
+        argument_kwargs = {
+            "type": type(field.default) if type(field.default) != type(None) else str,
+            "default": field.default,
+            "help": field.description,
+        }
+
+        if field.annotation is bool:
+            argument_kwargs["action"] = "store_true" if not field.default else "store_false"
+            del argument_kwargs["type"]
+            del argument_kwargs["default"]
+        parser.add_argument(argument_name, **argument_kwargs)
+
+
+def update_config_from_args(config: Config, args: argparse.Namespace):
+    """Updates the config object with values from the parsed arguments."""
+    args_dict = vars(args)
+
+    for field_name, field in Config.model_fields.items():
+        arg_name = field_name.replace('_', '-')
+        if arg_name in args_dict and args_dict[arg_name] is not None:
+            setattr(config, field_name, args_dict[arg_name])
+
+    for field_name, field in Config.EmbeddingConfig.model_fields.items():
+        arg_name = f"embedding-{field_name.replace('_', '-')}"
+        if arg_name in args_dict and args_dict[arg_name] is not None:
+            setattr(config.embedding_config, field_name, args_dict[arg_name])
+
+    for field_name, field in Config.EncoderConfig.model_fields.items():
+        arg_name = f"encoder-{field_name.replace('_', '-')}"
+        if arg_name in args_dict and args_dict[arg_name] is not None:
+            setattr(config.encoder_config, field_name, args_dict[arg_name])
+
+    for field_name, field in Config.DatasetConfig.model_fields.items():
+        arg_name = f"dataset-{field_name.replace('_', '-')}"
+        if arg_name in args_dict and args_dict[arg_name] is not None:
+            setattr(config.dataset_config, field_name, args_dict[arg_name])
+
+    for field_name, field in Config.IIMConfig.model_fields.items():
+        arg_name = f"iim_{field_name.replace('-', '_')}"
+        if arg_name in args_dict and args_dict[arg_name] is not None:
+            setattr(config.iim_config, field_name, args_dict[arg_name])
+        if field_name == "neural_net_config":
+            for nn_field_name, nn_field in Config.IIMConfig.NEURAL_NET_CONFIG.model_fields.items():
+                arg_name = f"iim-neural-net-{nn_field_name.replace('_', '-')}"
+                if arg_name in args_dict and args_dict[arg_name] is not None:
+                    setattr(config.iim_config.neural_net_config, nn_field_name, args_dict[arg_name])
+
+    for field_name, field in Config.CloudModelsConfig.model_fields.items():
+        arg_name = f"cloud-{field_name.replace('_', '-')}"
+        if arg_name in args_dict and args_dict[arg_name] is not None:
+            setattr(config.cloud_config, field_name, args_dict[arg_name])
+
+    for field_name, field in Config.ExperimentConfig.model_fields.items():
+        arg_name = f"experiment-{field_name.replace('_', '-')}"
+        if arg_name in args_dict and args_dict[arg_name] is not None:
+            setattr(config.experiment_config, field_name, args_dict[arg_name])

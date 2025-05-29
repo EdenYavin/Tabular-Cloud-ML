@@ -36,7 +36,7 @@ class RawDataset:
     def get_number_of_features(self):
         return self.X.shape[1]
 
-    def get_dataset(self):
+    def get_dataset(self) -> tuple[np.ndarray, np.ndarray]:
         return self.X, self.y
 
 

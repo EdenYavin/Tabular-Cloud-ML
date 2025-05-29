@@ -75,7 +75,7 @@ class ExperimentHandler(ABC):
     def log_results(self,
                     dataset_name: str, train_shape: tuple, new_train_shape: tuple, test_shape: tuple, cloud_models_names,
                     embeddings_baseline_acc: float, embeddings_baseline_f1: float,
-                    prediction_baseline_acc: float, prediction_baseline_f1: float,
+                    # prediction_baseline_acc: float, prediction_baseline_f1: float,
                     iim_baseline_acc: float, iim_baseline_f1: float,
                     iim_model_name: str = None,
                     raw_baseline_acc: float = None, raw_baseline_f1: float = None,
@@ -89,7 +89,6 @@ class ExperimentHandler(ABC):
 
         log_msg += f"""
          Emb Baseline: {embeddings_baseline_acc}, {embeddings_baseline_f1}\n
-         Prediction Baseline: {prediction_baseline_acc}, {prediction_baseline_f1}\n
          IIM {iim_name}: {iim_baseline_acc}, {iim_baseline_f1}\n
         """
 
@@ -107,8 +106,8 @@ class ExperimentHandler(ABC):
             "embedding": [config.embedding_config.name],
             "encryptor": [config.encoder_config.name],
             "cloud_model": [cloud_models_names],
-            "pred_baseline_acc": [prediction_baseline_acc],
-            "pred_baseline_f1": [prediction_baseline_f1],
+            # "pred_baseline_acc": [prediction_baseline_acc],
+            # "pred_baseline_f1": [prediction_baseline_f1],
             "emb_baseline_acc": [embeddings_baseline_acc],
             "emb_baseline_f1": [embeddings_baseline_f1],
             "iim_test_acc": [iim_baseline_acc],

@@ -3,6 +3,7 @@ from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
 
+from src.cloud import CloudModelManager
 from src.domain.dataset import Batch
 from src.embeddings import ClipEmbedding
 from src.encryptor.base import BaseEncryptor
@@ -64,60 +65,55 @@ class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
         # separately and use the cloud cache to save processed file to save up memory (no need to
         # load the cloud model) and speed up the runtime.
         batch = Batch(X=embeddings, y=y, size=config.dataset_config.batch_size)
+        number_of_new_samples = (
+            self.n_pred_vectors if not is_test
+            else 1
+        )
+
         for mini_batch, labels in batch:
 
-                # Because we are potentially expanding X_train we should also expand y_train
-                # with the same number of labels. We do so by duplicate the labels for each new augmentation.
-                # For example if we encode x_1 to 3 new samples x_enc_1_1, x_enc_1_2, x_enc_1_2 and the original
-                # label for x_1 was 1, than we add [1,1,1] to y_train.
-                # For y_test, we just duplicate it based on the number of encryptors
-                new_samples = (
-                    len(config.cloud_config.names) if config.experiment_config.use_preds
-                    else 1
-                )
+            for idx, cloud_model in enumerate(config.cloud_config.names):
 
-                for label in labels:
-                    [new_y.append(label) for _ in range(new_samples)]
+                for _ in range(number_of_new_samples):
 
-                observation = []
+                    observation = []
 
-                if config.experiment_config.use_embedding:
-                    observation.append(mini_batch)
+                    if config.experiment_config.use_embedding:
+                        observation.append(mini_batch)
 
-                images = self.encryptor.encode(mini_batch)
+                    images = self.encryptor.encode(mini_batch)
 
-                with tf.device(GPU_DEVICE):  # Run the models on the GPU
+                    with tf.device(GPU_DEVICE):  # Run the models on the GPU
+
+                        if config.encoder_config.rotating_key:
+                            # embed the encrypted samples
+                            x_tag = self.triangulation_embedding.forward(images)
+                            observation.append(x_tag)
+
+                            # Add the new triangulation samples' embedding as well:
+                            # 1. Encrypt them
+                            y_tag = self.encryptor.encode(triangulation_samples)
+                            # 2. Embed the encryption
+                            y_tag = self.triangulation_embedding(y_tag)
+                            observation.append(
+                                np.vstack([np.hstack([x, y_tag.flatten()]) for x in
+                                                          x_tag])
+                            )  # Triangulation features vector = X', Y_1', Y_2',...
+
+                        if config.experiment_config.use_preds:
+                                predictions = self.cloud_model_manager.predict(model_name=cloud_model, batch=images)
+                                observations.append(np.hstack([*observation, predictions]))
+                                predictions_for_baseline.append(predictions)
+
+                        else:
+                            observations.append(np.hstack(observation))
 
                     if config.encoder_config.rotating_key:
-                        # embed the encrypted samples
-                        x_tag = self.triangulation_embedding.forward(images)
-                        observation.append(x_tag)
+                        # Rotate the key for the next sample to be encoded by a new key
+                        self.encryptor.switch_key()
 
-                        # Add the new triangulation samples' embedding as well:
-                        # 1. Encrypt them
-                        y_tag = self.encryptor.encode(triangulation_samples)
-                        # 2. Embed the encryption
-                        y_tag = self.triangulation_embedding(y_tag)
-                        observation.append(
-                            np.vstack([np.hstack([x, y_tag.flatten()]) for x in
-                                                      x_tag])
-                        )  # Triangulation features vector = X', Y_1', Y_2',...
-
-                    if config.experiment_config.use_preds:
-
-                        for idx, cloud_model in enumerate(config.cloud_config.names):
-
-                            predictions = self.cloud_db.get_predictions(cloud_model, images, batch.progress.n, is_test)
-                            observations.append(np.hstack([*observation, predictions]))
-                            predictions_for_baseline.append(predictions)
-
-                    else:
-                        observations.append(np.hstack(observation))
-
-                if config.encoder_config.rotating_key:
-                    # Rotate the key for the next sample to be encoded by a new key
-                    self.encryptor.switch_key()
-
+                    # Add the labels accordingly
+                    new_y.extend(labels)
 
 
         if len(predictions_for_baseline) > 0:

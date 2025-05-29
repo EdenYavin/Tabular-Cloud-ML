@@ -1,12 +1,23 @@
+import argparse
+
 import src.utils.constansts as consts
-from src.experiments import StackingExperimentHandler, NoStackingExperimentHandler, IncrementEvalExperimentHandler, GlobalEmbeddingExperimentHandler
-from src.utils.config import config
+from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandler, ModelTrainingExperimentHandler
+from src.utils.config import config, update_config_from_args
 import tensorflow as tf
 import numpy as np
+
+from src.utils.constansts import EXPERIMENTS
 
 np.random.seed(42)
 
 def main():
+
+    parser = argparse.ArgumentParser(description="Run experiments with specified configurations.")
+    parser.add_argument("--iim-train-baseline", action="store_true", help="Enable baseline mode.")
+    parser.add_argument("--experiment-ext-type", type=EXPERIMENTS, choices=list(EXPERIMENTS), help="Experiment type: training or dataset.")
+
+    args = parser.parse_args()
+    update_config_from_args(config, args)
 
     # Use GPU only when using Decon
     if config.encoder_config.name not in consts.GPU_MODELS:
@@ -16,16 +27,12 @@ def main():
     if config.experiment_config.exp_type == consts.EXPERIMENTS.INCREMENT_EVALUATION:
         experiment_handler = IncrementEvalExperimentHandler
 
-    elif config.experiment_config.exp_type == consts.EXPERIMENTS.PREDICTIONS_LEARNING:
-
-        if len(config.cloud_config.names) > 1 and config.iim_config.stacking:
-            experiment_handler = StackingExperimentHandler
-
-        else:
-            experiment_handler = NoStackingExperimentHandler
+    elif config.experiment_config.exp_type == consts.EXPERIMENTS.DATASET_CREATION:
+        experiment_handler = DatasetCreationHandler
 
     else:
-        experiment_handler = GlobalEmbeddingExperimentHandler
+        experiment_handler = ModelTrainingExperimentHandler
+
 
     with experiment_handler() as experiment:
         experiment.run_experiment()

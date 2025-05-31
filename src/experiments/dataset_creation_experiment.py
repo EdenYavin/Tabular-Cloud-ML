@@ -5,7 +5,7 @@ import pickle
 
 from tqdm import tqdm
 
-from src.pipeline.feature_engineering_pipeline import NoStackingFeatureEngineeringPipeline as FeatureEngineeringPipeline
+from src.pipeline.feature_engineering_pipeline import DatasetCreation as FeatureEngineeringPipeline
 from src.cloud import CLOUD_MODELS
 from src.encryptor import EncryptorFactory
 from src.embeddings import EmbeddingsFactory

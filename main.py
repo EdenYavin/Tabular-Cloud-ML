@@ -14,7 +14,8 @@ def main():
 
     parser = argparse.ArgumentParser(description="Run experiments with specified configurations.")
     parser.add_argument("--iim-train-baseline", action="store_true", help="Enable baseline mode.")
-    parser.add_argument("--experiment-ext-type", type=EXPERIMENTS, choices=list(EXPERIMENTS), help="Experiment type: training or dataset.")
+    parser.add_argument("--experiment-to-run", type=EXPERIMENTS, choices=list(EXPERIMENTS), help="Experiment type: training or dataset.")
+    parser.add_argument("--encoder-rotating_key", default=True, help="Use triangulation samples or not")
 
     args = parser.parse_args()
     update_config_from_args(config, args)
@@ -24,10 +25,10 @@ def main():
         # Hide GPU from visible devices
         tf.config.set_visible_devices([], 'GPU')
 
-    if config.experiment_config.exp_type == consts.EXPERIMENTS.INCREMENT_EVALUATION:
+    if config.experiment_config.to_run == consts.EXPERIMENTS.INCREMENT_EVALUATION:
         experiment_handler = IncrementEvalExperimentHandler
 
-    elif config.experiment_config.exp_type == consts.EXPERIMENTS.DATASET_CREATION:
+    elif config.experiment_config.to_run == consts.EXPERIMENTS.DATASET_CREATION:
         experiment_handler = DatasetCreationHandler
 
     else:

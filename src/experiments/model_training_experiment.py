@@ -1,9 +1,7 @@
 import gc
-import os.path
 import pathlib
 import pickle
 
-from tqdm import tqdm
 
 from src.internal_model import InternalInferenceModelFactory
 from src.dataset import DatasetFactory, RawDataset
@@ -30,55 +28,58 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
 
             for n_pred_vectors in self.n_pred_vectors:
 
-                logger.info(f"\n#### Training model experiment: Dataset: {dataset_name}, n_pred_vectors: {n_pred_vectors} ####\n")
+                for model_name in config.iim_config.name:
 
-                path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / str(n_pred_vectors)
+                    logger.info(f"\n#### Training model experiment: "
+                                f"Dataset: {dataset_name}, n_pred_vectors: {n_pred_vectors} ####\n")
 
-                if path.exists():
+                    path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / str(n_pred_vectors)
 
-                    data_path = path / BASELINE_DATASET_FILE_NAME
+                    if path.exists():
 
-                    with open(data_path, "rb") as f:
-                        dataset = pickle.load(f)
+                        data_path = path / DATASET_FILE_NAME
 
-                    logger.debug(f"#### EVALUATING INTERNAL MODEL ####\n"
-                                 f" Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
-                    internal_model = InternalInferenceModelFactory().get_model(
-                        num_classes=raw_dataset.get_n_classes(),
-                        input_shape=dataset.train.features.shape[1],
-                        type=config.iim_config.name[0]
-                    )
-                    internal_model.fit(
-                        X=dataset.train.features, y=dataset.train.labels,
-                        validation_data=(dataset.test.features, dataset.test.labels),
-                    )
-                    test_acc, test_f1 = internal_model.evaluate(
-                        X=dataset.test.features, y=dataset.test.labels
-                    )
+                        with open(data_path, "rb") as f:
+                            dataset = pickle.load(f)
+
+                        logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name}####\n"
+                                     f" Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
+                        internal_model = InternalInferenceModelFactory().get_model(
+                            num_classes=raw_dataset.get_n_classes(),
+                            input_shape=dataset.train.features.shape[1],
+                            type=config.iim_config.name[0]
+                        )
+                        internal_model.fit(
+                            X=dataset.train.features, y=dataset.train.labels,
+                            validation_data=(dataset.test.features, dataset.test.labels),
+                        )
+                        test_acc, test_f1 = internal_model.evaluate(
+                            X=dataset.test.features, y=dataset.test.labels
+                        )
 
 
-                    if config.iim_config.train_baseline:
-                        baseline_path = path / DATASET_FILE_NAME
-                        with open(baseline_path, "rb") as f:
-                            baseline_dataset = pickle.load(f)
+                        if config.iim_config.train_baseline:
+                            baseline_path = path / BASELINE_DATASET_FILE_NAME
+                            with open(baseline_path, "rb") as f:
+                                baseline_dataset = pickle.load(f)
 
-                        logger.info(f"Baseline flag is set, training the baseline embedding model.\n "
-                                    f"Dataset size: {baseline_dataset.train.features.shape}")
+                            logger.info(f"Baseline flag is set, training the baseline embedding model.\n "
+                                        f"Dataset size: {baseline_dataset.train.features.shape}")
 
-                        baseline_emb_acc, embeddings_baseline_f1 = self.get_embedding_baseline(baseline_dataset)
-                    else:
-                        baseline_emb_acc, embeddings_baseline_f1 = 0, 0
+                            baseline_emb_acc, embeddings_baseline_f1 = self.get_embedding_baseline(baseline_dataset)
+                        else:
+                            baseline_emb_acc, embeddings_baseline_f1 = 0, 0
 
-                    self.log_results(
-                        dataset_name=dataset_name,
-                        train_shape=dataset.train.features.shape,
-                        new_train_shape=dataset.train.features.shape,
-                        test_shape=dataset.test.features.shape,
-                        cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
-                        embeddings_baseline_acc=baseline_emb_acc, embeddings_baseline_f1=embeddings_baseline_f1,
-                        iim_baseline_acc=test_acc, iim_baseline_f1=test_f1,
-                        iim_model_name=internal_model.name,
-                    )
+                        self.log_results(
+                            dataset_name=dataset_name,
+                            train_shape=dataset.train.features.shape,
+                            new_train_shape=dataset.train.features.shape,
+                            test_shape=dataset.test.features.shape,
+                            cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
+                            embeddings_baseline_acc=baseline_emb_acc, embeddings_baseline_f1=embeddings_baseline_f1,
+                            iim_baseline_acc=test_acc, iim_baseline_f1=test_f1,
+                            iim_model_name=internal_model.name,
+                        )
 
 
                     del dataset

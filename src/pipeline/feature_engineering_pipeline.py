@@ -13,7 +13,7 @@ from src.utils.config import config
 from loguru import logger
 
 
-class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
+class DatasetCreation(FeatureEngineeringPipeline):
 
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
                  n_pred_vectors, metadata = None):
@@ -23,6 +23,8 @@ class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
             logger.info(f"Triangulation model is on, using {ClipEmbedding.name}")
             self.triangulation_embedding = ClipEmbedding()
 
+        if config.experiment_config.use_preds:
+            logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")
 
     def _get_features(self, embeddings, y, is_test):
         """
@@ -57,9 +59,6 @@ class NoStackingFeatureEngineeringPipeline(FeatureEngineeringPipeline):
         new_y = []
 
         triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
-
-        if config.experiment_config.use_preds:
-            logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")
 
         # Start processing the data using batches. We will do it for each cloud model
         # separately and use the cloud cache to save processed file to save up memory (no need to

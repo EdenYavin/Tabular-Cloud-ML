@@ -46,18 +46,18 @@ class Config(BaseModel):
         n_pred_vectors: int = Field(description="Number of prediction vectors to query from the cloud models")
         n_triangulation_samples: int = Field(description="Number samples to sample from the dataset to use for the triangulation")
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
-        exp_type: str = Field(description="type of the experiment - embedding learning, or prediction learning")
+        to_run: str = Field(description="type of the experiment - embedding learning, or prediction learning")
 
 
-    experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5,n_pred_vectors=1, k_folds=1,
+    experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,
                                                            use_preds=True, use_embedding=True,
-                                                           exp_type=EXPERIMENTS.DATASET_CREATION,
+                                                           to_run=EXPERIMENTS.DATASET_CREATION,
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
         CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16
     ])
-    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.NEURAL_NET], stacking=False, train_baseline=False,
+    iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.LSTM], stacking=False, train_baseline=False,
                                       neural_net_config=IIMConfig.NEURAL_NET_CONFIG(
                                           batch_size=10,
                                           dropout=0
@@ -77,7 +77,7 @@ def add_config_arguments(parser: argparse.ArgumentParser, config_prefix: str = "
     """Adds arguments to the parser based on the Config model."""
 
     for field_name, field in Config.model_fields.items():
-        argument_name = f"--{config_prefix}{field_name.replace('_', '-')}"
+        argument_name = f"--{config_prefix}{field_name.replace('-', '_')}"
         argument_kwargs = {
             "type": type(field.default) if type(field.default) != type(None) else str,
             "default": field.default,
@@ -93,7 +93,7 @@ def add_config_arguments(parser: argparse.ArgumentParser, config_prefix: str = "
         parser.add_argument(argument_name, **argument_kwargs)
 
     for field_name, field in Config.EmbeddingConfig.model_fields.items():
-        argument_name = f"--embedding-{field_name.replace('_', '-')}"
+        argument_name = f"--embedding-{field_name.replace('-', '_')}"
         argument_kwargs = {
             "type": type(field.default) if type(field.default) != type(None) else str,
             "default": field.default,
@@ -102,7 +102,7 @@ def add_config_arguments(parser: argparse.ArgumentParser, config_prefix: str = "
         parser.add_argument(argument_name, **argument_kwargs)
 
     for field_name, field in Config.EncoderConfig.model_fields.items():
-        argument_name = f"--encoder-{field_name.replace('_', '-')}"
+        argument_name = f"--encoder-{field_name.replace('-', '_')}"
         argument_kwargs = {
             "type": type(field.default) if type(field.default) != type(None) else str,
             "default": field.default,
@@ -116,7 +116,7 @@ def add_config_arguments(parser: argparse.ArgumentParser, config_prefix: str = "
         parser.add_argument(argument_name, **argument_kwargs)
 
     for field_name, field in Config.DatasetConfig.model_fields.items():
-        argument_name = f"--dataset-{field_name.replace('_', '-')}"
+        argument_name = f"--dataset-{field_name.replace('-', '_')}"
         argument_kwargs = {
             "type": type(field.default) if type(field.default) != type(None) else str,
             "default": field.default,
@@ -127,7 +127,7 @@ def add_config_arguments(parser: argparse.ArgumentParser, config_prefix: str = "
         parser.add_argument(argument_name, **argument_kwargs)
 
     for field_name, field in Config.IIMConfig.model_fields.items():
-        argument_name = f"--iim-{field_name.replace('_', '-')}"
+        argument_name = f"--iim-{field_name.replace('-', '_')}"
         argument_kwargs = {
             "type": type(field.default) if type(field.default) != type(None) else str,
             "default": field.default,
@@ -137,7 +137,7 @@ def add_config_arguments(parser: argparse.ArgumentParser, config_prefix: str = "
              argument_kwargs["action"] = "append"
         if field_name == "neural_net_config":
             for nn_field_name, nn_field in Config.IIMConfig.NEURAL_NET_CONFIG.model_fields.items():
-                argument_name = f"--iim-neural-net-{nn_field_name.replace('_', '-')}"
+                argument_name = f"--iim-neural-net-{nn_field_name.replace('-', '_')}"
                 argument_kwargs_nn = {
                     "type": type(nn_field.default) if type(nn_field.default) != type(None) else str,
                     "default": nn_field.default,
@@ -148,7 +148,7 @@ def add_config_arguments(parser: argparse.ArgumentParser, config_prefix: str = "
             parser.add_argument(argument_name, **argument_kwargs)
 
     for field_name, field in Config.CloudModelsConfig.model_fields.items():
-        argument_name = f"--cloud-{field_name.replace('_', '-')}"
+        argument_name = f"--cloud-{field_name.replace('-', '_')}"
         argument_kwargs = {
             "type": type(field.default) if type(field.default) != type(None) else str,
             "default": field.default,
@@ -159,7 +159,7 @@ def add_config_arguments(parser: argparse.ArgumentParser, config_prefix: str = "
         parser.add_argument(argument_name, **argument_kwargs)
 
     for field_name, field in Config.ExperimentConfig.model_fields.items():
-        argument_name = f"--experiment-{field_name.replace('_', '-')}"
+        argument_name = f"--experiment-{field_name.replace('-', '_')}"
         argument_kwargs = {
             "type": type(field.default) if type(field.default) != type(None) else str,
             "default": field.default,
@@ -178,22 +178,22 @@ def update_config_from_args(config: Config, args: argparse.Namespace):
     args_dict = vars(args)
 
     for field_name, field in Config.model_fields.items():
-        arg_name = field_name.replace('_', '-')
+        arg_name = field_name.replace('-', '_')
         if arg_name in args_dict and args_dict[arg_name] is not None:
             setattr(config, field_name, args_dict[arg_name])
 
     for field_name, field in Config.EmbeddingConfig.model_fields.items():
-        arg_name = f"embedding-{field_name.replace('_', '-')}"
+        arg_name = f"embedding_{field_name.replace('-', '_')}"
         if arg_name in args_dict and args_dict[arg_name] is not None:
             setattr(config.embedding_config, field_name, args_dict[arg_name])
 
     for field_name, field in Config.EncoderConfig.model_fields.items():
-        arg_name = f"encoder-{field_name.replace('_', '-')}"
+        arg_name = f"encoder_{field_name.replace('-', '_')}"
         if arg_name in args_dict and args_dict[arg_name] is not None:
             setattr(config.encoder_config, field_name, args_dict[arg_name])
 
     for field_name, field in Config.DatasetConfig.model_fields.items():
-        arg_name = f"dataset-{field_name.replace('_', '-')}"
+        arg_name = f"dataset_{field_name.replace('-', '_')}"
         if arg_name in args_dict and args_dict[arg_name] is not None:
             setattr(config.dataset_config, field_name, args_dict[arg_name])
 
@@ -203,16 +203,16 @@ def update_config_from_args(config: Config, args: argparse.Namespace):
             setattr(config.iim_config, field_name, args_dict[arg_name])
         if field_name == "neural_net_config":
             for nn_field_name, nn_field in Config.IIMConfig.NEURAL_NET_CONFIG.model_fields.items():
-                arg_name = f"iim-neural-net-{nn_field_name.replace('_', '-')}"
+                arg_name = f"iim_neural_net_{nn_field_name.replace('-', '_')}"
                 if arg_name in args_dict and args_dict[arg_name] is not None:
                     setattr(config.iim_config.neural_net_config, nn_field_name, args_dict[arg_name])
 
     for field_name, field in Config.CloudModelsConfig.model_fields.items():
-        arg_name = f"cloud-{field_name.replace('_', '-')}"
+        arg_name = f"cloud_{field_name.replace('-', '_')}"
         if arg_name in args_dict and args_dict[arg_name] is not None:
             setattr(config.cloud_config, field_name, args_dict[arg_name])
 
     for field_name, field in Config.ExperimentConfig.model_fields.items():
-        arg_name = f"experiment-{field_name.replace('_', '-')}"
+        arg_name = f"experiment_{field_name.replace('-', '_')}"
         if arg_name in args_dict and args_dict[arg_name] is not None:
             setattr(config.experiment_config, field_name, args_dict[arg_name])

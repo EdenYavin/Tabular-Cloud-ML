@@ -15,7 +15,11 @@ class ExperimentHandler(ABC):
 
     def __init__(self, experiment_name: str, report_path: str = REPORT_PATH):
         self.experiment_name: str = experiment_name
-        self.n_pred_vectors = config.experiment_config.n_pred_vectors
+        if type(config.experiment_config.n_pred_vectors) is list:
+            self.n_pred_vectors = config.experiment_config.n_pred_vectors
+        else:
+            self.n_pred_vectors = [config.experiment_config.n_pred_vectors]
+
         self.report_path = report_path
         if os.path.exists(self.report_path):
             try:
@@ -121,7 +125,7 @@ class ExperimentHandler(ABC):
         self.report = pd.concat([self.report, new_row])
 
         # Save results every 5 rows
-        if len(self.report)  // 5 and config.experiment_config.exp_type == EXPERIMENTS.INCREMENT_EVALUATION:
+        if len(self.report)  // 5 and config.experiment_config.to_run == EXPERIMENTS.INCREMENT_EVALUATION:
             self.save()
 
     def save(self):
@@ -132,7 +136,12 @@ class ExperimentHandler(ABC):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.save()
+        if (
+                config.experiment_config.to_run == EXPERIMENTS.INCREMENT_EVALUATION
+                or
+                config.experiment_config.to_run == EXPERIMENTS.MODEL_TRAINING
+        ):
+            self.save()
 
     @abstractmethod
     def run_experiment(self):

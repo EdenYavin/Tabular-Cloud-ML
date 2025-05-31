@@ -100,13 +100,19 @@ class LSTMIIM(NeuralNetworkInternalModel):
         self.model = self.get_model(num_classes=num_classes, input_shape=input_shape)
 
     def get_model(self, num_classes, input_shape):
-        inputs = Input(shape=(1, input_shape[1]))  # Add timesteps dimension
+        inputs = Input(shape=(1, input_shape))  # Add timesteps dimension
 
         x = LSTM(units=256, return_sequences=True)(inputs)  # Outputs full sequence
         x = LSTM(units=128, return_sequences=False)(x)
         x = Dense(64, activation='leaky_relu')(x)
         outputs = Dense(num_classes, activation='softmax')(x)
-        return Model(inputs=inputs, outputs=outputs)
+        model = Model(inputs=inputs, outputs=outputs)
+        # Compile the model with F1 Score
+        model.compile(optimizer='adam',
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy', F1Score()]
+                      )
+        return model
 
     def fit(self, X, y, validation_data=None):
         X = X.reshape(-1, 1, X.shape[1])

@@ -27,7 +27,7 @@ class Config(BaseModel):
     class IIMConfig(BaseModel):
 
         class NEURAL_NET_CONFIG(BaseModel):
-            epochs: int = 100
+            epochs: int = 20
             batch_size: int = 64
             dropout: float = 0.3
 

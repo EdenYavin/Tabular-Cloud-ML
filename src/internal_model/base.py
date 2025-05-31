@@ -40,7 +40,7 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
         tf.debugging.set_log_device_placement(True)
         with tf.device('/GPU:0'):
             lr_scheduler = LearningRateScheduler(lambda epoch: 0.0001 * (0.9 ** epoch))
-            early_stopping = EarlyStopping(patience=2, monitor='loss', restore_best_weights=True)
+            early_stopping = EarlyStopping(patience=1, monitor='loss', restore_best_weights=True, start_from_epoch=3)
             self.model.fit(X, y,
                            validation_data=validation_data, epochs=self.epochs,
                            batch_size=config.iim_config.neural_net_config.batch_size,

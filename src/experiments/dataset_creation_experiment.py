@@ -14,7 +14,7 @@ from src.dataset import DatasetFactory, RawDataset
 from src.utils.config import config
 from loguru import logger
 from src.experiments.base import ExperimentHandler
-from src.utils.helpers import get_experiment_name
+from src.utils.helpers import get_experiment_name, get_dataset_path
 from src.utils.constansts import OUTPUT_DIR_PATH, DATASET_FILE_NAME, BASELINE_DATASET_FILE_NAME
 
 
@@ -48,8 +48,8 @@ class DatasetCreationHandler(ExperimentHandler):
 
                 for n_pred_vectors in self.n_pred_vectors:
 
-                    logger.debug(f"CREATING THE CLOUD TRAIN SET FROM {dataset_name},"
-                          f" WITH {n_pred_vectors} PREDICTION VECTORS")
+                    logger.debug(f"Experiment name is {self.experiment_name}, Dataset is {dataset_name} and"
+                          f" will have {n_pred_vectors} prediction vector for each cloud model")
 
                     dataset_creator = FeatureEngineeringPipeline(
                         dataset_name=dataset_name,
@@ -62,7 +62,6 @@ class DatasetCreationHandler(ExperimentHandler):
                     dataset, emb_baseline_dataset = (
                         dataset_creator.create(X_sample, y_sample, X_test, y_test)
                     )
-
 
                     # # Log size for the final report
                     # train_shape = dataset_creator.original_train_size or X_sample.shape
@@ -105,8 +104,7 @@ class DatasetCreationHandler(ExperimentHandler):
                     #     iim_baseline_acc=test_acc, iim_baseline_f1=test_f1,
                     #     iim_model_name=internal_model.name,
                     # )
-                    rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
-                    path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / str(n_pred_vectors)
+                    path = get_dataset_path(dataset_name, n_pred_vectors)
                     os.makedirs(path, exist_ok=True)
 
                     logger.debug("Finished Creating the dataset.\n"

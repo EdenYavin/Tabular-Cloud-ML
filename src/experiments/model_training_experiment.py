@@ -8,7 +8,7 @@ from src.dataset import DatasetFactory, RawDataset
 from src.utils.config import config
 from loguru import logger
 from src.experiments.base import ExperimentHandler
-from src.utils.helpers import get_experiment_name
+from src.utils.helpers import get_experiment_name, get_dataset_path
 from src.utils.constansts import OUTPUT_DIR_PATH, DATASET_FILE_NAME, BASELINE_DATASET_FILE_NAME
 
 
@@ -19,7 +19,6 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
 
     def run_experiment(self):
 
-        rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
 
         for dataset_name in config.dataset_config.names:
 
@@ -33,7 +32,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                     logger.info(f"\n#### Training model experiment: "
                                 f"Dataset: {dataset_name}, n_pred_vectors: {n_pred_vectors} ####\n")
 
-                    path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / str(n_pred_vectors)
+                    path = get_dataset_path(dataset_name=dataset_name, n_pred_vectors=n_pred_vectors)
 
                     if path.exists():
 

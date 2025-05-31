@@ -50,7 +50,7 @@ class Config(BaseModel):
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,
-                                                           use_preds=True, use_embedding=True,
+                                                           use_preds=True, use_embedding=False,
                                                            to_run=EXPERIMENTS.DATASET_CREATION,
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[

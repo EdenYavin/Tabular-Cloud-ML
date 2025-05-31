@@ -1,4 +1,4 @@
-
+import pathlib
 import pickle
 import os
 from typing import Generator
@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
 from PIL import Image, ImageDraw, ImageFont
 import tensorflow as tf
-from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH
+from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OUTPUT_DIR_PATH
 from src.utils.config import config
 
 def get_number_of_samples_to_make(original_num_samples: int) -> int:
@@ -23,6 +23,12 @@ def get_number_of_samples_to_make(original_num_samples: int) -> int:
                                      if config.experiment_config.use_preds
                                      else n_pred * original_num_samples
                                      )
+
+
+def get_dataset_path(dataset_name: str, n_pred_vectors) -> pathlib.Path:
+    rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
+    use_cloud_features = "cloud" if config.experiment_config.use_preds else "no_cloud"
+    return pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / str(n_pred_vectors)
 
 
 def get_experiment_name() -> str:

@@ -1,6 +1,5 @@
 import gc
 import os
-import pathlib
 import pickle
 
 from tqdm import tqdm
@@ -47,6 +46,11 @@ class DatasetCreationHandler(ExperimentHandler):
                 logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
 
                 for n_pred_vectors in self.n_pred_vectors:
+
+                    if os.path.exists(get_dataset_path(dataset_name, n_pred_vectors)):
+                        logger.info(f"Dataset {get_dataset_path(dataset_name, n_pred_vectors)}"
+                                    f" already exists, skipping creation")
+                        continue
 
                     logger.debug(f"Experiment name is {self.experiment_name}, Dataset is {dataset_name} and"
                           f" will have {n_pred_vectors} prediction vector for each cloud model")
@@ -121,4 +125,3 @@ class DatasetCreationHandler(ExperimentHandler):
                     gc.collect()
 
 
-        return self.report

@@ -175,11 +175,11 @@ ALL_DATASETS = [
 ]
 
 PMLB_DATASETS = [
-    # "agaricus_lepiota",
-    # "mushroom",
-    # "magic",
+    "agaricus_lepiota",
+    "mushroom",
+    "magic",
     "ring",
-    # "twonorm",
+    "twonorm",
 ]
 
 PMLB_DATASETS_IMBALANCE = [

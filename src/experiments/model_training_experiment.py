@@ -19,6 +19,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
 
     def run_experiment(self):
 
+        logger.info(f"Training Model Experiment: {get_experiment_name()}")
 
         for dataset_name in config.dataset_config.names:
 
@@ -41,7 +42,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         with open(data_path, "rb") as f:
                             dataset = pickle.load(f)
 
-                        logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name}####\n"
+                        logger.debug(f"\n#### EVALUATING INTERNAL MODEL {model_name}####\n"
                                      f" Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
                         internal_model = InternalInferenceModelFactory().get_model(
                             num_classes=raw_dataset.get_n_classes(),

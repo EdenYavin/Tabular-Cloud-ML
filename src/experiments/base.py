@@ -81,7 +81,7 @@ class ExperimentHandler(ABC):
                     embeddings_baseline_acc: float, embeddings_baseline_f1: float,
                     # prediction_baseline_acc: float, prediction_baseline_f1: float,
                     iim_baseline_acc: float, iim_baseline_f1: float,
-                    iim_model_name: str = None,
+                    iim_model_name: str, total_params: int,
                     raw_baseline_acc: float = None, raw_baseline_f1: float = None,
                     ):
 
@@ -107,6 +107,7 @@ class ExperimentHandler(ABC):
             "new_train_size": [str(new_train_shape)],
             "test_size": [str(test_shape)],
             "iim_model": [iim_name],
+            "total_params": [total_params],
             "embedding": [config.embedding_config.name],
             "encryptor": [config.encoder_config.name],
             "cloud_model": [cloud_models_names],

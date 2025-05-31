@@ -127,7 +127,7 @@ class LSTMIIM(NeuralNetworkInternalModel):
 
     def evaluate(self, X, y):
         X = X.reshape(-1, 1, X.shape[1])
-        super().evaluate(X, y)
+        return super().evaluate(X, y)
 
 
 class DoubleDenseInternalModel(NeuralNetworkInternalModel):

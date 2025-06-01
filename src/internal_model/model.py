@@ -112,7 +112,7 @@ class LSTMIIM(NeuralNetworkInternalModel):
         # Compile the model with F1 Score
         model.compile(optimizer='adam',
                       loss='categorical_crossentropy',
-                      metrics=['accuracy', F1Score()]
+                      metrics=['accuracy']#, F1Score()]
                       )
         return model
 

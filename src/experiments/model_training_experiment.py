@@ -83,7 +83,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         )
 
 
-                    del dataset
+                    del dataset, internal_model
                     gc.collect()
 
             del raw_dataset

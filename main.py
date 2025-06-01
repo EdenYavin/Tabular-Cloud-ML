@@ -6,7 +6,7 @@ from src.utils.config import config, update_config_from_args
 import tensorflow as tf
 import numpy as np
 
-from src.utils.constansts import EXPERIMENTS
+from src.utils.constansts import EXPERIMENTS, IIM_MODELS
 
 np.random.seed(42)
 
@@ -21,6 +21,15 @@ def main():
     parser.add_argument("--encoder-rotating-key",
     action="store_true",  # Sets to True if flag is present
     help="Use triangulation samples or not")
+
+    parser.add_argument(
+        "--iim-name",
+        type=str,
+        nargs="+",
+        default=[IIM_MODELS.LSTM],
+        help="Specify one or more IIM model names (e.g. --iim-model-name lstm, dense)"
+    )
+
 
     args = parser.parse_args()
     update_config_from_args(config, args)

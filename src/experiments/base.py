@@ -128,6 +128,8 @@ class ExperimentHandler(ABC):
         # Save results every 5 rows
         if len(self.report)  // 5 and config.experiment_config.to_run == EXPERIMENTS.INCREMENT_EVALUATION:
             self.save()
+        else:
+            self.save() # or each time if it is a regular experiments
 
     def save(self):
         logger.info(f"Saving report to {self.report_path}")

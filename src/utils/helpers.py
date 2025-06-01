@@ -28,7 +28,8 @@ def get_number_of_samples_to_make(original_num_samples: int) -> int:
 def get_dataset_path(dataset_name: str, n_pred_vectors) -> pathlib.Path:
     rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
     use_cloud_features = "cloud" if config.experiment_config.use_preds else "no_cloud"
-    return pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / str(n_pred_vectors)
+    cloud_models = "_".join(config.cloud_config.names) if config.experiment_config.use_preds else ""
+    return pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / str(n_pred_vectors)
 
 
 def get_experiment_name() -> str:

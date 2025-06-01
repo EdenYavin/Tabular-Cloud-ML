@@ -28,7 +28,7 @@ class Config(BaseModel):
 
         class NEURAL_NET_CONFIG(BaseModel):
             epochs: int = 20
-            batch_size: int = 64
+            batch_size: int = 8
             dropout: float = 0.3
 
         neural_net_config: NEURAL_NET_CONFIG = Field(description="Neural network config", default=NEURAL_NET_CONFIG())

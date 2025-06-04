@@ -78,7 +78,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                             cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
                             embeddings_baseline_acc=baseline_emb_acc, embeddings_baseline_f1=embeddings_baseline_f1,
                             iim_baseline_acc=test_acc, iim_baseline_f1=test_f1,
-                            iim_model_name=internal_model.name,
+                            iim_model_name=model_name,
                             total_params=internal_model.model.count_params()
                         )
 

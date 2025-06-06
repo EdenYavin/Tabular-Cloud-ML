@@ -49,14 +49,14 @@ class Config(BaseModel):
         to_run: str = Field(description="type of the experiment - embedding learning, or prediction learning")
 
 
-    experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=2, k_folds=1,
+    experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,
                                                            use_preds=True, use_embedding=False,
                                                            to_run=EXPERIMENTS.DATASET_CREATION,
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         # CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
         # CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16
-        CLOUD_MODELS.Xception
+        CLOUD_MODELS.Xception, CLOUD_MODELS.EFFICIENTNET
     ])
     iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.LSTM], stacking=False, train_baseline=False,
                                       neural_net_config=IIMConfig.NEURAL_NET_CONFIG(

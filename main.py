@@ -22,6 +22,15 @@ def main():
     action="store_true",  # Sets to True if flag is present
     help="Use triangulation samples or not")
 
+    # Example of using 'dest'
+    parser.add_argument(
+        "--number-of-prediction-vector",  # User-facing name
+        type=int,
+        default=1,
+        dest="experiment_n_pred_vectors",  # Internal name for your config
+        help="Specify the number of prediction vectors for the experiment."
+    )
+
     parser.add_argument(
         "--iim-name",
         type=str,

@@ -42,13 +42,14 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         with open(data_path, "rb") as f:
                             dataset = pickle.load(f)
 
-                        logger.debug(f"\n#### EVALUATING INTERNAL MODEL {model_name}####\n"
-                                     f" Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
+
                         internal_model = InternalInferenceModelFactory().get_model(
                             num_classes=raw_dataset.get_n_classes(),
                             input_shape=dataset.train.features.shape[1],
-                            type=config.iim_config.name[0]
+                            type=model_name
                         )
+                        logger.debug(f"\n#### EVALUATING INTERNAL MODEL {model_name}####\n"
+                                     f" Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
                         internal_model.fit(
                             X=dataset.train.features, y=dataset.train.labels,
                             validation_data=(dataset.test.features, dataset.test.labels),

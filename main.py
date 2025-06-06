@@ -14,9 +14,11 @@ def main():
 
     parser = argparse.ArgumentParser(description="Run experiments with specified configurations.")
     parser.add_argument("--iim-train-baseline", action="store_true", help="Enable baseline mode.")
-    parser.add_argument("--experiment-to-run", type=EXPERIMENTS, choices=list(EXPERIMENTS), help="Experiment type: training or dataset.")
-    parser.add_argument(    "--experiment-use-preds",
+    parser.add_argument("--experiment-to-run", type=EXPERIMENTS,
+                        choices=list(EXPERIMENTS), help="Experiment type: training or dataset.")
+    parser.add_argument(    "--use-cloud-models",
     action="store_true",  # Sets to True if flag is present
+    dest="experiment-use-preds",
     help="Use the cloud as features or not. (default: False)")
     parser.add_argument("--encoder-rotating-key",
     action="store_true",  # Sets to True if flag is present

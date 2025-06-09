@@ -47,7 +47,7 @@ class DatasetCreationHandler(ExperimentHandler):
 
                 for n_pred_vectors in self.n_pred_vectors:
 
-                    if os.path.exists(get_dataset_path(dataset_name, n_pred_vectors)):
+                    if os.path.exists(get_dataset_path(dataset_name, 5)):
                         logger.info(f"Dataset {get_dataset_path(dataset_name, n_pred_vectors)}"
                                     f" already exists, skipping creation")
                         continue

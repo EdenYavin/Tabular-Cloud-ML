@@ -56,7 +56,7 @@ class Config(BaseModel):
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         # CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
         # CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16
-        CLOUD_MODELS.Xception
+        CLOUD_MODELS.Xception, CLOUD_MODELS.EFFICIENTNET
     ])
     iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.LSTM], stacking=False, train_baseline=False,
                                       neural_net_config=IIMConfig.NEURAL_NET_CONFIG(

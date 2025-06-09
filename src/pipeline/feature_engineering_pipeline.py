@@ -58,8 +58,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
         predictions_for_baseline = [] # Will be used for the baseline
         new_y = []
 
-        # triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
-        triangulation_samples = embeddings[-config.experiment_config.n_triangulation_samples:]
+        triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
 
         # Start processing the data using batches. We will do it for each cloud model
         # separately and use the cloud cache to save processed file to save up memory (no need to
@@ -70,51 +69,55 @@ class DatasetCreation(FeatureEngineeringPipeline):
             else 1
         )
 
-        for mini_batch, labels in batch:
+        with self.cloud_model_manager as cloud:
+            # Use context manager to control the Cloud models
 
-            for idx, cloud_model in enumerate(config.cloud_config.names):
+            for mini_batch, labels in batch:
 
-                for _ in range(number_of_new_samples):
+                for idx, cloud_model in enumerate(config.cloud_config.names):
 
-                    observation = []
+                    for _ in range(number_of_new_samples):
 
-                    if config.experiment_config.use_embedding:
-                        observation.append(mini_batch)
+                        observation = []
 
-                    images = self.encryptor.encode(mini_batch)
+                        if config.experiment_config.use_embedding:
+                            observation.append(mini_batch)
 
-                    with tf.device(GPU_DEVICE):  # Run the models on the GPU
+                        images = self.encryptor.encode(mini_batch)
 
-                        if config.encoder_config.rotating_key:
-                            # embed the encrypted samples
-                            x_tag = self.triangulation_embedding.forward(images)
-                            observation.append(x_tag)
+                        with tf.device(GPU_DEVICE):  # Run the models on the GPU
 
-                            # Add the new triangulation samples' embedding as well:
-                            # 1. Encrypt them
-                            y_tag = self.encryptor.encode(triangulation_samples)
-                            # 2. Embed the encryption
-                            y_tag = self.triangulation_embedding(y_tag)
-                            observation.append(
-                                np.vstack([np.hstack([x, y_tag.flatten()]) for x in
-                                                          x_tag])
-                            )  # Triangulation features vector = X', Y_1', Y_2',...
+                            if config.encoder_config.rotating_key:
+                                # embed the encrypted samples
+                                x_tag = self.triangulation_embedding.forward(images)
+                                observation.append(x_tag)
 
-                        if config.experiment_config.use_preds:
-                                predictions = self.cloud_model_manager.predict(model_name=cloud_model, batch=images)
-                                observations.append(np.hstack([*observation, predictions]))
-                                predictions_for_baseline.append(predictions)
+                                # Add the new triangulation samples' embedding as well:
+                                # 1. Encrypt them
+                                y_tag = self.encryptor.encode(triangulation_samples)
+                                # 2. Embed the encryption
+                                y_tag = self.triangulation_embedding(y_tag)
+                                observation.append(
+                                    np.vstack([np.hstack([x, y_tag.flatten()]) for x in
+                                                              x_tag])
+                                )  # Triangulation features vector = X', Y_1', Y_2',...
 
-                        else:
-                            observations.append(np.hstack(observation))
+                            if config.experiment_config.use_preds:
+                                    predictions = cloud.predict(model_name=cloud_model, batch=images)
+                                    observations.append(np.hstack([*observation, predictions]))
+                                    predictions_for_baseline.append(predictions)
 
-                    if config.encoder_config.rotating_key:
-                        # Rotate the key for the next sample to be encoded by a new key
-                        self.encryptor.switch_key()
+                            else:
+                                observations.append(np.hstack(observation))
 
-                    # Add the labels accordingly
-                    new_y.extend(labels)
+                        # Add the labels accordingly
+                        new_y.extend(labels)
 
+                    del images, y_tag, x_tag
+
+                if config.encoder_config.rotating_key:
+                    # Rotate the key for the next sample to be encoded by a new key
+                    self.encryptor.switch_key()
 
         if len(predictions_for_baseline) > 0:
             predictions_for_baseline = np.vstack(predictions_for_baseline)

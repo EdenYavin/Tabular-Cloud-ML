@@ -26,11 +26,12 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                 raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
                 logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}")
                 n_classes = raw_dataset.get_n_classes()
+                original_size = raw_dataset.get_dataset()[0].shape
                 del raw_dataset
 
             except:
                 logger.warning(f"Error loading Dataset {dataset_name}, using default number of classes -> 2")
-                n_classes = 2
+                n_classes, original_size = 2, 0
 
             for n_pred_vectors in self.n_pred_vectors:
 
@@ -79,7 +80,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
 
                         self.log_results(
                             dataset_name=dataset_name,
-                            train_shape=dataset.train.features.shape,
+                            train_shape=original_size,
                             new_train_shape=dataset.train.features.shape,
                             test_shape=dataset.test.features.shape,
                             cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),

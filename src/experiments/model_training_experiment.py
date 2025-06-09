@@ -1,5 +1,4 @@
 import gc
-import pathlib
 import pickle
 
 
@@ -9,7 +8,7 @@ from src.utils.config import config
 from loguru import logger
 from src.experiments.base import ExperimentHandler
 from src.utils.helpers import get_experiment_name, get_dataset_path
-from src.utils.constansts import OUTPUT_DIR_PATH, DATASET_FILE_NAME, BASELINE_DATASET_FILE_NAME
+from src.utils.constansts import DATASET_FILE_NAME, BASELINE_DATASET_FILE_NAME
 
 
 class ModelTrainingExperimentHandler(ExperimentHandler):
@@ -23,8 +22,15 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
 
         for dataset_name in config.dataset_config.names:
 
-            raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
-            logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}")
+            try:
+                raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
+                logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}")
+                n_classes = raw_dataset.get_n_classes()
+                del raw_dataset
+
+            except:
+                logger.warning(f"Error loading Dataset {dataset_name}, using default number of classes -> 2")
+                n_classes = 2
 
             for n_pred_vectors in self.n_pred_vectors:
 
@@ -44,7 +50,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
 
 
                         internal_model = InternalInferenceModelFactory().get_model(
-                            num_classes=raw_dataset.get_n_classes(),
+                            num_classes=n_classes,
                             input_shape=dataset.train.features.shape[1],
                             type=model_name
                         )
@@ -84,11 +90,8 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         )
 
 
-                    del dataset, internal_model
-                    gc.collect()
-
-            del raw_dataset
-            gc.collect()
+                        del dataset, internal_model
+                        gc.collect()
 
 
         return self.report

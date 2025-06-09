@@ -18,7 +18,7 @@ def main():
                         choices=list(EXPERIMENTS), help="Experiment type: training or dataset.")
     parser.add_argument(    "--use-cloud-models",
     action="store_true",  # Sets to True if flag is present
-    dest="experiment-use-preds",
+    dest="experiment_use_preds",
     help="Use the cloud as features or not. (default: False)")
     parser.add_argument("--encoder-rotating-key",
     action="store_true",  # Sets to True if flag is present

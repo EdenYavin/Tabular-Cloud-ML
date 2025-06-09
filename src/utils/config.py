@@ -56,7 +56,7 @@ class Config(BaseModel):
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         # CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,
         # CLOUD_MODELS.DENSENET, CLOUD_MODELS.VGG16
-        CLOUD_MODELS.Xception, CLOUD_MODELS.EFFICIENTNET
+        CLOUD_MODELS.Xception
     ])
     iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.LSTM], stacking=False, train_baseline=False,
                                       neural_net_config=IIMConfig.NEURAL_NET_CONFIG(
@@ -65,7 +65,7 @@ class Config(BaseModel):
                                       ))
     dataset_config: DatasetConfig = DatasetConfig(split_ratio=1,
                                                   names=PMLB_DATASETS,
-                                                  batch_size=500
+                                                  batch_size=100
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)
     encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV, rotating_key=True)

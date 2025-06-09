@@ -58,7 +58,8 @@ class DatasetCreation(FeatureEngineeringPipeline):
         predictions_for_baseline = [] # Will be used for the baseline
         new_y = []
 
-        triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
+        # triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
+        triangulation_samples = embeddings[-config.experiment_config.n_triangulation_samples:]
 
         # Start processing the data using batches. We will do it for each cloud model
         # separately and use the cloud cache to save processed file to save up memory (no need to

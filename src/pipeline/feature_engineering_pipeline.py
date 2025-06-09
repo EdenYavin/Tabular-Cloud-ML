@@ -58,8 +58,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
         predictions_for_baseline = [] # Will be used for the baseline
         new_y = []
 
-        # triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
-        triangulation_samples = embeddings[-config.experiment_config.n_triangulation_samples:]
+        triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
 
         # Start processing the data using batches. We will do it for each cloud model
         # separately and use the cloud cache to save processed file to save up memory (no need to
@@ -108,13 +107,12 @@ class DatasetCreation(FeatureEngineeringPipeline):
                         else:
                             observations.append(np.hstack(observation))
 
-                    if config.encoder_config.rotating_key:
-                        # Rotate the key for the next sample to be encoded by a new key
-                        self.encryptor.switch_key()
-
                     # Add the labels accordingly
                     new_y.extend(labels)
 
+            if config.encoder_config.rotating_key:
+                # Rotate the key for the next sample to be encoded by a new key
+                self.encryptor.switch_key()
 
         if len(predictions_for_baseline) > 0:
             predictions_for_baseline = np.vstack(predictions_for_baseline)

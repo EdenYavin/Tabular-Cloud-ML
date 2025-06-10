@@ -51,7 +51,7 @@ class CloudModelManager:
         for model_id in model_ids_to_clear:
             if model_id in self._active_models:  # Check if still present (good practice)
                 model_instance = self._active_models.pop(model_id)
-                logger.info(f"  [ModelRunManager] Removed '{model_instance.model_id}' from active list.")
+                logger.info(f"  [ModelRunManager] Removed '{model_instance.name}' from active list.")
                 del model_instance
 
         collected_count = gc.collect()

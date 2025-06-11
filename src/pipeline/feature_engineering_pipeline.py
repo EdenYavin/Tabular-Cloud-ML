@@ -74,7 +74,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
 
             for mini_batch, labels in batch:
 
-                for idx, cloud_model in enumerate(config.cloud_config.names):
+                for cloud_model in config.cloud_config.names:
 
                     for _ in range(number_of_new_samples):
 

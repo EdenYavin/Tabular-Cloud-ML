@@ -9,7 +9,6 @@ from src.cloud.vision import (XceptionCloudModel,
         MobileNetCloudModel
       )
 from src.cloud.tabular import EnsembleCloudModel, TabularCloudModel, NeuralNetCloudModel
-from src.cloud.llm import SequenceClassificationLLMCloudModel, BertLLMCloudModel
 
 CLOUD_MODELS = {
     NeuralNetCloudModel.name: NeuralNetCloudModel,
@@ -23,8 +22,6 @@ CLOUD_MODELS = {
     InceptionCloudModel.name: InceptionCloudModel,
     DenseNetCloudModel.name: DenseNetCloudModel,
     MobileNetCloudModel.name: MobileNetCloudModel,
-    SequenceClassificationLLMCloudModel.name: SequenceClassificationLLMCloudModel,
-    BertLLMCloudModel.name: BertLLMCloudModel
 }
 
 class CloudModelManager:

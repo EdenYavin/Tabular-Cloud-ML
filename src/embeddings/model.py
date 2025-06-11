@@ -1,5 +1,4 @@
 import pandas as pd
-from huggingface_hub.keras_mixin import keras
 from keras.src.applications import resnet
 from keras.src.applications.resnet import preprocess_input
 from keras.src.layers import Dense, BatchNormalization, Input, LeakyReLU
@@ -11,9 +10,10 @@ from tab2img.converter import Tab2Img
 from keras.src.callbacks import EarlyStopping
 from keras.src.utils import to_categorical
 from loguru import logger
-from transformers import CLIPProcessor, CLIPModel
 import torch
-from src.utils.helpers import create_image_from_numbers, expand_matrix_to_img_size
+import keras
+from transformers import CLIPModel, CLIPProcessor
+from src.utils.helpers import expand_matrix_to_img_size
 from src.utils.config import config
 from src.utils.constansts import CPU_DEVICE, EMBEDDING_MODEL_PATH
 

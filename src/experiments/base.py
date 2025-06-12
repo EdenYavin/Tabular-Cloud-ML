@@ -81,7 +81,7 @@ class ExperimentHandler(ABC):
                     embeddings_baseline_acc: float, embeddings_baseline_f1: float,
                     # prediction_baseline_acc: float, prediction_baseline_f1: float,
                     iim_baseline_acc: float, iim_baseline_f1: float,
-                    iim_model_name: str, total_params: int,
+                    iim_model_name: str, total_params: int, n_pred_vectors: int,
                     raw_baseline_acc: float = None, raw_baseline_f1: float = None,
                     ):
 
@@ -102,6 +102,7 @@ class ExperimentHandler(ABC):
         new_row = {
             "exp_name": [self.experiment_name],
             "triangulation_samples": [train_samples],
+            "n_pred_vectors": [n_pred_vectors],
             "dataset": [dataset_name],
             "train_size": [str(train_shape)],
             "new_train_size": [str(new_train_shape)],

@@ -6,7 +6,7 @@ from src.utils.config import config, update_config_from_args
 import tensorflow as tf
 import numpy as np
 
-from src.utils.constansts import EXPERIMENTS, IIM_MODELS
+from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS
 
 np.random.seed(42)
 
@@ -30,6 +30,7 @@ def main():
     parser.add_argument(
         "--number-of-prediction-vector",  # User-facing name
         type=int,
+        nargs="+",
         default=1,
         dest="experiment_n_pred_vectors",  # Internal name for your config
         help="Specify the number of prediction vectors for the experiment."
@@ -43,6 +44,14 @@ def main():
         help="Specify one or more IIM model names (e.g. --iim-model-name lstm, dense)"
     )
 
+    parser.add_argument(
+        "--datasets",
+        type=str,
+        nargs="+",
+        dest="dataset_names",  # Internal name for your config
+        default=PMLB_DATASETS,
+        help="The raw dataset(s) used to create the new cloud features dataset."
+    )
 
     args = parser.parse_args()
     update_config_from_args(config, args)

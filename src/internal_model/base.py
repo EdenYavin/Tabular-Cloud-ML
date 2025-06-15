@@ -56,9 +56,9 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
         with open(filename, 'wb') as f:
             pickle.dump(self.history.history, f)
 
-    def plot_history(self, filename=None):
+    def plot_history(self, filename=None, title=None):
         logger.info(f'plotting history to {filename}')
-        plot_history(history=self.history,filename=filename)
+        plot_history(history=self.history,filename=filename, title=title)
 
     def predict(self, X):
         prediction = self.model.predict(X)

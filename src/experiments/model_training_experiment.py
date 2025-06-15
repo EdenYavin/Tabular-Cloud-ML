@@ -68,7 +68,9 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         )
 
                         internal_model.save_history(history_path)
-                        internal_model.plot_history(plot_path)
+                        internal_model.plot_history(plot_path, title=f"Loss Curve {dataset_name} Dataset,"
+                                                                     f" Internal Model {model_name}"
+                                                                     f", Samples: {dataset.test.features.shape[0]}")
 
                         if config.iim_config.train_baseline:
                             baseline_path = path / BASELINE_DATASET_FILE_NAME

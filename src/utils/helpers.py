@@ -12,7 +12,7 @@ from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OU
 from src.utils.config import config
 
 
-def plot_history(history, filename=None):
+def plot_history(history, filename=None, title=None):
     """Plot and optionally save training curves"""
     plt.figure(figsize=(12, 6))
 
@@ -21,7 +21,7 @@ def plot_history(history, filename=None):
     plt.plot(history.history['loss'], label='Training Loss')
     if 'val_loss' in history.history:
         plt.plot(history.history['val_loss'], label='Validation Loss')
-    plt.title('Loss Curves')
+    plt.title('Loss Curves' or title)
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend()

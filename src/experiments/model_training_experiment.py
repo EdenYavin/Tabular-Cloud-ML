@@ -46,7 +46,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
 
                         data_path = path / DATASET_FILE_NAME
                         history_path = path / "history.pkl"
-                        plot_path = path / "train_plot.png"
+                        plot_path = path / f"{model_name}_{n_pred_vectors}_train_plot.png"
 
                         with open(data_path, "rb") as f:
                             dataset = pickle.load(f)

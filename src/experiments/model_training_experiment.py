@@ -45,6 +45,8 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                     if path.exists():
 
                         data_path = path / DATASET_FILE_NAME
+                        history_path = path / "history.pkl"
+                        plot_path = path / "train_plot.png"
 
                         with open(data_path, "rb") as f:
                             dataset = pickle.load(f)
@@ -65,6 +67,8 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                             X=dataset.test.features, y=dataset.test.labels
                         )
 
+                        internal_model.save_history(history_path)
+                        internal_model.plot_history(plot_path)
 
                         if config.iim_config.train_baseline:
                             baseline_path = path / BASELINE_DATASET_FILE_NAME

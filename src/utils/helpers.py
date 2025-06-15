@@ -2,7 +2,7 @@ import pathlib
 import pickle
 import os
 from typing import Generator
-
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
@@ -10,6 +10,36 @@ from PIL import Image, ImageDraw, ImageFont
 import tensorflow as tf
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OUTPUT_DIR_PATH
 from src.utils.config import config
+
+
+def plot_history(history, filename=None):
+    """Plot and optionally save training curves"""
+    plt.figure(figsize=(12, 6))
+
+    # Plot loss
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['loss'], label='Training Loss')
+    if 'val_loss' in history.history:
+        plt.plot(history.history['val_loss'], label='Validation Loss')
+    plt.title('Loss Curves')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend()
+
+    # Plot accuracy if available
+    if 'accuracy' in history.history:
+        plt.subplot(1, 2, 2)
+        plt.plot(history.history['accuracy'], label='Training Accuracy')
+        if 'val_accuracy' in history.history:
+            plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+        plt.title('Accuracy Curves')
+        plt.ylabel('Accuracy')
+        plt.xlabel('Epoch')
+        plt.legend()
+
+    if filename:
+        plt.savefig(filename)
+    plt.show()
 
 def get_number_of_samples_to_make(original_num_samples: int) -> int:
     """

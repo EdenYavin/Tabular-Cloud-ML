@@ -19,3 +19,4 @@ jupyterlab==4.2.5
 tab2img==0.0.2
 torch==1.12.1
 transformers==4.44.2
+matplotlib==3.10.3

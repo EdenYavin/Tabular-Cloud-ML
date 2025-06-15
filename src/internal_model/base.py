@@ -43,6 +43,7 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
     def fit(self, X, y, validation_data=None):
         tf.debugging.set_log_device_placement(True)
         with tf.device('/GPU:0'):
+            logger.info(f'Using GPU: {list(filter(lambda d: "GPU:0" in d.name, tf.config.list_physical_devices()))}')
             lr_scheduler = LearningRateScheduler(lambda epoch: 0.0001 * (0.9 ** epoch))
             early_stopping = EarlyStopping(patience=2, monitor='val_loss', restore_best_weights=True, start_from_epoch=3)
             self.history = self.model.fit(X, y,

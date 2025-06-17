@@ -61,7 +61,8 @@ class Config(BaseModel):
     iim_config: IIMConfig = IIMConfig(name=[IIM_MODELS.LSTM], stacking=False, train_baseline=False,
                                       neural_net_config=IIMConfig.NEURAL_NET_CONFIG(
                                           batch_size=10,
-                                          dropout=0
+                                          dropout=0,
+                                          epochs=30
                                       ))
     dataset_config: DatasetConfig = DatasetConfig(split_ratio=1,
                                                   names=PMLB_DATASETS,

@@ -101,8 +101,8 @@ class LSTMIIM(NeuralNetworkInternalModel):
 
     def get_model(self, num_classes, input_shape):
         inputs = Input(shape=(1, input_shape))  # Add timesteps dimension
-
-        x = LSTM(units=512, return_sequences=True)(inputs)  # Outputs full sequence
+        x = LSTM(units=1024, return_sequences=True)(inputs)  # Outputs full sequence
+        x = LSTM(units=512, return_sequences=True)(x)  # Outputs full sequence
         x = LSTM(units=256, return_sequences=True)(x)  # Outputs full sequence
         x = LSTM(units=128, return_sequences=True)(x)
         x = LSTM(units=64, return_sequences=False)(x)

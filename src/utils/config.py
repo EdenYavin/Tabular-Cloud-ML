@@ -118,3 +118,8 @@ def update_config_from_args(config: Config, args: argparse.Namespace):
         arg_name = f"experiment_{field_name.replace('-', '_')}"
         if arg_name in args_dict and args_dict[arg_name] is not None:
             setattr(config.experiment_config, field_name, args_dict[arg_name])
+
+    if len(args.cloud_names) > 0:
+        setattr(config.experiment_config, "use_preds", True)
+    else:
+        setattr(config.experiment_config, "use_preds", False)

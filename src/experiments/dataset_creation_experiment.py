@@ -24,8 +24,6 @@ class DatasetCreationHandler(ExperimentHandler):
 
     def run_experiment(self):
 
-        assert len(config.cloud_config.names) >= 1
-
         if type(self.n_pred_vectors) is int:
             self.n_pred_vectors = [self.n_pred_vectors]
 

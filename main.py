@@ -18,9 +18,11 @@ def main():
                         choices=list(EXPERIMENTS), help="Experiment type: training or dataset.")
 
     parser.add_argument(    "--use-cloud-models",
-    action="store_true",  # Sets to True if flag is present
-    dest="experiment_use_preds",
-    help="Use the cloud as features or not. (default: False)")
+    type=str,
+    nargs="+",
+    default=[],
+    dest="cloud_names",
+    help="The cloud models to use")
 
     parser.add_argument("--encoder-rotating-key",
     action="store_true",  # Sets to True if flag is present
@@ -54,6 +56,7 @@ def main():
     )
 
     args = parser.parse_args()
+
     update_config_from_args(config, args)
 
     # Use GPU only when using Decon

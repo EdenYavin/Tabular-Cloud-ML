@@ -5,7 +5,7 @@ import pickle
 from tqdm import tqdm
 
 from src.pipeline.feature_engineering_pipeline import DatasetCreation as FeatureEngineeringPipeline
-from src.cloud import CLOUD_MODELS
+from src.cloud import CLOUD_MODELS, DEFAULT_CLOUD_OUTPUT_SHAPE
 from src.encryptor import EncryptorFactory
 from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
@@ -30,7 +30,10 @@ class DatasetCreationHandler(ExperimentHandler):
         datasets = config.dataset_config.names
 
         # Get the output for the cloud model
-        cloud_model_output = CLOUD_MODELS[config.cloud_config.names[0]].input_shape
+        if config.cloud_config.names:
+            cloud_model_output = CLOUD_MODELS[config.cloud_config.names[0]].input_shape
+        else:
+            cloud_model_output = DEFAULT_CLOUD_OUTPUT_SHAPE
 
         for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
             with logger.contextualize(dataset=dataset_name):

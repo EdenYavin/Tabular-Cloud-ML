@@ -24,6 +24,8 @@ CLOUD_MODELS = {
     MobileNetCloudModel.name: MobileNetCloudModel,
 }
 
+DEFAULT_CLOUD_OUTPUT_SHAPE = XceptionCloudModel.input_shape
+
 class CloudModelManager:
     def __init__(self):
         self.current_model_name = None

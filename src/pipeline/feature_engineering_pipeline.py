@@ -103,12 +103,12 @@ class DatasetCreation(FeatureEngineeringPipeline):
                         for cloud_model in config.cloud_config.names:
 
                             if config.experiment_config.use_preds:
-                                    predictions = cloud.predict(model_name=cloud_model, batch=images)
-                                    observations.append(np.hstack([*observation, predictions]))
-                                    predictions_for_baseline.append(predictions)
+                                predictions = cloud.predict(model_name=cloud_model, batch=images)
+                                observations.append(np.hstack([*observation, predictions]))
+                                predictions_for_baseline.append(predictions)
 
-                            else:
-                                observations.append(np.hstack(observation))
+                        else:
+                            observations.append(np.hstack(observation))
 
                         # Add the labels accordingly
                         new_y.extend(labels)

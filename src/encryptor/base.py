@@ -39,10 +39,9 @@ class BaseEncryptor:
 
         model_path = os.path.join(ENCRYPTOR_MODELS_DIR_PATH, f"{self.dataset_name}_{embedding_name}.h5")
         if self.model is None:
-            if os.path.exists(model_path):
+            if os.path.exists(model_path) and not config.encoder_config.rotating_key:
                 self.model = load_model(model_path)
             else:
-
                 self.model = self.build_generator(self.input_shape, self.output_shape)
                 self.save_model(model_path)
 

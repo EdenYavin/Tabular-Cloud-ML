@@ -15,7 +15,7 @@ import keras
 from transformers import CLIPModel, CLIPProcessor
 from src.utils.helpers import expand_matrix_to_img_size
 from src.utils.config import config
-from src.utils.constansts import CPU_DEVICE, EMBEDDING_MODEL_PATH
+from src.utils.constansts import CPU_DEVICE, EMBEDDING_MODEL_PATH, MODELS_PATH
 
 class DNNEmbedding(nn.Module):
 
@@ -166,8 +166,8 @@ class ClipEmbedding(nn.Module):
         super(ClipEmbedding, self).__init__()
         model_id = "openai/clip-vit-base-patch32"
         self.input_shape = (224, 224)
-        self.model = CLIPModel.from_pretrained(model_id)
-        self.processor = CLIPProcessor.from_pretrained(model_id)
+        self.model = CLIPModel.from_pretrained(model_id, cache_dir=MODELS_PATH)
+        self.processor = CLIPProcessor.from_pretrained(model_id, cache_dir=MODELS_PATH)
         self.output_shape = (1, 512)
 
 

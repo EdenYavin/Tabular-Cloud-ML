@@ -74,33 +74,33 @@ class DatasetCreation(FeatureEngineeringPipeline):
 
             for mini_batch, labels in batch:
 
-                for cloud_model in config.cloud_config.names:
+                for _ in range(number_of_new_samples):
 
-                    for _ in range(number_of_new_samples):
+                    observation = []
 
-                        observation = []
+                    if config.experiment_config.use_embedding:
+                        observation.append(mini_batch)
 
-                        if config.experiment_config.use_embedding:
-                            observation.append(mini_batch)
+                    with tf.device(GPU_DEVICE):  # Run the models on the GPU
 
                         images = self.encryptor.encode(mini_batch)
 
-                        with tf.device(GPU_DEVICE):  # Run the models on the GPU
+                        if config.encoder_config.rotating_key:
+                            # embed the encrypted samples
+                            x_tag = self.triangulation_embedding.forward(images)
+                            observation.append(x_tag)
 
-                            if config.encoder_config.rotating_key:
-                                # embed the encrypted samples
-                                x_tag = self.triangulation_embedding.forward(images)
-                                observation.append(x_tag)
+                            # Add the new triangulation samples' embedding as well:
+                            # 1. Encrypt them
+                            y_tag = self.encryptor.encode(triangulation_samples)
+                            # 2. Embed the encryption
+                            y_tag = self.triangulation_embedding(y_tag)
+                            observation.append(
+                                np.vstack([np.hstack([x, y_tag.flatten()]) for x in
+                                           x_tag])
+                            )  # Triangulation features vector = X', Y_1', Y_2',...
 
-                                # Add the new triangulation samples' embedding as well:
-                                # 1. Encrypt them
-                                y_tag = self.encryptor.encode(triangulation_samples)
-                                # 2. Embed the encryption
-                                y_tag = self.triangulation_embedding(y_tag)
-                                observation.append(
-                                    np.vstack([np.hstack([x, y_tag.flatten()]) for x in
-                                                              x_tag])
-                                )  # Triangulation features vector = X', Y_1', Y_2',...
+                        for cloud_model in config.cloud_config.names:
 
                             if config.experiment_config.use_preds:
                                     predictions = cloud.predict(model_name=cloud_model, batch=images)
@@ -115,9 +115,9 @@ class DatasetCreation(FeatureEngineeringPipeline):
 
                     del images, y_tag, x_tag
 
-                if config.encoder_config.rotating_key:
-                    # Rotate the key for the next sample to be encoded by a new key
-                    self.encryptor.switch_key()
+                    if config.encoder_config.rotating_key:
+                        # Rotate the key for the next sample to be encoded by a new key
+                        self.encryptor.switch_key()
 
         if len(predictions_for_baseline) > 0:
             predictions_for_baseline = np.vstack(predictions_for_baseline)

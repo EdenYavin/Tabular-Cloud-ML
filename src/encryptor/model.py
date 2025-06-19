@@ -52,9 +52,7 @@ class DCEncryptor(BaseEncryptor):
     def build_generator(self, input_shape, output_shape):
         # Ziv's Model
         G = Sequential()
-
         G.add(Reshape(target_shape=[1,1, *input_shape], input_shape=input_shape))
-        # No weights or activations here
 
         # 1x1x4096
         G.add(Conv2DTranspose(filters=64, kernel_size=4))

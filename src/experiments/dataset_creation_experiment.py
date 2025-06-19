@@ -41,7 +41,7 @@ class DatasetCreationHandler(ExperimentHandler):
                 raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
 
                 embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name)
-                encryptor = EncryptorFactory.get_model(dataset_name=dataset_name, output_shape=cloud_model_output)
+                encryptor = EncryptorFactory.get_model(dataset_name=dataset_name, output_shape=cloud_model_output,)
 
                 X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
                 logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")

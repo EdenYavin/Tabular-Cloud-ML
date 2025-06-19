@@ -63,7 +63,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
         # Start processing the data using batches. We will do it for each cloud model
         # separately and use the cloud cache to save processed file to save up memory (no need to
         # load the cloud model) and speed up the runtime.
-        batch = Batch(X=embeddings, y=y, size=config.dataset_config.batch_size)
+        batch = Batch(X=embeddings, y=y, size=1)#config.dataset_config.batch_size)
         number_of_new_samples = (
             self.n_pred_vectors if not is_test
             else 1
@@ -71,7 +71,6 @@ class DatasetCreation(FeatureEngineeringPipeline):
 
         with self.cloud_model_manager as cloud:
             # Use context manager to control the Cloud models
-
             for mini_batch, labels in batch:
 
                 for _ in range(number_of_new_samples):

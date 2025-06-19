@@ -100,12 +100,14 @@ class DatasetCreation(FeatureEngineeringPipeline):
                                            x_tag])
                             )  # Triangulation features vector = X', Y_1', Y_2',...
 
-                        for cloud_model in config.cloud_config.names:
 
-                            if config.experiment_config.use_preds:
-                                predictions = cloud.predict(model_name=cloud_model, batch=images)
-                                observations.append(np.hstack([*observation, predictions]))
-                                predictions_for_baseline.append(predictions)
+                        if config.cloud_config.names:
+                            for cloud_model in config.cloud_config.names:
+
+                                if config.experiment_config.use_preds:
+                                    predictions = cloud.predict(model_name=cloud_model, batch=images)
+                                    observations.append(np.hstack([*observation, predictions]))
+                                    predictions_for_baseline.append(predictions)
 
                         else:
                             observations.append(np.hstack(observation))

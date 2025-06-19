@@ -37,7 +37,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
 
                 for model_name in config.iim_config.name:
 
-                    logger.info(f"\n#### Training model experiment: "
+                    logger.info(f"#### Training model experiment: "
                                 f"Dataset: {dataset_name}, n_pred_vectors: {n_pred_vectors} ####\n")
 
                     path = get_dataset_path(dataset_name=dataset_name, n_pred_vectors=n_pred_vectors)
@@ -57,7 +57,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                             input_shape=dataset.train.features.shape[1],
                             type=model_name
                         )
-                        logger.debug(f"\n#### EVALUATING INTERNAL MODEL {model_name}####\n"
+                        logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} ####\n"
                                      f" Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
                         internal_model.fit(
                             X=dataset.train.features, y=dataset.train.labels,

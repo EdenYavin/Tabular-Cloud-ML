@@ -71,7 +71,6 @@ class DatasetCreation(FeatureEngineeringPipeline):
             self.n_pred_vectors if not is_test
             else 1
         )
-
         encrypted, observations,new_y = [], [], []
         with tf.device(GPU_DEVICE):  # Run the models on the GPU
             for x, label in tqdm(zip(embeddings, y),total=len(embeddings), desc="Encrypting" ,leave=True, position=0):
@@ -91,7 +90,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
                     np.vstack([np.hstack([x, y_tag.flatten()]) for x in
                                x_tags])
                 )  # Triangulation features vector = X', Y_1', Y_2',...
-                observations = np.vstack(observations)
+            observations = np.vstack(observations)
 
 
         del embeddings, y_tag # No need for the embeddings & y_tag anymore

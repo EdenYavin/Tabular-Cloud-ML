@@ -99,12 +99,15 @@ class DatasetCreation(FeatureEngineeringPipeline):
 
         del embeddings, y_tag # No need for the embeddings & y_tag anymore
 
+
         with self.cloud_model_manager as cloud:
+            # Add the cloud models prediction to the overall features (X_tag, Y_tag) if needed by the config
             progress_bar = tqdm(total=len(encrypted), desc="Processing Cloud Models")
+
             for x_tags in batching(encrypted, config.dataset_config.batch_size):
                 cloud_predictions = []
-                with tf.device(GPU_DEVICE):  # Run the models on the GPU
 
+                with tf.device(GPU_DEVICE):  # Run the models on the GPU
                     if config.cloud_config.names:
                         for cloud_model in config.cloud_config.names:
                             predictions = cloud.predict(model_name=cloud_model, batch=np.vstack(x_tags))

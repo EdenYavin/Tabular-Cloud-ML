@@ -18,7 +18,6 @@ class FeatureEngineeringPipeline(ABC):
         self.n_pred_vectors = n_pred_vectors
         self.name = dataset_name
         self.use_embedding = config.experiment_config.use_embedding
-        self.use_predictions = config.experiment_config.use_preds
         self.raw_metadata = metadata
         self.embeddings_model = embeddings_model
         self.embedding_db = EmbeddingDBFactory.get_db(dataset_name, self.embeddings_model)

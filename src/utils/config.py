@@ -41,7 +41,6 @@ class Config(BaseModel):
         names: list[str] = Field(description="Cloud model to use")
 
     class ExperimentConfig(BaseModel):
-        use_preds: bool = Field(description="A flag to indicate if the predictions should be used in training the IIM")
         use_embedding: bool = Field(description="A flag to indicate if the embedding should be used in training the IIM")
         n_pred_vectors: int = Field(description="Number of prediction vectors to query from the cloud models")
         n_triangulation_samples: int = Field(description="Number samples to sample from the dataset to use for the triangulation")
@@ -50,7 +49,7 @@ class Config(BaseModel):
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,
-                                                           use_preds=True, use_embedding=False,
+                                                           use_embedding=False,
                                                            to_run=EXPERIMENTS.DATASET_CREATION,
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
@@ -118,8 +117,3 @@ def update_config_from_args(config: Config, args: argparse.Namespace):
         arg_name = f"experiment_{field_name.replace('-', '_')}"
         if arg_name in args_dict and args_dict[arg_name] is not None:
             setattr(config.experiment_config, field_name, args_dict[arg_name])
-
-    if len(args.cloud_names) > 0:
-        setattr(config.experiment_config, "use_preds", True)
-    else:
-        setattr(config.experiment_config, "use_preds", False)

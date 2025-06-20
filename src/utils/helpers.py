@@ -41,30 +41,17 @@ def plot_history(history, filename=None, title=None):
         plt.savefig(filename)
     plt.show()
 
-def get_number_of_samples_to_make(original_num_samples: int) -> int:
-    """
-    The size of the new dataset is:
-     1. original dataset * the total number of cloud models (because each sample gets a prediction by a different model) * number of prediction vectors to generate from each model
-        This is in case we use the cloud models
-    2. original dataset * num_pred_vec in case we are not using the cloud models
-    """
-    n_pred = config.experiment_config.n_pred_vectors
-    return (n_pred * original_num_samples * len(config.cloud_config.names)
-                                     if config.experiment_config.use_preds
-                                     else n_pred * original_num_samples
-                                     )
-
 
 def get_dataset_path(dataset_name: str, n_pred_vectors) -> pathlib.Path:
     rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
-    use_cloud_features = "cloud" if config.experiment_config.use_preds else "no_cloud"
-    cloud_models = "_".join(config.cloud_config.names) if config.experiment_config.use_preds else ""
+    use_cloud_features = "cloud" if config.cloud_config.names else "no_cloud"
+    cloud_models = "_".join(config.cloud_config.names) if config.cloud_config.names else ""
     return pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / str(n_pred_vectors)
 
 
 def get_experiment_name() -> str:
     use_embed = "emb" if config.experiment_config.use_embedding else "no_emb"
-    use_cloud = "cloud_vec" if config.experiment_config.use_preds else "no_cloud_vec"
+    use_cloud = "cloud_vec" if config.cloud_config.names else "no_cloud_vec"
     use_rotate_key = "rotate_key" if config.encoder_config.rotating_key else "no_rotate_key"
     return f"{use_rotate_key}_{use_embed}_{use_cloud}"
 
@@ -309,3 +296,6 @@ def save_cache_file(dataset_name: str, split_ratio: float, data):
 def load_prompt(path: str) -> str:
     with open(path, 'r') as f:
         return f.read()
+
+def batching(list_: list, size: int) -> Generator[list, None, None]:
+    yield from (list_[i : i + size] for i in range(0, len(list_), size))

@@ -95,30 +95,30 @@ class DatasetCreation(FeatureEngineeringPipeline):
 
         del embeddings, y_tag # No need for the embeddings & y_tag anymore
 
+        if config.cloud_config.names:
 
-        with self.cloud_model_manager as cloud:
-            # Add the cloud models prediction to the overall features (X_tag, Y_tag) if needed by the config
-            progress_bar = tqdm(total=len(encrypted), desc="Processing Cloud Models")
-
-            for x_tags in batching(encrypted, config.dataset_config.batch_size):
-                cloud_predictions = []
-
-                with tf.device(GPU_DEVICE):  # Run the models on the GPU
-                    if config.cloud_config.names:
-                        for cloud_model in config.cloud_config.names:
-                            predictions = cloud.predict(model_name=cloud_model, batch=np.vstack(x_tags))
-                            cloud_predictions.append(predictions)
-                            predictions_for_baseline.append(predictions)
-
-                        progress_bar.update(config.dataset_config.batch_size)
-
-                    else:
-                        progress_bar.close()
-
-                del x_tags
+            with self.cloud_model_manager as cloud:
+                # Add the cloud models prediction to the overall features (X_tag, Y_tag) if needed by the config
+                progress_bar = tqdm(total=len(encrypted), desc="Processing Cloud Models")
 
 
-        observations = np.hstack([observations, np.vstack(cloud_predictions)])
+                for x_tags in batching(encrypted, config.dataset_config.batch_size):
+                        cloud_predictions = []
+
+                        with tf.device(GPU_DEVICE):  # Run the models on the GPU
+                                for cloud_model in config.cloud_config.names:
+                                    predictions = cloud.predict(model_name=cloud_model, batch=np.vstack(x_tags))
+                                    cloud_predictions.append(predictions)
+                                    predictions_for_baseline.append(predictions)
+
+                                progress_bar.update(config.dataset_config.batch_size)
+
+
+                        del x_tags
+
+            # Add the cloud prediction features as well
+            observations = np.hstack([observations, np.vstack(cloud_predictions)])
+            del cloud_predictions
 
         if len(predictions_for_baseline) > 0:
             predictions_for_baseline = np.vstack(predictions_for_baseline)

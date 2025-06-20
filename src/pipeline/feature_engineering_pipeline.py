@@ -66,10 +66,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
         # 2. Embed the encryption
         y_tag = self.triangulation_embedding(y_tag)
 
-        embeddings = embeddings[:100]
-        # Start processing the data using batches. We will do it for each cloud model
-        # separately and use the cloud cache to save processed file to save up memory (no need to
-        # load the cloud model) and speed up the runtime.
+        # For test data we won't duplicate but encrypt it only once
         number_of_new_samples = (
             self.n_pred_vectors if not is_test
             else 1

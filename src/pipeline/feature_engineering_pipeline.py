@@ -71,7 +71,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
         predictions_for_baseline = []  # Will be used for the baseline
         encrypted, observations,new_y = [], [], []
 
-        data_path = get_dataset_path(self.name,self.n_pred_vectors)
+        data_path = get_dataset_path(self.name,self.n_pred_vectors, use_cloud=False)
         file_path = data_path / f"train_{ENCRYPTED_DATA_FILE_NAME}"
         if is_test:
             file_path = data_path / f"test_{ENCRYPTED_DATA_FILE_NAME}"

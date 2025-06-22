@@ -101,6 +101,11 @@ class DatasetCreation(FeatureEngineeringPipeline):
                             # No cloud models need to be used, just use the features up until now
                             observations.append(np.hstack(observation))
 
+                        if config.encoder_config.rotating_key:
+                            # Switch key for the next example
+                            self.encryptor.switch_key()
+
+
                     del x_tag, x_tag_emb
 
         cloud.__exit__(None, None, None)

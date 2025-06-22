@@ -68,71 +68,41 @@ class DatasetCreation(FeatureEngineeringPipeline):
             self.n_pred_vectors if not is_test
             else 1
         )
-        predictions_for_baseline = []  # Will be used for the baseline
-        encrypted, observations,new_y = [], [], []
+        predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
+        observations, new_y =  [], []
 
-        data_path = get_dataset_path(self.name,self.n_pred_vectors, use_cloud=False)
-        file_path = data_path / f"train_{ENCRYPTED_DATA_FILE_NAME}"
-        if is_test:
-            file_path = data_path / f"test_{ENCRYPTED_DATA_FILE_NAME}"
-        if file_path.exists():
-            with open(file_path / ENCRYPTED_DATA_FILE_NAME, "rb") as f:
-                encrypted = pickle.load(f)
-
-        else:
+        with tqdm(total=embeddings, leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
             with tf.device(GPU_DEVICE):  # Run the models on the GPU
-                for x, label in tqdm(zip(embeddings, y),total=len(embeddings), desc="Encrypting" ,leave=True, position=0):
+                logger.debug(f"Running ON GPU device: {GPU_DEVICE}")
+
+                for x, label in zip(embeddings, y):
+                    pbar.update(1)
+                    # Each samples can be duplicated
                     for _ in range(number_of_new_samples):
-                        # Encrypt and switch encryption key for each new sample
-                        encrypted.append(
-                            self.encryptor.encode(x.reshape(1, -1))
-                        )
-                        if config.encoder_config.rotating_key:
-                            self.encryptor.switch_key()
-                        # Duplicate the labels as the number of new samples. If each sample is used twice,
-                        # than the label for that sample need to be duplicated as well.
+
+                        # Duplicate the labels
                         new_y.append(label)
-                
-                # Save encrypted data for analysis and fast loading
-                with open(data_path / ENCRYPTED_DATA_FILE_NAME, "wb") as f:
-                    pickle.dump(encrypted, f)
-                
-                for x_tags in tqdm(batching(encrypted, config.dataset_config.batch_size), desc=f"Clip Embedding X_tag"):
-                    x_tags =  self.triangulation_embedding.forward(np.vstack(x_tags))
-                    observations.append(
-                        np.vstack([np.hstack([x, y_tag.flatten()]) for x in
-                                   x_tags])
-                    )  # Triangulation features vector = X', Y_1', Y_2',...
-                observations = np.vstack(observations)
 
+                        # Triangulation features vector = X', Y_1', Y_2',...
+                        x_tag = self.encryptor.encode(x.reshape(1, -1))
 
-        del embeddings, y_tag # No need for the embeddings & y_tag anymore
+                        # Embedding fore triangulation using CLIP, those are the new features
+                        x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
+                        observation = [x_tag_emb, y_tag.flatten()]
 
-        if config.cloud_config.names:
-
-            with self.cloud_model_manager as cloud:
-                # Add the cloud models prediction to the overall features (X_tag, Y_tag) if needed by the config
-                progress_bar = tqdm(total=len(encrypted), desc="Processing Cloud Models")
-
-                for x_tags in batching(encrypted, config.dataset_config.batch_size):
-                        cloud_predictions = []
-
-                        with tf.device(GPU_DEVICE):  # Run the models on the GPU
+                        # Add embedding as features if needed
+                        if config.experiment_config.use_embedding:
+                            observation.append(x)
+                        # Add the cloud predictions as features if needed:
+                        if config.cloud_config.names:
+                            with self.cloud_model_manager as cloud:
                                 for cloud_model in config.cloud_config.names:
-                                    predictions = cloud.predict(model_name=cloud_model, batch=np.vstack(x_tags))
-                                    cloud_predictions.append(predictions)
-                                    predictions_for_baseline.append(predictions)
+                                    predictions = cloud.predict(model_name=cloud_model, batch=np.vstack(x_tag))
+                                    observations.append(np.hstack([observation, predictions]))
+                        else:
+                            # No cloud models need to be used, just use the features up until now
+                            observations.append(np.hstack(observation))
 
-                                progress_bar.update(config.dataset_config.batch_size)
-
-
-            # Add the cloud prediction features as well
-            observations = np.hstack([observations, np.vstack(cloud_predictions)])
-            del cloud_predictions, encrypted
-
-        if len(predictions_for_baseline) > 0:
-            predictions_for_baseline = np.vstack(predictions_for_baseline)
-        else:
-            predictions_for_baseline = np.array(list())
+                    del x_tag, x_tag_emb, predictions
 
         return observations, np.vstack(new_y), predictions_for_baseline

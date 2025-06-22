@@ -49,6 +49,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         plot_path = path / f"{model_name}_train_plot.png"
 
                         with open(data_path, "rb") as f:
+                            logger.info(f"Loading dataset from {data_path}")
                             dataset = pickle.load(f)
 
 

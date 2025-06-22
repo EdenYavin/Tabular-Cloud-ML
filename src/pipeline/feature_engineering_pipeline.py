@@ -81,11 +81,11 @@ class DatasetCreation(FeatureEngineeringPipeline):
                         # 1. Encrypt them using the new key
                         y_tag = self.encryptor.encode(triangulation_samples)
                         # 2. Embed the encryption
-                        y_tag = self.triangulation_embedding(y_tag)
+                        y_tag_emb = self.triangulation_embedding(y_tag)
 
                         # Embedding fore triangulation using CLIP, those are the new features
                         x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
-                        observation = [x_tag_emb.flatten(), y_tag.flatten()]
+                        observation = [x_tag_emb.flatten(), y_tag_emb.flatten()]
 
                         # Add embedding as features if needed
                         if config.experiment_config.use_embedding:
@@ -106,7 +106,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
                             self.encryptor.switch_key()
 
 
-                    del x_tag, x_tag_emb
+                    del x_tag, x_tag_emb, y_tag, y_tag_emb
 
         cloud.__exit__(None, None, None)
         return np.vstack(observations), np.vstack(new_y), predictions_for_baseline

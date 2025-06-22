@@ -67,7 +67,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
         )
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
         observations, new_y =  [], []
-
+        cloud = self.cloud_model_manager.__enter__()
         with tqdm(total=len(embeddings), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
             with tf.device(GPU_DEVICE):  # Run the models on the GPU
                 logger.debug(f"Running ON GPU device: {GPU_DEVICE}")
@@ -92,14 +92,14 @@ class DatasetCreation(FeatureEngineeringPipeline):
                             observation.append(x)
                         # Add the cloud predictions as features if needed:
                         if config.cloud_config.names:
-                            with self.cloud_model_manager as cloud:
-                                for cloud_model in config.cloud_config.names:
-                                    predictions = cloud.predict(model_name=cloud_model, batch=x_tag)
-                                    observations.append(np.hstack([np.hstack(observation), predictions.flatten()]))
+                            for cloud_model in config.cloud_config.names:
+                                predictions = cloud.predict(model_name=cloud_model, batch=x_tag)
+                                observations.append(np.hstack([np.hstack(observation), predictions.flatten()]))
                         else:
                             # No cloud models need to be used, just use the features up until now
                             observations.append(np.hstack(observation))
 
                     del x_tag, x_tag_emb, predictions
 
+        cloud.__exit__(None, None, None)
         return observations, np.vstack(new_y), predictions_for_baseline

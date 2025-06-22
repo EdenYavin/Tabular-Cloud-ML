@@ -6,13 +6,10 @@ import tensorflow as tf
 
 from src.embeddings import ClipEmbedding
 from src.encryptor.base import BaseEncryptor
-from src.utils.constansts import GPU_DEVICE, ENCRYPTED_DATA_FILE_NAME
+from src.utils.constansts import GPU_DEVICE
 from src.pipeline.base import FeatureEngineeringPipeline
 from src.utils.config import config
 from loguru import logger
-
-from src.utils.helpers import batching, get_dataset_path
-
 
 class DatasetCreation(FeatureEngineeringPipeline):
 
@@ -71,7 +68,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
         observations, new_y =  [], []
 
-        with tqdm(total=embeddings, leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
+        with tqdm(total=len(embeddings), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
             with tf.device(GPU_DEVICE):  # Run the models on the GPU
                 logger.debug(f"Running ON GPU device: {GPU_DEVICE}")
 

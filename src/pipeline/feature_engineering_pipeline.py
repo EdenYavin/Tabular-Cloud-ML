@@ -95,11 +95,13 @@ class DatasetCreation(FeatureEngineeringPipeline):
                             for cloud_model in config.cloud_config.names:
                                 predictions = cloud.predict(model_name=cloud_model, batch=x_tag)
                                 observations.append(np.hstack([np.hstack(observation), predictions.flatten()]))
+
+                                del predictions
                         else:
                             # No cloud models need to be used, just use the features up until now
                             observations.append(np.hstack(observation))
 
-                    del x_tag, x_tag_emb, predictions
+                    del x_tag, x_tag_emb
 
         cloud.__exit__(None, None, None)
         return np.vstack(observations), np.vstack(new_y), predictions_for_baseline

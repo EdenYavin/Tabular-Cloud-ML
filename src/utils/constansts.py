@@ -207,6 +207,7 @@ GPU_DEVICE = (CPU_DEVICE if len(tf.config.get_visible_devices()) == 1
 
 ENCRYPTOR_MODEL_FILE_NAME = 'encryptor.h5'
 ENCRYPTOR_MODELS_DIR_NAME = "encryptor"
+ENCRYPTED_DATA_FILE_NAME = 'encrypted_data.pkl'
 ENCRYPTOR_MODELS_DIR_PATH = os.path.join(STORE_PATH, ENCRYPTOR_MODELS_DIR_NAME)
 os.makedirs(ENCRYPTOR_MODELS_DIR_PATH, exist_ok=True)
 

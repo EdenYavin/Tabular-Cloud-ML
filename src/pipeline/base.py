@@ -1,3 +1,4 @@
+import gc
 from abc import ABC, abstractmethod
 import numpy as np
 from keras.src.utils import to_categorical
@@ -33,7 +34,9 @@ class FeatureEngineeringPipeline(ABC):
         # One hot encode the labels
         num_classes = len(np.unique(y_train))
         y_train = to_categorical(y_train, num_classes=num_classes)
+        gc.collect()
         y_test = to_categorical(y_test, num_classes=num_classes)
+        gc.collect()
 
         embeddings_baseline = EmbeddingBaselineDataset(
             train=EmbeddingBaselineFeatures(embeddings=X_emb_train, labels=y_train),

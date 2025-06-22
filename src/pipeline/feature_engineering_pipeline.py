@@ -1,18 +1,17 @@
+import pickle
 
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
 
-from src.cloud import CloudModelManager
-from src.domain.dataset import Batch
 from src.embeddings import ClipEmbedding
 from src.encryptor.base import BaseEncryptor
-from src.utils.constansts import GPU_DEVICE
+from src.utils.constansts import GPU_DEVICE, ENCRYPTED_DATA_FILE_NAME
 from src.pipeline.base import FeatureEngineeringPipeline
 from src.utils.config import config
 from loguru import logger
 
-from src.utils.helpers import batching
+from src.utils.helpers import batching, get_dataset_path
 
 
 class DatasetCreation(FeatureEngineeringPipeline):
@@ -28,6 +27,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
         if config.cloud_config.names:
             logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")
 
+    
     def _get_features(self, embeddings, y, is_test):
         """
         Get features from embeddings for training or testing.
@@ -56,11 +56,8 @@ class DatasetCreation(FeatureEngineeringPipeline):
         Raises:
         None
         """
-        predictions_for_baseline = [] # Will be used for the baseline
-
+        # Add the new triangulation samples' embedding as well
         triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
-
-        # Add the new triangulation samples' embedding as well:
         # 1. Encrypt them
         y_tag = self.encryptor.encode(triangulation_samples)
         # 2. Embed the encryption
@@ -71,26 +68,42 @@ class DatasetCreation(FeatureEngineeringPipeline):
             self.n_pred_vectors if not is_test
             else 1
         )
+        predictions_for_baseline = []  # Will be used for the baseline
         encrypted, observations,new_y = [], [], []
-        with tf.device(GPU_DEVICE):  # Run the models on the GPU
-            for x, label in tqdm(zip(embeddings, y),total=len(embeddings), desc="Encrypting" ,leave=True, position=0):
-                for _ in range(number_of_new_samples):
-                    # Encrypt and switch encryption key for each new sample
-                    encrypted.append(
-                        self.encryptor.encode(x.reshape(1, -1))
-                    )
-                    if config.encoder_config.rotating_key:
-                        self.encryptor.switch_key()
 
-                    new_y.append(label) # Duplicate the labels as the number of new samples
+        data_path = get_dataset_path(self.name,self.n_pred_vectors)
+        file_path = data_path / f"train_{ENCRYPTED_DATA_FILE_NAME}"
+        if is_test:
+            file_path = data_path / f"test_{ENCRYPTED_DATA_FILE_NAME}"
+        if file_path.exists():
+            with open(file_path / ENCRYPTED_DATA_FILE_NAME, "rb") as f:
+                encrypted = pickle.load(f)
 
-            for x_tags in tqdm(batching(encrypted, config.dataset_config.batch_size), desc="Embedding X_tag"):
-                x_tags =  self.triangulation_embedding.forward(np.vstack(x_tags))
-                observations.append(
-                    np.vstack([np.hstack([x, y_tag.flatten()]) for x in
-                               x_tags])
-                )  # Triangulation features vector = X', Y_1', Y_2',...
-            observations = np.vstack(observations)
+        else:
+            with tf.device(GPU_DEVICE):  # Run the models on the GPU
+                for x, label in tqdm(zip(embeddings, y),total=len(embeddings), desc="Encrypting" ,leave=True, position=0):
+                    for _ in range(number_of_new_samples):
+                        # Encrypt and switch encryption key for each new sample
+                        encrypted.append(
+                            self.encryptor.encode(x.reshape(1, -1))
+                        )
+                        if config.encoder_config.rotating_key:
+                            self.encryptor.switch_key()
+                        # Duplicate the labels as the number of new samples. If each sample is used twice,
+                        # than the label for that sample need to be duplicated as well.
+                        new_y.append(label)
+                
+                # Save encrypted data for analysis and fast loading
+                with open(data_path / ENCRYPTED_DATA_FILE_NAME, "wb") as f:
+                    pickle.dump(encrypted, f)
+                
+                for x_tags in tqdm(batching(encrypted, config.dataset_config.batch_size), desc=f"Clip Embedding X_tag"):
+                    x_tags =  self.triangulation_embedding.forward(np.vstack(x_tags))
+                    observations.append(
+                        np.vstack([np.hstack([x, y_tag.flatten()]) for x in
+                                   x_tags])
+                    )  # Triangulation features vector = X', Y_1', Y_2',...
+                observations = np.vstack(observations)
 
 
         del embeddings, y_tag # No need for the embeddings & y_tag anymore
@@ -100,7 +113,6 @@ class DatasetCreation(FeatureEngineeringPipeline):
             with self.cloud_model_manager as cloud:
                 # Add the cloud models prediction to the overall features (X_tag, Y_tag) if needed by the config
                 progress_bar = tqdm(total=len(encrypted), desc="Processing Cloud Models")
-
 
                 for x_tags in batching(encrypted, config.dataset_config.batch_size):
                         cloud_predictions = []
@@ -114,11 +126,9 @@ class DatasetCreation(FeatureEngineeringPipeline):
                                 progress_bar.update(config.dataset_config.batch_size)
 
 
-                        del x_tags
-
             # Add the cloud prediction features as well
             observations = np.hstack([observations, np.vstack(cloud_predictions)])
-            del cloud_predictions
+            del cloud_predictions, encrypted
 
         if len(predictions_for_baseline) > 0:
             predictions_for_baseline = np.vstack(predictions_for_baseline)

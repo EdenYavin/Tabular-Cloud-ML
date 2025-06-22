@@ -28,6 +28,15 @@ def main():
     action="store_true",  # Sets to True if flag is present
     help="Use triangulation samples or not")
 
+    parser.add_argument(
+        "--dataset-batch-size",
+        type=int,
+        default=100,
+        dest="dastaset_batch_size",
+        help="Batch size for dataset creation. In the feature engineering pipeline we will iterate the raw dataset"
+             " with batches where each batch has the dataset_batch_size"
+    )
+
     # Example of using 'dest'
     parser.add_argument(
         "--number-of-prediction-vector",  # User-facing name

@@ -55,10 +55,6 @@ class DatasetCreation(FeatureEngineeringPipeline):
         """
         # Add the new triangulation samples' embedding as well
         triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
-        # 1. Encrypt them
-        y_tag = self.encryptor.encode(triangulation_samples)
-        # 2. Embed the encryption
-        y_tag = self.triangulation_embedding(y_tag)
 
         # For test data we won't duplicate but encrypt it only once
         number_of_new_samples = (
@@ -82,6 +78,10 @@ class DatasetCreation(FeatureEngineeringPipeline):
 
                         # Triangulation features vector = X', Y_1', Y_2',...
                         x_tag = self.encryptor.encode(x.reshape(1, -1))
+                        # 1. Encrypt them using the new key
+                        y_tag = self.encryptor.encode(triangulation_samples)
+                        # 2. Embed the encryption
+                        y_tag = self.triangulation_embedding(y_tag)
 
                         # Embedding fore triangulation using CLIP, those are the new features
                         x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))

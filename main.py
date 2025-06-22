@@ -64,6 +64,14 @@ def main():
         help="The raw dataset(s) used to create the new cloud features dataset."
     )
 
+    parser.add_argument(
+        "--iim-epochs",
+        type=int,
+        dest="iim_neural_net_epochs",  # Internal name for your config
+        default=30,
+        help="The number of epochs to use for training the model."
+    )
+
     args = parser.parse_args()
 
     update_config_from_args(config, args)

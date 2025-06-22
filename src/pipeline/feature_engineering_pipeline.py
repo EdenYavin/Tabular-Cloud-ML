@@ -102,4 +102,4 @@ class DatasetCreation(FeatureEngineeringPipeline):
                     del x_tag, x_tag_emb, predictions
 
         cloud.__exit__(None, None, None)
-        return observations, np.vstack(new_y), predictions_for_baseline
+        return np.vstack(observations), np.vstack(new_y), predictions_for_baseline

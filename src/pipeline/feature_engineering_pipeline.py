@@ -94,7 +94,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
                         if config.cloud_config.names:
                             with self.cloud_model_manager as cloud:
                                 for cloud_model in config.cloud_config.names:
-                                    predictions = cloud.predict(model_name=cloud_model, batch=np.vstack(x_tag))
+                                    predictions = cloud.predict(model_name=cloud_model, batch=x_tag)
                                     observations.append(np.hstack([observation, predictions]))
                         else:
                             # No cloud models need to be used, just use the features up until now

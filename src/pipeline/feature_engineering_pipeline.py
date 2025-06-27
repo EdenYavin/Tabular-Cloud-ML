@@ -73,9 +73,6 @@ class DatasetCreation(FeatureEngineeringPipeline):
                     # Each samples can be duplicated
                     for _ in range(number_of_new_samples):
 
-                        # Duplicate the labels
-                        new_y.append(label)
-
                         # Triangulation features vector = X', Y_1', Y_2',...
                         x_tag = self.encryptor.encode(x.reshape(1, -1))
                         # 1. Encrypt them using the new key
@@ -95,11 +92,14 @@ class DatasetCreation(FeatureEngineeringPipeline):
                             for cloud_model in config.cloud_config.names:
                                 predictions = cloud.predict(model_name=cloud_model, batch=x_tag)
                                 observations.append(np.hstack([np.hstack(observation), predictions.flatten()]))
-
+                                # Duplicate the labels
+                                new_y.append(label)
                                 del predictions
                         else:
                             # No cloud models need to be used, just use the features up until now
                             observations.append(np.hstack(observation))
+                            # Duplicate the labels
+                            new_y.append(label)
 
                         if config.encoder_config.rotating_key:
                             # Switch key for the next example

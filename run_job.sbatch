@@ -18,4 +18,4 @@ module load anaconda
 source activate tabml
 
 # Run your experiment
-python main.py --experiment-to-run dataset_creation --encoder-rotating-key --datasets mushroom --number-of-prediction-vector 4 --use-cloud-models xception
+python main.py --experiment-to-run dataset_creation --encoder-rotating-key --datasets mushroom --number-of-prediction-vector 1 2 3 4 --use-cloud-models xception densenet

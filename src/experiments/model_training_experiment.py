@@ -58,8 +58,8 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                             input_shape=dataset.train.features.shape[1],
                             type=model_name
                         )
-                        logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} ####\n"
-                                     f" Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
+                        logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} ####"
+                                     f" Dataset Shape: Train - {dataset.train.features.shape}, Test: {dataset.test.features.shape}")
                         internal_model.fit(
                             X=dataset.train.features, y=dataset.train.labels,
                             validation_data=(dataset.test.features, dataset.test.labels),

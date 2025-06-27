@@ -15,13 +15,13 @@ from src.utils.config import config
 def plot_history(history, filename=None, title=None):
     """Plot and optionally save training curves"""
     plt.figure(figsize=(12, 6))
-
+    plt.title(title or "Training Curve")
     # Plot loss
     plt.subplot(1, 2, 1)
     plt.plot(history.history['loss'], label='Training Loss')
     if 'val_loss' in history.history:
         plt.plot(history.history['val_loss'], label='Validation Loss')
-    plt.title('Loss Curves' or title)
+    plt.title('Loss Curves')
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend()

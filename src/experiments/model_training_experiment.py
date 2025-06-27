@@ -69,7 +69,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         )
 
                         internal_model.save_history(history_path)
-                        internal_model.plot_history(plot_path, title=f"Loss Curve {dataset_name} Dataset,"
+                        internal_model.plot_history(plot_path, title=f"{dataset_name} Dataset,"
                                                                      f" Internal Model {model_name}"
                                                                      f", Samples: {dataset.test.features.shape[0]}")
 

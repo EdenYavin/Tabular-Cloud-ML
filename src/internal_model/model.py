@@ -99,7 +99,7 @@ class LSTMIIM(NeuralNetworkInternalModel):
         input_shape = kwargs.get("input_shape")
         self.model = self.get_model(num_classes=num_classes, input_shape=input_shape)
 
-    def build_model(input_shape, num_classes):
+    def get_model(self, num_classes, input_shape):
         # L2 regularization with λ=0.001
         reg = regularizers.L2(0.001)
 

@@ -128,7 +128,9 @@ class LSTMIIM(NeuralNetworkInternalModel):
 
         # Dense layers with dropout
         x = Dense(32, activation='leaky_relu', kernel_regularizer=reg)(x)
+        x = Dropout(0.2)(x)
         x = Dense(16, activation='leaky_relu', kernel_regularizer=reg)(x)
+        x = Dropout(0.2)(x)
         outputs = Dense(num_classes, activation='softmax')(x)
 
         model = Model(inputs=inputs, outputs=outputs)

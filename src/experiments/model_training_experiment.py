@@ -69,9 +69,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         )
 
                         internal_model.save_history(history_path)
-                        internal_model.plot_history(plot_path, title=f"{dataset_name} Dataset,"
-                                                                     f" Internal Model {model_name}"
-                                                                     f", Samples: {dataset.test.features.shape[0]}")
+                        internal_model.plot_history(plot_path)
 
                         if config.iim_config.train_baseline:
                             baseline_path = path / BASELINE_DATASET_FILE_NAME

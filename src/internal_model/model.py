@@ -102,34 +102,36 @@ class LSTMIIM(NeuralNetworkInternalModel):
     def get_model(self, num_classes, input_shape):
         # L2 regularization with λ=0.001
         # reg = regularizers.L2(0.001)
-        reg = regularizers.L2(0.)
+        reg = regularizers.L2(0.001)
 
         inputs = Input(shape=(1, input_shape))
 
         # LSTM layers with dropout and recurrent dropout
         x = LSTM(units=1024, return_sequences=True,
                  kernel_regularizer=reg, recurrent_regularizer=reg,
-                 dropout=0.0, recurrent_dropout=0.0)(inputs)
+                 dropout=0.2, recurrent_dropout=0.1)(inputs)
 
         x = LSTM(units=512, return_sequences=True,
                  kernel_regularizer=reg, recurrent_regularizer=reg,
-                 dropout=0.0, recurrent_dropout=0.0)(x)
+                 dropout=0.2, recurrent_dropout=0.1)(x)
 
         x = LSTM(units=256, return_sequences=True,
                  kernel_regularizer=reg, recurrent_regularizer=reg,
-                 dropout=0.0, recurrent_dropout=0.0)(x)
+                 dropout=0.2, recurrent_dropout=0.1)(x)
 
         x = LSTM(units=128, return_sequences=True,
                  kernel_regularizer=reg, recurrent_regularizer=reg,
-                 dropout=0.0, recurrent_dropout=0.0)(x)
+                 dropout=0.2, recurrent_dropout=0.1)(x)
 
         x = LSTM(units=64, return_sequences=False,
                  kernel_regularizer=reg, recurrent_regularizer=reg,
-                 dropout=0.0, recurrent_dropout=0.0)(x)
+                 dropout=0.2, recurrent_dropout=0.1)(x)
 
         # Dense layers with dropout
         x = Dense(32, activation='leaky_relu', kernel_regularizer=reg)(x)
+        x = Dropout(0.2)(x)
         x = Dense(16, activation='leaky_relu', kernel_regularizer=reg)(x)
+        x = Dropout(0.2)(x)
         outputs = Dense(num_classes, activation='softmax')(x)
 
         model = Model(inputs=inputs, outputs=outputs)

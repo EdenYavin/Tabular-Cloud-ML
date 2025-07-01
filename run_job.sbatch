@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --partition=main                     # Use 'main' partition unless told otherwise
-#SBATCH --time=0-20:00:00                    # Set job time limit to 10 hours (adjust as needed)
+#SBATCH --time=0-30:00:00                    # Set job time limit to 10 hours (adjust as needed)
 #SBATCH --job-name=tabml_mushroom            # Name your job for easier tracking
 #SBATCH --output=tabml_mushroom-%J.out       # Output log file, %J will be replaced by job ID
 #SBATCH --mail-user=your.email@post.bgu.ac.il  # Change to your own BGU email for notifications

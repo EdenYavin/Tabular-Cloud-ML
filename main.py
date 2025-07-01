@@ -2,6 +2,7 @@ import argparse
 
 import src.utils.constansts as consts
 from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandler, ModelTrainingExperimentHandler
+from src.experiments.model_training_loop import ModelTrainingLoopExperimentHandler
 from src.utils.config import config, update_config_from_args
 import tensorflow as tf
 import numpy as np
@@ -97,6 +98,8 @@ def main():
     elif config.experiment_config.to_run == consts.EXPERIMENTS.DATASET_CREATION:
         experiment_handler = DatasetCreationHandler
 
+    elif config.experiment_config.to_run == consts.EXPERIMENTS.MODEL_TRAINING:
+        experiment_handler = ModelTrainingLoopExperimentHandler
     else:
         experiment_handler = ModelTrainingExperimentHandler
 

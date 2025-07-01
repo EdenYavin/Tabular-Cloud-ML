@@ -52,6 +52,7 @@ class DATASETS(str, enum.Enum):
 class EXPERIMENTS(str, enum.Enum):
     DATASET_CREATION = "dataset_creation"
     MODEL_TRAINING = "model_training"
+    TRAINING_LOOP = "training_loop"
     GLOBAL_EMBEDDINGS = "global_embeddings"
     PREDICTIONS_LEARNING = "predictions_learning"
     INCREMENT_EVALUATION = "increment_eval"

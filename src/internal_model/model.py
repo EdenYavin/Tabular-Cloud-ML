@@ -140,6 +140,9 @@ class LSTMIIM(NeuralNetworkInternalModel):
                       metrics=['accuracy'])
         return model
 
+    def prepare_data_for_training(self, X,y):
+        return tf.reshape(X, [-1, 1, X.shape[-1]]), y
+
     def fit(self, X, y, validation_data=None):
         X = X.reshape(-1, 1, X.shape[1])
         if validation_data:

@@ -40,6 +40,9 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
         self.model: Model = None
         self.history = None
 
+    def prepare_data_for_training(self, X,y):
+        return X, y
+
     def fit(self, X, y, validation_data=None):
         tf.debugging.set_log_device_placement(True)
         with tf.device('/GPU:0'):

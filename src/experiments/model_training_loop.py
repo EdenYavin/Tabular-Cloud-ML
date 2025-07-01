@@ -1,11 +1,12 @@
 import gc, numpy as np
+import json
 import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import keras
 import tensorflow as tf
 
-from src.internal_model import InternalInferenceModelFactory
+from src.internal_model import InternalInferenceModelFactory, LSTMIIM
 from src.dataset import DatasetFactory, RawDataset
 from src.utils.config import config
 from loguru import logger
@@ -17,6 +18,7 @@ from src.embeddings import EmbeddingsFactory, ClipEmbedding
 from src.cloud import CLOUD_MODELS, DEFAULT_CLOUD_OUTPUT_SHAPE, CloudModelManager
 
 def plot(val_losses, train_losses, val_accuracies, train_accuracies, dataset_name, model_name, n_pred_vectors=1):
+
     path = get_dataset_path(dataset_name=dataset_name, n_pred_vectors=n_pred_vectors)
     plot_path = path / f"{model_name}_train_plot.png"
     os.makedirs(path, exist_ok=True)
@@ -44,7 +46,7 @@ def plot(val_losses, train_losses, val_accuracies, train_accuracies, dataset_nam
         plt.ylabel('Accuracy')
         plt.xlabel('Epoch')
         plt.legend()
-
+    logger.info(f"Saving plot to: {plot_path}")
     plt.savefig(plot_path)
 
 
@@ -96,6 +98,17 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
     def __init__(self):
         super().__init__(get_experiment_name())
+        self.checkpoint_metadata = {}
+
+    def _load_checkpoint_medata(self, dataset_name):
+        path = get_dataset_path(dataset_name, 1)
+        checkpoint_path = path / "checkpoint.json"
+        if checkpoint_path.exists():
+            with open(checkpoint_path, "r") as f:
+                self.checkpoint_metadata = json.load(f)
+        else:
+            self.checkpoint_metadata['start_epoch'] = 0
+            self.checkpoint_metadata['model_file'] = None
 
     def run_experiment(self):
 
@@ -105,6 +118,8 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
         triangulation_embedding = ClipEmbedding()
 
         for dataset_name in config.dataset_config.names:
+
+            self._load_checkpoint_medata(dataset_name)
 
             raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
             logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}")
@@ -127,7 +142,11 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                 logger.info(f"#### Training model experiment: "
                             f"Dataset: {dataset_name}, Model: {model_name} ####")
 
-                model, prepare_data_func = None, None
+
+                if self.checkpoint_metadata['model_file']:
+                    model = keras.models.load_model(self.checkpoint_metadata['model_file'])
+                else:
+                    model = None
 
                 with tf.device('/GPU:0'):
                     logger.info(
@@ -139,64 +158,73 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                     optimizer = keras.optimizers.Adam()
                     loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
-                    for epoch in range(config.iim_config.neural_net_config.epochs):
+                    logger.warning(f"Starting from Epoch: {self.checkpoint_metadata['start_epoch']}")
+                    for epoch in range(self.checkpoint_metadata['start_epoch'], config.iim_config.neural_net_config.epochs):
+                        try:
+                            new_X_train, new_y_train = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_train, y_train)
+                            new_X_test, new_y_test = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_test, y_test)
+                            train_dataset = tf.data.Dataset.from_tensor_slices((new_X_train, new_y_train)).batch(config.iim_config.neural_net_config.batch_size)
+                            test_dataset = tf.data.Dataset.from_tensor_slices((new_X_test, new_y_test)).batch(config.iim_config.neural_net_config.batch_size)
+                            gc.collect()
 
-                        new_X_train, new_y_train = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_train, y_train)
-                        new_X_test, new_y_test = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_test, y_test)
-                        train_dataset = tf.data.Dataset.from_tensor_slices((new_X_train, new_y_train)).batch(config.iim_config.neural_net_config.batch_size)
-                        test_dataset = tf.data.Dataset.from_tensor_slices((new_X_test, new_y_test)).batch(config.iim_config.neural_net_config.batch_size)
-                        gc.collect()
-                        if not model:
-                            # Init model once in the loop as we need the input size
-                            iim = InternalInferenceModelFactory().get_model(
-                                num_classes=n_classes,
-                                input_shape=new_X_train.shape[1],
-                                type=model_name
-                            )
-                            model = iim.model
-                            prepare_data_func = iim.prepare_data_for_training
 
-                        # Iterate over batches
-                        for step, (x_batch, y_batch) in enumerate(train_dataset):
-                            # Forward pass + gradients
-                            with tf.GradientTape() as tape:
-                                x_batch, y_batch = prepare_data_func(x_batch, y_batch)
-                                logits = model(x_batch, training=True)
-                                loss = loss_fn(y_batch, logits)
-                                acc = tf.reduce_mean(keras.metrics.sparse_categorical_accuracy(y_batch, logits))
+                            if not model:
+                                model = LSTMIIM(num_classes=n_classes,
+                                    input_shape=new_X_train.shape[1],
+                                    type=model_name).model
 
-                            # Backpropagation
-                            gradients = tape.gradient(loss, model.trainable_weights)
-                            optimizer.apply_gradients(zip(gradients, model.trainable_weights))
+                            # Iterate over batches
+                            for step, (x_batch, y_batch) in enumerate(train_dataset):
+                                # Forward pass + gradients
+                                with tf.GradientTape() as tape:
+                                    x_batch, y_batch = LSTMIIM.prepare_data_for_training(x_batch, y_batch)
+                                    logits = model(x_batch, training=True)
+                                    loss = loss_fn(y_batch, logits)
+                                    acc = tf.reduce_mean(keras.metrics.sparse_categorical_accuracy(y_batch, logits))
 
-                            # Record batch metrics
-                            epoch_train_loss.append(loss.numpy())
-                            epoch_train_acc.append(acc.numpy())
+                                # Backpropagation
+                                gradients = tape.gradient(loss, model.trainable_weights)
+                                optimizer.apply_gradients(zip(gradients, model.trainable_weights))
 
-                        # Calculate epoch averages
-                        train_losses.append(np.mean(epoch_train_loss))
-                        current_train_acc = np.mean(epoch_train_acc)
-                        train_accuracies.append(current_train_acc)
+                                # Record batch metrics
+                                epoch_train_loss.append(loss.numpy())
+                                epoch_train_acc.append(acc.numpy())
 
-                        epoch_val_loss = []
-                        epoch_val_acc = []
+                            # Calculate epoch averages
+                            current_train_loss = np.mean(epoch_train_loss)
+                            train_losses.append(current_train_loss)
+                            current_train_acc = np.mean(epoch_train_acc)
+                            train_accuracies.append(current_train_acc)
 
-                        for step, (x_val_batch, y_val_batch) in enumerate(test_dataset):
-                            x_val_batch, y_val_batch = prepare_data_func(x_val_batch, y_val_batch)
-                            val_logits = model(x_val_batch, training=False)
-                            val_loss = loss_fn(y_val_batch, val_logits)
-                            val_acc = tf.reduce_mean(
-                                keras.metrics.sparse_categorical_accuracy(y_val_batch, val_logits))
-                            epoch_val_loss.append(val_loss.numpy())
-                            epoch_val_acc.append(val_acc.numpy())
+                            epoch_val_loss = []
+                            epoch_val_acc = []
 
-                        val_losses.append(np.mean(epoch_val_loss))
-                        current_val_acc = np.mean(epoch_val_acc)
-                        val_accuracies.append(current_val_acc)
+                            for step, (x_val_batch, y_val_batch) in enumerate(test_dataset):
+                                x_val_batch, y_val_batch = LSTMIIM.prepare_data_for_training(x_val_batch, y_val_batch)
+                                val_logits = model(x_val_batch, training=False)
+                                val_loss = loss_fn(y_val_batch, val_logits)
+                                val_acc = tf.reduce_mean(
+                                    keras.metrics.sparse_categorical_accuracy(y_val_batch, val_logits))
+                                epoch_val_loss.append(val_loss.numpy())
+                                epoch_val_acc.append(val_acc.numpy())
 
-                        print(f"\nEpoch {epoch + 1}/100: Train Acc: {current_train_acc:.4f}, Val Acc: {current_val_acc:.4f}")
+                            current_val_loss = np.mean(epoch_val_loss)
+                            val_losses.append(current_val_loss)
+                            current_val_acc = np.mean(epoch_val_acc)
+                            val_accuracies.append(current_val_acc)
+
+                            print(f"\nEpoch {epoch + 1}/100: Train Loss: {current_train_loss:.4f}, Val Loss: {current_val_loss:.4f}, Train Acc: {current_train_acc:.4f}, Val Acc: {current_val_acc:.4f}")
+                            plot(train_losses, val_losses, train_accuracies, val_accuracies, dataset_name, model_name)
+
+                        except Exception as e:
+                            logger.error(f"Error in training: {e}")
+                            path = get_dataset_path(dataset_name, 1)
+                            model_path = path / f"{model_name}_{epoch}.keras"
+                            self.checkpoint_metadata['model_file'] = model_path
+                            self.checkpoint_metadata['start_epoch'] = epoch
+                            logger.warning(f"Saving checkpoint to: {model_path}")
+                            model.save(model_path)
 
                 cloud.__exit__(None, None, None)
-                plot(train_losses, val_losses, train_accuracies, val_accuracies, dataset_name, model_name)
 
         return self.report

@@ -125,7 +125,8 @@ class LSTMIIM(NeuralNetworkInternalModel):
                       metrics=['accuracy'])
         return model
 
-    def prepare_data_for_training(self, X,y):
+    @staticmethod
+    def prepare_data_for_training(X,y):
         return tf.reshape(X, [-1, 1, X.shape[-1]]), y
 
     def fit(self, X, y, validation_data=None):

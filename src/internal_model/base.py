@@ -40,7 +40,8 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
         self.model: Model = None
         self.history = None
 
-    def prepare_data_for_training(self, X,y):
+    @staticmethod
+    def prepare_data_for_training(X,y):
         return X, y
 
     def fit(self, X, y, validation_data=None):

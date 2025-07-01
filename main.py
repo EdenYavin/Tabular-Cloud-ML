@@ -98,7 +98,7 @@ def main():
     elif config.experiment_config.to_run == consts.EXPERIMENTS.DATASET_CREATION:
         experiment_handler = DatasetCreationHandler
 
-    elif config.experiment_config.to_run == consts.EXPERIMENTS.MODEL_TRAINING:
+    elif config.experiment_config.to_run == consts.EXPERIMENTS.TRAINING_LOOP:
         experiment_handler = ModelTrainingLoopExperimentHandler
     else:
         experiment_handler = ModelTrainingExperimentHandler

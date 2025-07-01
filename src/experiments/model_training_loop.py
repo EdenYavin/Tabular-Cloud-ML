@@ -116,9 +116,7 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
             db = EmbeddingDBFactory.get_db(dataset_name, embedding_model)
             X_train = db.get_embedding(X_train, is_test=False)
-            X_train = np.vstack(X_train)[:10, :]
             X_test = db.get_embedding(X_test, is_test=True)
-            X_test = np.vstack(X_test)[:10, :]
 
             del db, embedding_model
             gc.collect()

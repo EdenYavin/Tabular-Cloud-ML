@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import keras
 import tensorflow as tf
+import warnings
+
+warnings.filterwarnings('ignore')
+
 
 from src.internal_model import InternalInferenceModelFactory, LSTMIIM
 from src.dataset import DatasetFactory, RawDataset
@@ -165,8 +169,6 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                             new_X_test, new_y_test = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_test, y_test)
                             train_dataset = tf.data.Dataset.from_tensor_slices((new_X_train, new_y_train)).batch(config.iim_config.neural_net_config.batch_size)
                             test_dataset = tf.data.Dataset.from_tensor_slices((new_X_test, new_y_test)).batch(config.iim_config.neural_net_config.batch_size)
-                            gc.collect()
-
 
                             if not model:
                                 model = LSTMIIM(num_classes=n_classes,
@@ -215,6 +217,8 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
                             print(f"\nEpoch {epoch + 1}/100: Train Loss: {current_train_loss:.4f}, Val Loss: {current_val_loss:.4f}, Train Acc: {current_train_acc:.4f}, Val Acc: {current_val_acc:.4f}")
                             plot(train_losses, val_losses, train_accuracies, val_accuracies, dataset_name, model_name)
+                            del new_X_train, new_X_test, new_y_train, new_y_test, train_dataset, test_dataset, x_val_batch, x_batch, y_batch, y_val_batch
+                            gc.collect()
 
                         except Exception as e:
                             logger.error(f"Error in training: {e}")

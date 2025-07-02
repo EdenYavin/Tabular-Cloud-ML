@@ -5,7 +5,8 @@
 #SBATCH --output=tabml_mushroom-%J.out       # Output log file, %J will be replaced by job ID
 #SBATCH --mail-user=your.email@post.bgu.ac.il  # Change to your own BGU email for notifications
 #SBATCH --mail-type=BEGIN,END,FAIL           # Get email on job start, end, or failure
-#SBATCH --gpus=1                             # Request 1 GPU
+#SBATCH --gpus=rtx_3090:1                             # Request 1 GPU
+#SBATCH --mem=32G                 # Request 32 GB of RAM
 
 # Print SLURM job info for debugging
 echo "SLURM_JOBID=$SLURM_JOBID"

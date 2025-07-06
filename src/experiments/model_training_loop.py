@@ -77,7 +77,9 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, y):
             y_tag_emb = triangulation_embedding(y_tag)
 
             x_tag_emb = triangulation_embedding.forward(np.vstack(x_tag))
+
             observation = [x_tag_emb.flatten(), y_tag_emb.flatten()]
+            del x_tag, x_tag_emb, y_tag_emb, y_tag_emb
 
             # Add the cloud predictions as features if needed:
             if config.cloud_config.names:
@@ -95,6 +97,8 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, y):
             if config.encoder_config.rotating_key:
                 # Switch key for the next example
                 encryptor.switch_key()
+
+    del triangulation_samples, encryptor
 
     return np.vstack(observations), np.vstack(new_y)
 
@@ -140,12 +144,10 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
             del db, embedding_model
             gc.collect()
 
-
             for model_name in config.iim_config.name:
 
                 logger.info(f"#### Training model experiment: "
                             f"Dataset: {dataset_name}, Model: {model_name} ####")
-
 
                 if self.checkpoint_metadata['model_file']:
                     model = keras.models.load_model(self.checkpoint_metadata['model_file'])

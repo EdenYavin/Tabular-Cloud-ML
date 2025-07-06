@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --partition=main                     # Use 'main' partition unless told otherwise
 #SBATCH --time=0-30:00:00                    # Set job time limit to 10 hours (adjust as needed)
-#SBATCH --job-name=tabml_mushroom_training_loop            # Name your job for easier tracking
-#SBATCH --output=tabml_mushroom_cloud-%J.out       # Output log file, %J will be replaced by job ID
+#SBATCH --job-name=tabml_ring_training_loop            # Name your job for easier tracking
+#SBATCH --output=tabml_ring_cloud-%J.out       # Output log file, %J will be replaced by job ID
 #SBATCH --mail-user=edenyav@post.bgu.ac.il  # Change to your own BGU email for notifications
 #SBATCH --mail-type=BEGIN,END,FAIL           # Get email on job start, end, or failure
 #SBATCH --gpus=rtx_3090:1                             # Request 1 GPU
@@ -19,4 +19,4 @@ module load anaconda
 source activate tabml
 
 # Run your experiment
-python main.py --experiment-to-run training_loop --encoder-rotating-key --datasets mushroom --use-cloud-models xception --number-of-prediction-vector 1 --iim-epochs 100
+python main.py --experiment-to-run training_loop --encoder-rotating-key --datasets ring --use-cloud-models xception --number-of-prediction-vector 1 --iim-epochs 100

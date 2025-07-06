@@ -19,4 +19,4 @@ module load anaconda
 source activate tabml
 
 # Run your experiment
-python main.py --experiment-to-run training_loop --encoder-rotating-key --datasets mushroom --number-of-prediction-vector 1 --iim-epochs 100
+python main.py --experiment-to-run training_loop --encoder-rotating-key --datasets ring --number-of-prediction-vector 1 --iim-epochs 100

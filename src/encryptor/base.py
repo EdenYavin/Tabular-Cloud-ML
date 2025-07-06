@@ -37,7 +37,7 @@ class BaseEncryptor:
         self.input_shape = inputs.shape[1:]
         self.output_shape = self.output_shape or (1, inputs.shape[2])
 
-        model_path = os.path.join(ENCRYPTOR_MODELS_DIR_PATH, f"{self.dataset_name}_{embedding_name}.h5")
+        model_path = os.path.join(ENCRYPTOR_MODELS_DIR_PATH, f"{self.dataset_name}_{embedding_name}.keras")
         if self.model is None:
             if os.path.exists(model_path) and not config.encoder_config.rotating_key:
                 self.model = load_model(model_path)

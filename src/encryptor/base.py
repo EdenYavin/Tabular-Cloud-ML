@@ -43,7 +43,10 @@ class BaseEncryptor:
                 self.model = load_model(model_path)
             else:
                 self.model = self.build_generator(self.input_shape, self.output_shape)
-                self.save_model(model_path)
+                if not os.path.exists(model_path):
+                    # We don't want to trigger saving each time, only once.
+                    # No need to save the same model multiple times
+                    self.save_model(model_path)
 
         return self.model(inputs).numpy()
 

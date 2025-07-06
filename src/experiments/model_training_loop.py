@@ -79,7 +79,7 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, y):
             x_tag_emb = triangulation_embedding.forward(np.vstack(x_tag))
 
             observation = [x_tag_emb.flatten(), y_tag_emb.flatten()]
-            del x_tag, x_tag_emb, y_tag_emb, y_tag_emb
+            del x_tag_emb, y_tag_emb, y_tag_emb
 
             # Add the cloud predictions as features if needed:
             if config.cloud_config.names:
@@ -88,7 +88,12 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, y):
                     observations.append(np.hstack([np.hstack(observation), predictions.flatten()]))
                     # Duplicate the labels
                     new_y.append(label)
+
                     del predictions
+
+                del x_tag
+
+
             else:
                 # No cloud models need to be used, just use the features up until now
                 observations.append(np.hstack(observation))

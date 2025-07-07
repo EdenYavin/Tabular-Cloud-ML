@@ -39,6 +39,10 @@ class RawDataset:
     def get_dataset(self) -> tuple[np.ndarray, np.ndarray]:
         return self.X, self.y
 
+    def get_labels_ratio(self) -> dict:
+        unique_labels, counts = np.unique(self.y, return_counts=True)
+        ratios = counts / counts.sum()
+        return dict(zip(unique_labels, ratios))
 
     def k_fold_iterator(self, n_splits=10, shuffle=True, random_state=None):
         """Yields train and test splits for K-Fold cross-validation."""

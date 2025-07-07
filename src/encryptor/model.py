@@ -2,8 +2,9 @@ from keras.src.layers import Input, Dense,  Flatten
 from keras.src.layers import BatchNormalization, Activation, Conv2DTranspose
 from keras.src.models import Model, Sequential
 from keras.src.layers import LeakyReLU, Reshape, Conv2D, UpSampling2D, ReLU
+from keras.src import initializers
 from src.encryptor.base import BaseEncryptor
-
+from loguru import logger
 
 
 class TabularDCEncryptor(BaseEncryptor):
@@ -49,7 +50,8 @@ class DCEncryptor(BaseEncryptor):
 
     name = "dc"
 
-    def build_generator(self, input_shape, output_shape):
+    def build_generator(self, input_shape, output_shape, seed=None):
+
         # Ziv's Model
         G = Sequential()
         G.add(Reshape(target_shape=[1,1, *input_shape], input_shape=input_shape))
@@ -60,7 +62,7 @@ class DCEncryptor(BaseEncryptor):
         # Weights index: 0, Activations index: 1
 
         # 4x4x64
-        G.add(Conv2D(filters=64, kernel_size=4, padding='same'))
+        G.add(Conv2D(filters=64, kernel_size=4, padding='same',kernel_initializer=initializers.GlorotUniform(seed=seed)))
         G.add(BatchNormalization(momentum=0.7))
         G.add(Activation('relu'))
         # Weights index: 2, Activations index: 5
@@ -68,7 +70,7 @@ class DCEncryptor(BaseEncryptor):
         # No weights or activations here
 
         # 8x8x64
-        G.add(Conv2D(filters=32, kernel_size=4, padding='same'))
+        G.add(Conv2D(filters=32, kernel_size=4, padding='same', kernel_initializer=initializers.GlorotUniform(seed=seed)))
         G.add(BatchNormalization(momentum=0.7))
         G.add(Activation('relu'))
         # Weights index: 8, Activations index: 9
@@ -76,7 +78,7 @@ class DCEncryptor(BaseEncryptor):
         # No weights or activations here
 
         # 16x16x32
-        G.add(Conv2D(filters=16, kernel_size=4, padding='same'))
+        G.add(Conv2D(filters=16, kernel_size=4, padding='same', kernel_initializer=initializers.GlorotUniform(seed=seed)))
         G.add(BatchNormalization(momentum=0.7))
         G.add(Activation('relu'))
         # Weights index: 14, Activations index: 13
@@ -84,7 +86,7 @@ class DCEncryptor(BaseEncryptor):
         # No weights or activations here
 
         # 32x32x16
-        G.add(Conv2D(filters=8, kernel_size=4, padding='same'))
+        G.add(Conv2D(filters=8, kernel_size=4, padding='same', kernel_initializer=initializers.GlorotUniform(seed=seed)))
         G.add(BatchNormalization(momentum=0.7))
         G.add(Activation('relu'))
         # Weights index: 20, Activations index: 17
@@ -92,7 +94,7 @@ class DCEncryptor(BaseEncryptor):
         # No weights or activations here
 
         # 64x64x8
-        G.add(Conv2D(filters=4, kernel_size=4, padding='same'))
+        G.add(Conv2D(filters=4, kernel_size=4, padding='same', kernel_initializer=initializers.GlorotUniform(seed=seed)))
         G.add(BatchNormalization(momentum=0.7))
         G.add(Activation('relu'))
         # Weights index: 26, Activations index: 21
@@ -100,7 +102,7 @@ class DCEncryptor(BaseEncryptor):
         # No weights or activations here
 
         # 128x128x4
-        G.add(Conv2D(filters=3, kernel_size=4, padding='same'))
+        G.add(Conv2D(filters=3, kernel_size=4, padding='same', kernel_initializer=initializers.GlorotUniform(seed=seed)))
         # G.add(Activation('sigmoid'))
         G.add(Activation('relu'))
         # Weights index: 32, Activations index: 25

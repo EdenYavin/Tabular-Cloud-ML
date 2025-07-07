@@ -17,8 +17,9 @@ class BaseEncryptor:
         self.output_shape = output_shape
         self.input_shape = None
         self.dataset_name = dataset_name
+        self.seed = 1
 
-    def build_generator(self, input_shape, output_shape):
+    def build_generator(self, input_shape, output_shape, seed=None):
         raise NotImplementedError("Subclasses should implement this method")
 
     def save_model(self, filename):
@@ -30,7 +31,8 @@ class BaseEncryptor:
 
     def switch_key(self):
         del self.model
-        self.model = self.build_generator(self.input_shape, self.output_shape)
+        self.model = self.build_generator(self.input_shape, self.output_shape, seed=self.seed)
+        self.seed += 1
 
     def encode(self, inputs) -> np.array:
 
@@ -43,6 +45,7 @@ class BaseEncryptor:
                 self.model = load_model(model_path)
             else:
                 self.model = self.build_generator(self.input_shape, self.output_shape)
+                self.seed += 1
                 if not os.path.exists(model_path):
                     # We don't want to trigger saving each time, only once.
                     # No need to save the same model multiple times

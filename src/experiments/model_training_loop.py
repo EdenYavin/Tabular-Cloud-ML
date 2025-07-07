@@ -54,7 +54,7 @@ def plot(val_losses, train_losses, val_accuracies, train_accuracies, dataset_nam
     plt.savefig(plot_path)
 
 
-def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, y):
+def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X):
     # Get the output for the cloud model
     if config.cloud_config.names:
         cloud_model_output = CLOUD_MODELS[config.cloud_config.names[0]].input_shape
@@ -67,7 +67,7 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, y):
     with tqdm(total=len(X), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
 
         observations, new_y = [], []
-        for x, label in zip(X, y):
+        for x in X:
             pbar.update(1)
             # Triangulation features vector = X', Y_1', Y_2',...
             x_tag = encryptor.encode(x.reshape(1, -1))
@@ -76,10 +76,9 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, y):
             # 2. Embed the encryption
             y_tag_emb = triangulation_embedding(y_tag)
 
-            x_tag_emb = triangulation_embedding.forward(np.vstack(x_tag))
+            x_tag_emb = triangulation_embedding(np.vstack(x_tag))
 
             observation = [x_tag_emb.flatten(), y_tag_emb.flatten()]
-
 
             # Add the cloud predictions as features if needed:
             if config.cloud_config.names:
@@ -87,7 +86,6 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, y):
                     predictions = cloud.predict(model_name=cloud_model, batch=x_tag)
                     observations.append(np.hstack([np.hstack(observation), predictions.flatten()]))
                     # Duplicate the labels
-                    new_y.append(label)
 
                     del predictions
 
@@ -95,7 +93,6 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, y):
                 # No cloud models need to be used, just use the features up until now
                 observations.append(np.hstack(observation))
                 # Duplicate the labels
-                new_y.append(label)
             if config.encoder_config.rotating_key:
                 # Switch key for the next example
                 encryptor.switch_key()
@@ -134,7 +131,7 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
             self._load_checkpoint_medata(dataset_name)
 
             raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
-            logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}")
+            logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}, Labels Ratio: {raw_dataset.get_labels_ratio()}")
             X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
             embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y,dataset_name=dataset_name)
 
@@ -142,10 +139,10 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
             del raw_dataset, X_sample, y_sample
 
             db = EmbeddingDBFactory.get_db(dataset_name, embedding_model)
-            X_train = db.get_embedding(X_train, is_test=False)
-            X_test = db.get_embedding(X_test, is_test=True)
+            X_train_emb = db.get_embedding(X_train, is_test=False)
+            X_test_emb = db.get_embedding(X_test, is_test=True)
 
-            del db, embedding_model
+            del db, embedding_model, X_train, X_test
             gc.collect()
 
             for model_name in config.iim_config.name:
@@ -162,7 +159,6 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                     logger.info(
                         f'Using GPU: {list(filter(lambda d: "GPU:0" in d.name, tf.config.list_physical_devices()))}')
 
-                    epoch_train_loss, epoch_train_acc = [], []
                     train_losses, train_accuracies = [], []
                     val_losses, val_accuracies  = [], []
                     optimizer = keras.optimizers.Adam()
@@ -170,11 +166,14 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
                     logger.warning(f"Starting from Epoch: {self.checkpoint_metadata['start_epoch']}")
                     for epoch in range(self.checkpoint_metadata['start_epoch'], config.iim_config.neural_net_config.epochs):
+                        epoch_train_loss, epoch_train_acc = [], []
+                        epoch_val_loss, epoch_val_acc = [], []
+
                         try:
-                            new_X_train, new_y_train = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_train, y_train)
-                            new_X_test, new_y_test = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_test, y_test)
-                            train_dataset = tf.data.Dataset.from_tensor_slices((new_X_train, new_y_train)).batch(config.iim_config.neural_net_config.batch_size)
-                            test_dataset = tf.data.Dataset.from_tensor_slices((new_X_test, new_y_test)).batch(config.iim_config.neural_net_config.batch_size)
+                            new_X_train = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_train_emb)
+                            new_X_test = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_test_emb)
+                            train_dataset = tf.data.Dataset.from_tensor_slices((new_X_train, y_train)).batch(config.iim_config.neural_net_config.batch_size)
+                            test_dataset = tf.data.Dataset.from_tensor_slices((new_X_test, y_test)).batch(config.iim_config.neural_net_config.batch_size)
 
                             if not model:
                                 model = LSTMIIM(num_classes=n_classes,
@@ -204,8 +203,6 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                             current_train_acc = np.mean(epoch_train_acc)
                             train_accuracies.append(current_train_acc)
 
-                            epoch_val_loss = []
-                            epoch_val_acc = []
 
                             for step, (x_val_batch, y_val_batch) in enumerate(test_dataset):
                                 x_val_batch, y_val_batch = LSTMIIM.prepare_data_for_training(x_val_batch, y_val_batch)
@@ -223,7 +220,10 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
                             print(f"\nEpoch {epoch + 1}/100: Train Loss: {current_train_loss:.4f}, Val Loss: {current_val_loss:.4f}, Train Acc: {current_train_acc:.4f}, Val Acc: {current_val_acc:.4f}")
                             plot(train_losses, val_losses, train_accuracies, val_accuracies, dataset_name, model_name)
-                            del new_X_train, new_X_test, new_y_train, new_y_test, train_dataset, test_dataset, x_val_batch, x_batch, y_batch, y_val_batch
+                            del (new_X_train, new_X_test, new_y_train, new_y_test,
+                                 train_dataset, test_dataset, x_val_batch, x_batch, y_batch, y_val_batch,
+                                 epoch_train_loss, epoch_train_acc, epoch_val_loss, epoch_val_acc
+                                 )
                             gc.collect()
 
                         except Exception as e:

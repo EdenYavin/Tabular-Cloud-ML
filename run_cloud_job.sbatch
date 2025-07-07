@@ -4,7 +4,7 @@
 #SBATCH --mail-user=edenyav@post.bgu.ac.il
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --gpus=rtx_3090:1
-#SBATCH --mem=32G
+#SBATCH --mem=36G
 
 # Echo info
 echo "SLURM_JOBID=$SLURM_JOBID"

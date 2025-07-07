@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-from src.internal_model import InternalInferenceModelFactory, LSTMIIM
+from src.internal_model import LSTMIIM
 from src.dataset import DatasetFactory, RawDataset
 from src.utils.config import config
 from loguru import logger
@@ -101,7 +101,7 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X):
 
     del triangulation_samples, encryptor
 
-    return np.vstack(observations), np.vstack(new_y)
+    return np.vstack(observations)
 
 class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
@@ -220,7 +220,7 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
                             print(f"\nEpoch {epoch + 1}/100: Train Loss: {current_train_loss:.4f}, Val Loss: {current_val_loss:.4f}, Train Acc: {current_train_acc:.4f}, Val Acc: {current_val_acc:.4f}")
                             plot(train_losses, val_losses, train_accuracies, val_accuracies, dataset_name, model_name)
-                            del (new_X_train, new_X_test, new_y_train, new_y_test,
+                            del (new_X_train, new_X_test,
                                  train_dataset, test_dataset, x_val_batch, x_batch, y_batch, y_val_batch,
                                  epoch_train_loss, epoch_train_acc, epoch_val_loss, epoch_val_acc
                                  )
@@ -228,12 +228,13 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
                         except Exception as e:
                             logger.error(f"Error in training: {e}")
-                            path = get_dataset_path(dataset_name, 1)
-                            model_path = path / f"{model_name}_{epoch}.keras"
-                            self.checkpoint_metadata['model_file'] = model_path
-                            self.checkpoint_metadata['start_epoch'] = epoch
-                            logger.warning(f"Saving checkpoint to: {model_path}")
-                            model.save(model_path)
+                            if model:
+                                path = get_dataset_path(dataset_name, 1)
+                                model_path = path / f"{model_name}_{epoch}.keras"
+                                self.checkpoint_metadata['start_epoch'] = epoch
+                                logger.warning(f"Saving checkpoint to: {model_path}")
+                                self.checkpoint_metadata['model_file'] = model_path
+                                model.save(model_path)
 
                 cloud.__exit__(None, None, None)
 

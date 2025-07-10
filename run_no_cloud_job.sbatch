@@ -10,15 +10,16 @@
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "SLURM_JOB_NODELIST=$SLURM_JOB_NODELIST"
 echo "Running dataset: $DATASET_NAME"
-
+echo "Running experiment": $EXPERIMENT_NAME
 # Load environment
 module load anaconda
 source activate tabml
 
 # Run the Python script
 python main.py \
-    --experiment-to-run training_loop \
+    --experiment-to-run "$EXPERIMENT_NAME" \
     --encoder-rotating-key \
     --datasets "$DATASET_NAME" \
-    --number-of-prediction-vector 100
+    --number-of-prediction-vector 100 \
+    --iim-epochs 100
 

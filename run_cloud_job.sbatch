@@ -15,9 +15,11 @@ echo "Running dataset: $DATASET_NAME"
 module load anaconda
 source activate tabml
 
+# Run the Python script
 python main.py \
-    --experiment-to-run dataset_creation \
+    --experiment-to-run "$EXPERIMENT_NAME" \
     --encoder-rotating-key \
     --datasets "$DATASET_NAME" \
+    --number-of-prediction-vector 100 \
     --use-cloud-models xception \
-    --number-of-prediction-vector 100
+    --iim-epochs 100

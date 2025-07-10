@@ -54,7 +54,7 @@ def plot(val_losses, train_losses, val_accuracies, train_accuracies, dataset_nam
     plt.savefig(plot_path)
 
 
-def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X):
+def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, triangulation_samples):
     # Get the output for the cloud model
     if config.cloud_config.names:
         cloud_model_output = CLOUD_MODELS[config.cloud_config.names[0]].input_shape
@@ -63,7 +63,6 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X):
 
     encryptor = EncryptorFactory.get_model(dataset_name=dataset_name, output_shape=cloud_model_output)
 
-    triangulation_samples = X[:config.experiment_config.n_triangulation_samples]
     with tqdm(total=len(X), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
 
         observations, new_y = [], []
@@ -145,6 +144,8 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
             del db, embedding_model, X_train, X_test
             gc.collect()
 
+            triangulation_samples = X_test_emb[: config.experiment_config.n_triangulation_samples]
+
             for model_name in config.iim_config.name:
 
                 logger.info(f"#### Training model experiment: "
@@ -170,8 +171,8 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                         epoch_val_loss, epoch_val_acc = [], []
 
                         try:
-                            new_X_train = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_train_emb)
-                            new_X_test = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_test_emb)
+                            new_X_train = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_train_emb, triangulation_samples)
+                            new_X_test = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_test_emb, triangulation_samples)
                             train_dataset = tf.data.Dataset.from_tensor_slices((new_X_train, y_train)).batch(config.iim_config.neural_net_config.batch_size)
                             test_dataset = tf.data.Dataset.from_tensor_slices((new_X_test, y_test)).batch(config.iim_config.neural_net_config.batch_size)
 

@@ -17,7 +17,7 @@ source activate tabml
 
 # Run the Python script
 python main.py \
-    --experiment-to-run dataset_creation \
+    --experiment-to-run training_loop \
     --encoder-rotating-key \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector 100

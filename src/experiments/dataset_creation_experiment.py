@@ -47,7 +47,7 @@ class DatasetCreationHandler(ExperimentHandler):
                 logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
                 del X_train, y_train
 
-                for n_pred_vectors in self.n_pred_vectors:
+                for n_pred_vectors in tqdm(self.n_pred_vectors, desc="Preparing Dataset", unit="dataset"):
 
                     if os.path.exists(get_dataset_path(dataset_name, n_pred_vectors)):
                         logger.info(f"Dataset {get_dataset_path(dataset_name, n_pred_vectors)}"

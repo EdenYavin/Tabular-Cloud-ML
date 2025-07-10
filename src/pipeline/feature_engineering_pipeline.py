@@ -14,7 +14,7 @@ from loguru import logger
 class DatasetCreation(FeatureEngineeringPipeline):
 
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
-                 n_pred_vectors, metadata = None):
+                 metadata = None):
         super().__init__(dataset_name, encryptor, embeddings_model, metadata)
         self.triangulation_embedding = None
         if config.encoder_config.rotating_key:

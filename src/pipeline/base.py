@@ -73,6 +73,6 @@ class FeatureEngineeringPipeline(ABC):
         return np.vstack(embeddings)
 
     @abstractmethod
-    def _get_features(self, embeddings, y, is_test) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _get_features(self, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         pass
 

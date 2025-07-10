@@ -25,7 +25,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
             logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")
 
     
-    def _get_features(self, embeddings, y, is_test) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _get_features(self, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Get features from embeddings for training or testing.
 

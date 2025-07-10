@@ -24,9 +24,6 @@ class DatasetCreationHandler(ExperimentHandler):
 
     def run_experiment(self):
 
-        if type(self.n_pred_vectors) is int:
-            self.n_pred_vectors = [self.n_pred_vectors]
-
         datasets = config.dataset_config.names
 
         # Get the output for the cloud model
@@ -47,7 +44,7 @@ class DatasetCreationHandler(ExperimentHandler):
                 logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
                 del X_train, y_train
 
-                for n_pred_vectors in tqdm(self.n_pred_vectors, desc="Preparing Dataset", unit="dataset"):
+                for n_pred_vectors in tqdm(range(self.n_pred_vectors), desc=f"Preparing Dataset {dataset_name}", unit="dataset"):
 
                     if os.path.exists(get_dataset_path(dataset_name, n_pred_vectors)):
                         logger.info(f"Dataset {get_dataset_path(dataset_name, n_pred_vectors)}"

@@ -15,11 +15,7 @@ class ExperimentHandler(ABC):
 
     def __init__(self, experiment_name: str, report_path: str = REPORT_PATH):
         self.experiment_name: str = experiment_name
-        if type(config.experiment_config.n_pred_vectors) is list:
-            self.n_pred_vectors = config.experiment_config.n_pred_vectors
-        else:
-            self.n_pred_vectors = [config.experiment_config.n_pred_vectors]
-
+        self.n_pred_vectors = config.experiment_config.n_pred_vectors
         self.report_path = report_path
         if os.path.exists(self.report_path):
             try:

@@ -14,9 +14,8 @@ from src.utils.db import EmbeddingDBFactory
 class FeatureEngineeringPipeline(ABC):
 
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
-                 n_pred_vectors, metadata = None):
+                 metadata = None):
 
-        self.n_pred_vectors = n_pred_vectors
         self.name = dataset_name
         self.use_embedding = config.experiment_config.use_embedding
         self.raw_metadata = metadata
@@ -74,6 +73,6 @@ class FeatureEngineeringPipeline(ABC):
         return np.vstack(embeddings)
 
     @abstractmethod
-    def _get_features(self, embeddings, y, is_test):
+    def _get_features(self, embeddings, y, is_test) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         pass
 

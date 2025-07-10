@@ -174,7 +174,6 @@ class ClipEmbedding(nn.Module):
             self.processor = CLIPProcessor.from_pretrained(model_id, cache_dir=MODELS_PATH, local_files_only=True)
         self.output_shape = (1, 512)
 
-
     def forward(self, x):
 
         image_input = self.processor(images=x, return_tensors="pt", do_rescale=False)["pixel_values"]

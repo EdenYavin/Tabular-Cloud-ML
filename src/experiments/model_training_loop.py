@@ -144,7 +144,9 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
             del db, embedding_model, X_train, X_test
             gc.collect()
 
-            triangulation_samples = X_test_emb[: config.experiment_config.n_triangulation_samples]
+            # Random select indices
+            indices = np.random.choice(len(X_test_emb), size=config.experiment_config.n_triangulation_samples, replace=False)
+            triangulation_samples = X_test_emb[indices]
 
             for model_name in config.iim_config.name:
 

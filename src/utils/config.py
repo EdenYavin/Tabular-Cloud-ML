@@ -23,7 +23,7 @@ class Config(BaseModel):
         split_ratio : float = Field(description="How much of the original train set (90%) will be used to train the IIM")
         one_hot: bool = Field(description="A flag to indicate if the ground truth labels should be one-hot encoded", default=False)
         batch_size: int = Field(description="Batch size to accumulate", default=64)
-        use_folders: bool = Field(description="Use folders instead of creating the data on the fly", default=False)
+        use_cache: bool = Field(description="Use cache as folders instead of creating the data on the fly", default=False)
 
     class IIMConfig(BaseModel):
 
@@ -46,7 +46,7 @@ class Config(BaseModel):
         n_pred_vectors: int = Field(description="Number of prediction vectors to query from the cloud models")
         n_triangulation_samples: int = Field(description="Number samples to sample from the dataset to use for the triangulation")
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
-        to_run: str = Field(description="type of the experiment - embedding learning, or prediction learning")
+        to_run: str = Field(description="type of the experiment - dataset creation, model training, etc")
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,

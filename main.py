@@ -73,7 +73,7 @@ def main():
     )
 
     parser.add_argument(
-        "--dataset-use-folders",
+        "--dataset-use-cache",
         action="store_true",  # Sets to True if flag is present
         help="Use dataset folders instead of creating the data on the fly each epoch."
     )

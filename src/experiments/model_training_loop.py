@@ -264,6 +264,9 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                                 self.checkpoint_metadata['model_file'] = model_path
                                 model.save(model_path)
 
+                                with open(path / "checkpoint.json") as r:
+                                    json.dump(self.checkpoint_metadata, r)
+
                 cloud.__exit__(None, None, None)
 
         return self.report

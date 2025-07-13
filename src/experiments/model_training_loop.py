@@ -114,8 +114,16 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
         path = get_dataset_path(dataset_name, 1)
         checkpoint_path = path / "checkpoint.json"
         if checkpoint_path.exists():
-            with open(checkpoint_path, "r") as f:
-                self.checkpoint_metadata = json.load(f)
+            try:
+                with open(checkpoint_path, "r") as f:
+                    self.checkpoint_metadata = json.load(f)
+            except:
+                # If there is a problem with the file we will not use it and flush it with empty values
+                with open(checkpoint_path, "w") as f:
+                    json.dump({}, f)
+
+                self.checkpoint_metadata['start_epoch'] = 0
+                self.checkpoint_metadata['model_file'] = None
         else:
             self.checkpoint_metadata['start_epoch'] = 0
             self.checkpoint_metadata['model_file'] = None

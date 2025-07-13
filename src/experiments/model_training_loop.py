@@ -194,10 +194,10 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                         epoch_val_loss, epoch_val_acc = [], []
 
                         try:
-                            if (new_X_train := self._load_dataset(epoch, dataset_name, train=True)) is None and config.dataset_config.use_folders:
+                            if (new_X_train := self._load_dataset(epoch, dataset_name, train=True)) is None and not config.dataset_config.use_folders:
                                 new_X_train = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_train_emb, triangulation_samples)
 
-                            if (new_X_test := self._load_dataset(epoch, dataset_name, train=False)) is None and config.dataset_config.use_folders:
+                            if (new_X_test := self._load_dataset(epoch, dataset_name, train=False)) is None and not config.dataset_config.use_folders:
                                 new_X_test = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_test_emb, triangulation_samples)
 
                             train_dataset = tf.data.Dataset.from_tensor_slices((new_X_train, y_train)).batch(config.iim_config.neural_net_config.batch_size)
@@ -264,7 +264,7 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                                 self.checkpoint_metadata['model_file'] = model_path
                                 model.save(model_path)
 
-                                with open(path / "checkpoint.json") as r:
+                                with open(path / "checkpoint.json", 'w') as r:
                                     json.dump(self.checkpoint_metadata, r)
 
                 cloud.__exit__(None, None, None)

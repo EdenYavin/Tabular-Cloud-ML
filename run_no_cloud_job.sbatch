@@ -22,3 +22,4 @@ python main.py \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector 100 \
     --iim-epochs 100 \
+    --dataset-use-folders

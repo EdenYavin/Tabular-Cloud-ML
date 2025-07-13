@@ -121,16 +121,23 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
             self.checkpoint_metadata['model_file'] = None
 
     def _load_dataset(self, epoch: int, dataset_name: str, train=False):
+
         path = get_dataset_path(dataset_name, epoch + 1) / "dataset.pkl"
-        if path.exists():
-            logger.info(f"Loading epoch's {epoch} dataset from: {path}")
-            with open(path, "rb") as f:
-                dataset = pickle.load(f)
 
-            if train:
-                return dataset.train.features
+        try:
+            if path.exists():
+                logger.info(f"Loading epoch's {epoch} dataset from: {path}")
+                with open(path, "rb") as f:
+                    dataset = pickle.load(f)
 
-            return dataset.test.features
+                if train:
+                    return dataset.train.features
+
+                return dataset.test.features
+
+        except Exception as e:
+            logger.warning(f"Failed to load {dataset_name} dataset from {path}: {e}")
+            return None
 
     def run_experiment(self):
 

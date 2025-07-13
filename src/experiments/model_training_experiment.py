@@ -60,7 +60,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                 if path.exists():
 
                     history_path = path / "history.pkl"
-                    plot_path = path / f"{model_name}_train_plot.png"
+                    plot_path = path / f"{model_name}_{config.experiment_config.to_run}_train_plot.png"
 
                     # with open(data_path, "rb") as f:
                     #     logger.info(f"Loading dataset from {data_path}")

@@ -123,7 +123,7 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
     def _load_dataset(self, epoch: int, dataset_name: str, train=False):
         path = get_dataset_path(dataset_name, epoch + 1) / "dataset.pkl"
         if path.exists():
-            logger.info(f"Loading dataset from: {path}")
+            logger.info(f"Loading epoch's {epoch} dataset from: {path}")
             with open(path, "rb") as f:
                 dataset = pickle.load(f)
 

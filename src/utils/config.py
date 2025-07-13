@@ -23,6 +23,7 @@ class Config(BaseModel):
         split_ratio : float = Field(description="How much of the original train set (90%) will be used to train the IIM")
         one_hot: bool = Field(description="A flag to indicate if the ground truth labels should be one-hot encoded", default=False)
         batch_size: int = Field(description="Batch size to accumulate", default=64)
+        use_folders: bool = Field(description="Use folders instead of creating the data on the fly", default=False)
 
     class IIMConfig(BaseModel):
 

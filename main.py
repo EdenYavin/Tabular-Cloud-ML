@@ -72,6 +72,12 @@ def main():
         help="The number of epochs to use for training the model."
     )
 
+    parser.add_argument(
+        "--dataset-use-folders",
+        action="store_true",  # Sets to True if flag is present
+        help="Use dataset folders instead of creating the data on the fly each epoch."
+    )
+
     args = parser.parse_args()
 
     update_config_from_args(config, args)

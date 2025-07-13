@@ -1,6 +1,8 @@
 import gc, numpy as np
 import json
 import os
+import pickle
+
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import keras
@@ -98,7 +100,7 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, triangulat
 
             del x_tag_emb, y_tag_emb, y_tag, x_tag
 
-    del triangulation_samples, encryptor
+    del encryptor
 
     return np.vstack(observations)
 
@@ -117,6 +119,18 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
         else:
             self.checkpoint_metadata['start_epoch'] = 0
             self.checkpoint_metadata['model_file'] = None
+
+    def _load_dataset(self, epoch: int, dataset_name: str, train=False):
+        path = get_dataset_path(dataset_name, epoch + 1) / "dataset.pkl"
+        if path.exists():
+            logger.info(f"Loading dataset from: {path}")
+            with open(path, "rb") as f:
+                dataset = pickle.load(f)
+
+            if train:
+                return dataset.train.features
+
+            return dataset.test.features
 
     def run_experiment(self):
 
@@ -173,8 +187,12 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                         epoch_val_loss, epoch_val_acc = [], []
 
                         try:
-                            new_X_train = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_train_emb, triangulation_samples)
-                            new_X_test = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_test_emb, triangulation_samples)
+                            if (new_X_train := self._load_dataset(epoch, dataset_name, train=True)) is None and config.dataset_config.use_folders:
+                                new_X_train = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_train_emb, triangulation_samples)
+
+                            if (new_X_test := self._load_dataset(epoch, dataset_name, train=False)) is None and config.dataset_config.use_folders:
+                                new_X_test = encrypt_and_embed(dataset_name, triangulation_embedding, cloud, X_test_emb, triangulation_samples)
+
                             train_dataset = tf.data.Dataset.from_tensor_slices((new_X_train, y_train)).batch(config.iim_config.neural_net_config.batch_size)
                             test_dataset = tf.data.Dataset.from_tensor_slices((new_X_test, y_test)).batch(config.iim_config.neural_net_config.batch_size)
 

@@ -126,7 +126,7 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
         try:
             if path.exists():
-                logger.info(f"Loading epoch's {epoch} dataset from: {path}")
+                logger.info(f"Loading epoch's {epoch} {'train' if train else 'test'} dataset from: {path}")
                 with open(path, "rb") as f:
                     dataset = pickle.load(f)
 
@@ -246,7 +246,7 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
                             current_val_acc = np.mean(epoch_val_acc)
                             val_accuracies.append(current_val_acc)
 
-                            print(f"\nEpoch {epoch + 1}/100: Train Loss: {current_train_loss:.4f}, Val Loss: {current_val_loss:.4f}, Train Acc: {current_train_acc:.4f}, Val Acc: {current_val_acc:.4f}")
+                            logger.info(f"\nEpoch {epoch + 1}/100: Train Loss: {current_train_loss:.4f}, Val Loss: {current_val_loss:.4f}, Train Acc: {current_train_acc:.4f}, Val Acc: {current_val_acc:.4f}")
                             plot(train_losses, val_losses, train_accuracies, val_accuracies, dataset_name, model_name)
                             del (new_X_train, new_X_test,
                                  train_dataset, test_dataset, x_val_batch, x_batch, y_batch, y_val_batch,

@@ -21,6 +21,6 @@ python main.py \
     --experiment-to-run "$EXPERIMENT_NAME" \
     --encoder-rotating-key \
     --datasets "$DATASET_NAME" \
-    --number-of-prediction-vector 100 \
+    --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
     --use-cloud-models xception \
     --iim-epochs 100

@@ -106,6 +106,7 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, triangulat
 
 class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
+
     def __init__(self):
         super().__init__(get_experiment_name())
         self.checkpoint_metadata = {}
@@ -116,7 +117,13 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
         if checkpoint_path.exists():
             try:
                 with open(checkpoint_path, "r") as f:
-                    self.checkpoint_metadata = json.load(f)
+                    metadata = json.load(f)
+                    # Only use the metadata saved if there was an error
+                    if metadata.get('error', False) is True:
+                        self.checkpoint_metadata = metadata
+                    else:
+                        # There was no error, start a new experiment
+                        return
             except:
                 # If there is a problem with the file we will not use it and flush it with empty values
                 with open(checkpoint_path, "w") as f:
@@ -124,9 +131,12 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
                 self.checkpoint_metadata['start_epoch'] = 0
                 self.checkpoint_metadata['model_file'] = None
+                self.checkpoint_metadata['triangulation_indices'] = None
+
         else:
             self.checkpoint_metadata['start_epoch'] = 0
             self.checkpoint_metadata['model_file'] = None
+            self.checkpoint_metadata['triangulation_indices'] = None
 
     def _load_dataset(self, epoch: int, dataset_name: str, train=False):
 
@@ -146,6 +156,34 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
         except Exception as e:
             logger.warning(f"Failed to load {dataset_name} dataset from {path}: {e}")
             return None
+
+    def _get_triangulation_samples(self, embeddings):
+
+        if 'triangulation_indices' in self.checkpoint_metadata:
+            logger.warning(f"Triangulation indices found in checkpoint {self.checkpoint_metadata['triangulation_indices']}")
+            return embeddings[self.checkpoint_metadata['triangulation_indices']]
+
+        how_to_choose = config.experiment_config.triangulation_choosing
+        n_samples = config.experiment_config.n_triangulation_samples
+
+        logger.info(f"Choosing the {how_to_choose} {n_samples} triangulation samples")
+
+        if how_to_choose == 'random':
+            indices = np.random.choice(len(embeddings), size=n_samples,
+                                       replace=False)
+            triangulation_samples = embeddings[indices]
+            self.checkpoint_metadata['triangulation_indices'] = indices
+
+        elif how_to_choose == 'first':
+            triangulation_samples = embeddings[:n_samples]
+            self.checkpoint_metadata['triangulation_indices'] = list(range(n_samples))
+
+        else:
+            triangulation_samples = embeddings[-n_samples:]
+            self.checkpoint_metadata['triangulation_indices'] = [i for i in
+                                                                 range(len(embeddings), len(embeddings) - n_samples, -1)]
+
+        return triangulation_samples
 
     def run_experiment(self):
 
@@ -174,8 +212,8 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
             gc.collect()
 
             # Random select indices
-            indices = np.random.choice(len(X_test_emb), size=config.experiment_config.n_triangulation_samples, replace=False)
-            triangulation_samples = X_test_emb[indices]
+            indices = np.random.choice(len(X_train_emb), size=config.experiment_config.n_triangulation_samples, replace=False)
+            triangulation_samples = X_train_emb[indices]
 
             for model_name in config.iim_config.name:
 
@@ -264,7 +302,9 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
                         except Exception as e:
                             logger.error(f"Error in training: {e}")
+
                             if model:
+                                self.checkpoint_metadata['error'] = True
                                 path = get_dataset_path(dataset_name, 1)
                                 model_path = path / f"{model_name}_{epoch}.keras"
                                 self.checkpoint_metadata['start_epoch'] = epoch

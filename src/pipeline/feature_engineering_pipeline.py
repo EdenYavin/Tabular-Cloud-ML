@@ -54,7 +54,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
         None
         """
         # Add the new triangulation samples' embedding as well
-        triangulation_samples = embeddings[:config.experiment_config.n_triangulation_samples]
+        triangulation_samples = self._get_triangulation_samples(embeddings)
 
         # For test data we won't duplicate but encrypt it only once
 

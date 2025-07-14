@@ -78,6 +78,14 @@ def main():
         help="Use dataset folders instead of creating the data on the fly each epoch."
     )
 
+    parser.add_argument(
+        "--triangulation-choosing",  # User-facing name
+        type=str,
+        default='first',
+        dest="experiment_triangulation_choosing",  # Internal name for your config
+        help="Specify how to choose the embedding - first (First N samples), last, random (random N samples)"
+    )
+
     args = parser.parse_args()
 
     update_config_from_args(config, args)

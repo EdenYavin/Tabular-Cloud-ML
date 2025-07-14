@@ -45,6 +45,7 @@ class Config(BaseModel):
         use_embedding: bool = Field(description="A flag to indicate if the embedding should be used in training the IIM")
         n_pred_vectors: int = Field(description="Number of prediction vectors to query from the cloud models")
         n_triangulation_samples: int = Field(description="Number samples to sample from the dataset to use for the triangulation")
+        triangulation_choosing: str = Field(description="How to choose the triangulation: first (first N samples), last, random (random N samples)", default="first")
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
         to_run: str = Field(description="type of the experiment - dataset creation, model training, etc")
 

@@ -46,7 +46,10 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pat
     rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
     use_cloud_features = "cloud" if (config.cloud_config.names  and use_cloud) else "no_cloud"
     cloud_models = "_".join(config.cloud_config.names) if (config.cloud_config.names and use_cloud) else ""
-    return pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / str(n_pred_vectors)
+    triang_type = config.experiment_config.triangulation_choosing
+    path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / str(n_pred_vectors) / triang_type
+    path.mkdir(exist_ok=True)
+    return path
 
 
 def get_experiment_name() -> str:

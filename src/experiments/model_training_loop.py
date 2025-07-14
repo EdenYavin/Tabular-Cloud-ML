@@ -212,8 +212,7 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
             gc.collect()
 
             # Random select indices
-            indices = np.random.choice(len(X_train_emb), size=config.experiment_config.n_triangulation_samples, replace=False)
-            triangulation_samples = X_train_emb[indices]
+            triangulation_samples = self._get_triangulation_samples(X_train_emb)
 
             for model_name in config.iim_config.name:
 

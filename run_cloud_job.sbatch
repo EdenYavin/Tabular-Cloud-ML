@@ -23,4 +23,5 @@ python main.py \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
     --use-cloud-models xception \
-    --iim-epochs 100
+    --iim-epochs 100 \
+    --triangulation-choosing "$CHOOSE"

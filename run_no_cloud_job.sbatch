@@ -21,4 +21,5 @@ python main.py \
     --encoder-rotating-key \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
-    --iim-epochs 100
+    --iim-epochs 100 \
+    --triangulation-choosing "$CHOOSE"

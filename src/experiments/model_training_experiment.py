@@ -62,10 +62,6 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                     history_path = path / "history.pkl"
                     plot_path = path / f"{model_name}_{config.experiment_config.to_run}_train_plot.png"
 
-                    # with open(data_path, "rb") as f:
-                    #     logger.info(f"Loading dataset from {data_path}")
-                    #     dataset = pickle.load(f)
-
                     X_train, y_train, X_test, y_test = self._collect_datasets(dataset_name=dataset_name)
 
                     internal_model = InternalInferenceModelFactory().get_model(

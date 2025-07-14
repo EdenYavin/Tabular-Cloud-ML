@@ -159,7 +159,7 @@ class ModelTrainingLoopExperimentHandler(ExperimentHandler):
 
     def _get_triangulation_samples(self, embeddings):
 
-        if 'triangulation_indices' in self.checkpoint_metadata:
+        if self.checkpoint_metadata.get('triangulation_indices') is not None:
             logger.warning(f"Triangulation indices found in checkpoint {self.checkpoint_metadata['triangulation_indices']}")
             return embeddings[self.checkpoint_metadata['triangulation_indices']]
 

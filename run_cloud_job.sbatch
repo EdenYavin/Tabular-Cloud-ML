@@ -10,8 +10,8 @@
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "SLURM_JOB_NODELIST=$SLURM_JOB_NODELIST"
 echo "Running dataset: $DATASET_NAME"
-echo "Using Cloud Model": $CLOUD_MODEL
-echo "Running experiment": $EXPERIMENT_NAME
+echo "Using Cloud Model: $CLOUD_MODEL"
+echo "Running experiment: $EXPERIMENT_NAME"
 
 # Load environment
 module load anaconda

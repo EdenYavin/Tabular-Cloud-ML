@@ -22,6 +22,6 @@ python main.py \
     --encoder-rotating-key \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
-    --use-cloud-models xception \
+    --use-cloud-models "$CLOUD_MODEL" \
     --iim-epochs 100 \
     --triangulation-choosing "$CHOOSE"

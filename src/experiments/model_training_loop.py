@@ -67,7 +67,7 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, triangulat
 
     with tqdm(total=len(X), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
 
-        observations, new_y = [], []
+        observations =  []
         for x in X:
             pbar.update(1)
             # Triangulation features vector = X', Y_1', Y_2',...
@@ -87,7 +87,6 @@ def encrypt_and_embed(dataset_name, triangulation_embedding,cloud, X, triangulat
                     predictions = cloud.predict(model_name=cloud_model, batch=x_tag)
                     observations.append(np.hstack([np.hstack(observation), predictions.flatten()]))
                     # Duplicate the labels
-
                     del predictions
 
             else:

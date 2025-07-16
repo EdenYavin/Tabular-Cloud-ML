@@ -34,8 +34,7 @@ class BaseEncryptor:
         self.model = load_model(filename)  # For Keras models
 
     def switch_key(self):
-        del self.model
-        self.model = self.reset_weights_in_place(seed=self.seed)
+        self.reset_weights_in_place(seed=self.seed)
         self.seed += 1
 
     def reset_weights_in_place(self, seed):
@@ -53,14 +52,13 @@ class BaseEncryptor:
                 init = initializers.Zeros()  # Bias is usually Zeros by default
                 layer.bias.assign(init(layer.bias.shape, layer.bias.dtype))
 
-            if isinstance(layer, tf.keras.layers.BatchNormalization):
-                # Reset batch norm non-trainable params if needed
-                for attr in ['gamma', 'beta', 'moving_mean', 'moving_variance']:
-                    var = getattr(layer, attr, None)
-                    if var is not None:
-                        init = tf.keras.initializers.Ones() if 'gamma' in attr else tf.keras.initializers.Zeros()
-                        var.assign(init(var.shape, var.dtype))
-
+            # if isinstance(layer, tf.keras.layers.BatchNormalization):
+            #     # Reset batch norm non-trainable params if needed
+            #     for attr in ['gamma', 'beta', 'moving_mean', 'moving_variance']:
+            #         var = getattr(layer, attr, None)
+            #         if var is not None:
+            #             init = tf.keras.initializers.Ones() if 'gamma' in attr else tf.keras.initializers.Zeros()
+            #             var.assign(init(var.shape, var.dtype))
     def encode(self, inputs) -> np.array:
 
         self.input_shape = inputs.shape[1:]

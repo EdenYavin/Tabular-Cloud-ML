@@ -1,3 +1,4 @@
+import gc
 
 import numpy as np
 from keras.api.models import load_model
@@ -34,7 +35,9 @@ class BaseEncryptor:
         self.model = load_model(filename)  # For Keras models
 
     def switch_key(self):
-        self.reset_weights_in_place(seed=self.seed)
+        del self.model
+        gc.collect()
+        self.model = self.build_generator(self.input_shape, self.output_shape, seed=self.seed)
         self.seed += 1
 
     def reset_weights_in_place(self, seed):

@@ -4,7 +4,7 @@ from keras.api.models import load_model
 import os
 
 from keras.src import initializers
-
+from keras.src import layers
 from src.utils.constansts import ENCRYPTOR_MODELS_DIR_PATH
 from src.utils.config import config
 import tensorflow as tf
@@ -43,22 +43,34 @@ class BaseEncryptor:
                 self.reset_weights_in_place(seed)
                 continue
 
-            # You can expand this based on layer types or your model structure
+            # Dense / Conv2D layers
             if hasattr(layer, 'kernel'):
                 init = initializers.GlorotUniform(seed=seed)
                 layer.kernel.assign(init(layer.kernel.shape, layer.kernel.dtype))
 
             if hasattr(layer, 'bias') and layer.bias is not None:
-                init = initializers.Zeros()  # Bias is usually Zeros by default
+                init = initializers.Zeros()
                 layer.bias.assign(init(layer.bias.shape, layer.bias.dtype))
 
-            # if isinstance(layer, tf.keras.layers.BatchNormalization):
-            #     # Reset batch norm non-trainable params if needed
-            #     for attr in ['gamma', 'beta', 'moving_mean', 'moving_variance']:
-            #         var = getattr(layer, attr, None)
-            #         if var is not None:
-            #             init = tf.keras.initializers.Ones() if 'gamma' in attr else tf.keras.initializers.Zeros()
-            #             var.assign(init(var.shape, var.dtype))
+            # BatchNormalization
+            if isinstance(layer, layers.BatchNormalization):
+                # Trainable parameters
+                if hasattr(layer, 'gamma') and layer.gamma is not None:
+                    gamma_init = initializers.Ones()  # Typically initialized to 1
+                    layer.gamma.assign(gamma_init(layer.gamma.shape, layer.gamma.dtype))
+
+                if hasattr(layer, 'beta') and layer.beta is not None:
+                    beta_init = initializers.Zeros()  # Typically initialized to 0
+                    layer.beta.assign(beta_init(layer.beta.shape, layer.beta.dtype))
+
+                # Non-trainable moving stats
+                if hasattr(layer, 'moving_mean') and layer.moving_mean is not None:
+                    layer.moving_mean.assign(tf.zeros_like(layer.moving_mean))
+
+                if hasattr(layer, 'moving_variance') and layer.moving_variance is not None:
+                    layer.moving_variance.assign(tf.ones_like(layer.moving_variance))
+
+
     def encode(self, inputs) -> np.array:
 
         self.input_shape = inputs.shape[1:]

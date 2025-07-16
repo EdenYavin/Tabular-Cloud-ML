@@ -3,8 +3,12 @@ import numpy as np
 from keras.api.models import load_model
 import os
 
+from keras.src import initializers
+
 from src.utils.constansts import ENCRYPTOR_MODELS_DIR_PATH
 from src.utils.config import config
+import tensorflow as tf
+
 
 embedding_name = config.embedding_config.name
 
@@ -31,8 +35,31 @@ class BaseEncryptor:
 
     def switch_key(self):
         del self.model
-        self.model = self.build_generator(self.input_shape, self.output_shape, seed=self.seed)
+        self.model = self.reset_weights_in_place(seed=self.seed)
         self.seed += 1
+
+    def reset_weights_in_place(self, seed):
+        for layer in self.model.layers:
+            if isinstance(layer, tf.keras.Model):
+                self.reset_weights_in_place(seed)
+                continue
+
+            # You can expand this based on layer types or your model structure
+            if hasattr(layer, 'kernel'):
+                init = initializers.GlorotUniform(seed=seed)
+                layer.kernel.assign(init(layer.kernel.shape, layer.kernel.dtype))
+
+            if hasattr(layer, 'bias') and layer.bias is not None:
+                init = initializers.Zeros()  # Bias is usually Zeros by default
+                layer.bias.assign(init(layer.bias.shape, layer.bias.dtype))
+
+            if isinstance(layer, tf.keras.layers.BatchNormalization):
+                # Reset batch norm non-trainable params if needed
+                for attr in ['gamma', 'beta', 'moving_mean', 'moving_variance']:
+                    var = getattr(layer, attr, None)
+                    if var is not None:
+                        init = tf.keras.initializers.Ones() if 'gamma' in attr else tf.keras.initializers.Zeros()
+                        var.assign(init(var.shape, var.dtype))
 
     def encode(self, inputs) -> np.array:
 

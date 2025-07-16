@@ -5,12 +5,31 @@ from typing import Generator
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
 from PIL import Image, ImageDraw, ImageFont
 import tensorflow as tf
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OUTPUT_DIR_PATH
 from src.utils.config import config
 
+def get_triangulation_samples_clustering(n_samples, embeddings):
+    # Cluster the embeddings
+    kmeans = KMeans(n_clusters=n_samples, random_state=42, n_init=10) # Set n_init explicitly
+    kmeans.fit(embeddings)
+
+    # Find the embedding closest to each centroid
+    triangulation_samples = []
+    for i in range(n_samples):
+        # Get the centroid
+        centroid = kmeans.cluster_centers_[i]
+
+        # Find the index of the closest embedding in the original data
+        distances = np.linalg.norm(embeddings - centroid, axis=1)
+        closest_embedding_index = np.argmin(distances)
+
+        triangulation_samples.append(embeddings[closest_embedding_index])
+
+    return np.array(triangulation_samples)
 
 def plot_history(history, filename=None, title=None):
     """Plot and optionally save training curves"""

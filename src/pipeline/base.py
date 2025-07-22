@@ -9,7 +9,7 @@ from src.domain.dataset import IIMFeatures, IIMDataset, PredictionBaselineFeatur
 from src.encryptor.base import BaseEncryptor
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
-from src.utils.helpers import get_triangulation_samples_clustering
+from src.utils.helpers import get_triangulation_samples_clustering, get_class_representative_samples
 
 
 class FeatureEngineeringPipeline(ABC):
@@ -26,7 +26,7 @@ class FeatureEngineeringPipeline(ABC):
         self.original_train_size = None
         self.cloud_model_manager = CloudModelManager()
 
-    def _get_triangulation_samples(self, embeddings):
+    def _get_triangulation_samples(self, embeddings, labels=None):
         how_to_choose = config.experiment_config.triangulation_choosing
         n_samples = config.experiment_config.n_triangulation_samples
 
@@ -42,7 +42,8 @@ class FeatureEngineeringPipeline(ABC):
 
         elif how_to_choose == 'kmeans':
             triangulation_samples = get_triangulation_samples_clustering(n_samples, embeddings)
-
+        elif how_to_choose == 'classes':
+            triangulation_samples = get_class_representative_samples(embeddings, labels)
         else:
             triangulation_samples = embeddings[-n_samples:]
 

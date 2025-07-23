@@ -56,7 +56,7 @@ def get_class_representative_samples(embeddings, labels):
 
     for label in unique_labels:
         # Get the embeddings for the current class
-        class_embeddings = embeddings[labels == label]
+        class_embeddings = embeddings[labels.argmax(axis=1) == label]
 
         # Calculate the centroid (mean) of the class embeddings
         centroid = np.mean(class_embeddings, axis=0)

@@ -25,4 +25,5 @@ python main.py \
     --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
     --use-cloud-models "$CLOUD_MODEL" \
     --iim-epochs 100 \
-    --triangulation-choosing "$CHOOSE"
+    --triangulation-choosing "$CHOOSE" \
+    --dataset-use-cache

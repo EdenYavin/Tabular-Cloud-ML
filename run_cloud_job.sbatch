@@ -23,7 +23,7 @@ python main.py \
     --encoder-rotating-key \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
-    --use-cloud-models "$CLOUD_MODEL" \
+    --use-cloud-models $CLOUD_MODEL \
     --iim-epochs 100 \
     --triangulation-choosing "$CHOOSE" \
     --dataset-use-cache

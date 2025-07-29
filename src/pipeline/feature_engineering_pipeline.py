@@ -77,19 +77,22 @@ class DatasetCreation(FeatureEngineeringPipeline):
 
                     # Embedding fore triangulation using CLIP, those are the new features
                     x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
-                    observation = [x_tag_emb.flatten(), y_tag_emb.flatten()]
+                    observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
 
-                    # Add embedding as features if needed
-                    if config.experiment_config.use_embedding:
-                        observation.append(x)
                     # Add the cloud predictions as features if needed:
                     if config.cloud_config.names:
                         for cloud_model in config.cloud_config.names:
-                            predictions = cloud.predict(model_name=cloud_model, batch=x_tag)
-                            observations.append(np.hstack([np.hstack(observation), predictions.flatten()]))
-                            # Duplicate the labels
-                            new_y.append(label)
-                            del predictions
+                            prediction = cloud.predict(model_name=cloud_model, batch=x_tag)
+                            # Append the predictions based on the configuration
+                            if config.cloud_config.horizontal_append:
+                                observation = np.hstack([observation, prediction.flatten()])
+                            else:
+                                observations.append(np.hstack([observation, prediction.flatten()]))
+                                # Duplicate the labels as we duplicate each sample
+                                new_y.append(label)
+
+                            del prediction
+
                     else:
                         # No cloud models need to be used, just use the features up until now
                         observations.append(np.hstack(observation))

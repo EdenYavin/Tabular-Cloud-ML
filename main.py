@@ -79,6 +79,14 @@ def main():
     )
 
     parser.add_argument(
+        "--use-horizontal-cloud-features",
+        type=bool,
+        default=True,
+        help="Add the cloud features horizontally to each sample or duplicate each sample as the number of cloud models, each sample with a different cloud feature.",
+        dest="cloud_horizontal_append"
+    )
+
+    parser.add_argument(
         "--triangulation-choosing",  # User-facing name
         type=str,
         default='first',

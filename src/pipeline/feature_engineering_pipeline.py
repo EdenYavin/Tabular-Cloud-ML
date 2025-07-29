@@ -61,6 +61,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
         observations, new_y =  [], []
         cloud = self.cloud_model_manager.__enter__()
+
         with tqdm(total=len(embeddings), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
             with tf.device(GPU_DEVICE):  # Run the models on the GPU
                 logger.debug(f"Running ON GPU device: {GPU_DEVICE}")
@@ -81,17 +82,24 @@ class DatasetCreation(FeatureEngineeringPipeline):
 
                     # Add the cloud predictions as features if needed:
                     if config.cloud_config.names:
+                        predictions = []
                         for cloud_model in config.cloud_config.names:
-                            prediction = cloud.predict(model_name=cloud_model, batch=x_tag)
-                            # Append the predictions based on the configuration
-                            if config.cloud_config.horizontal_append:
-                                observation = np.hstack([observation, prediction.flatten()])
-                            else:
-                                observations.append(np.hstack([observation, prediction.flatten()]))
+                            predictions.append(cloud.predict(model_name=cloud_model, batch=x_tag))
+
+                        # Flatten prediction to be stacked correctly
+                        predictions = [p.flatten() for p in predictions]
+
+                        if config.cloud_config.horizontal_append:
+                            observation = np.hstack([observation, np.hstack(predictions)])
+                            observations.append(observation)
+                            new_y.append(label)
+                        else:
+                            for p in predictions:
+                                observations.append(np.hstack([observation, p]))
                                 # Duplicate the labels as we duplicate each sample
                                 new_y.append(label)
 
-                            del prediction
+                        del predictions
 
                     else:
                         # No cloud models need to be used, just use the features up until now

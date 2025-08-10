@@ -21,7 +21,7 @@ which python
 python main.py \
     --experiment-to-run "$EXPERIMENT_NAME" \
     --encoder-rotating-key \
-    --use-raw-feautures \
+    --use-raw-features \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
     --iim-epochs 100 \

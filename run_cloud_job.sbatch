@@ -21,6 +21,7 @@ source activate tabml
 python main.py \
     --experiment-to-run "$EXPERIMENT_NAME" \
     --encoder-rotating-key \
+    --use-raw-feautures \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
     --use-cloud-models $CLOUD_MODEL \

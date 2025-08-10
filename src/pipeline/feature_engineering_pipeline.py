@@ -25,7 +25,7 @@ class DatasetCreation(FeatureEngineeringPipeline):
             logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")
 
     
-    def _get_features(self, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _get_features(self, X, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Get features from embeddings for training or testing.
 
@@ -66,19 +66,23 @@ class DatasetCreation(FeatureEngineeringPipeline):
             with tf.device(GPU_DEVICE):  # Run the models on the GPU
                 logger.debug(f"Running ON GPU device: {GPU_DEVICE}")
 
-                for x, label in zip(embeddings, y):
+                for x, x_emb, label in zip(X, embeddings, y):
                     pbar.update(1)
 
                     # Triangulation features vector = X', Y_1', Y_2',...
-                    x_tag = self.encryptor.encode(x.reshape(1, -1))
+                    x_tag = self.encryptor.encode(x_emb.reshape(1, -1))
                     # 1. Encrypt them using the new key
                     y_tag = self.encryptor.encode(triangulation_samples)
                     # 2. Embed the encryption
                     y_tag_emb = self.triangulation_embedding.forward(y_tag)
 
-                    # Embedding fore triangulation using CLIP, those are the new features
+                    # Embedding for triangulation using CLIP, those are the new features
                     x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
-                    observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
+
+                    if config.experiment_config.use_embedding:
+                        observation =  np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten()])
+                    else:
+                        observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
 
                     # Add the cloud predictions as features if needed:
                     if config.cloud_config.names:

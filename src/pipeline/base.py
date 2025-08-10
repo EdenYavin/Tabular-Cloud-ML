@@ -67,8 +67,8 @@ class FeatureEngineeringPipeline(ABC):
         )
 
 
-        Xs_train, new_y_train, X_pred_train = self._get_features(X_emb_train, y_train, is_test=False)
-        Xs_test, new_y_test, X_pred_test = self._get_features(X_emb_test, y_test, is_test=True)
+        Xs_train, new_y_train, X_pred_train = self._get_features(X_train, X_emb_train, y_train, is_test=False)
+        Xs_test, new_y_test, X_pred_test = self._get_features(X_test, X_emb_test, y_test, is_test=True)
 
         # pred_baseline = PredictionBaselineDataset(
         #     train=PredictionBaselineFeatures(predictions=X_pred_train, labels=new_y_train),
@@ -97,6 +97,6 @@ class FeatureEngineeringPipeline(ABC):
         return np.vstack(embeddings)
 
     @abstractmethod
-    def _get_features(self, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _get_features(self, X, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         pass
 

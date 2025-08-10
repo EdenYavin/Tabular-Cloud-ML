@@ -102,9 +102,8 @@ class LSTMIIM(NeuralNetworkInternalModel):
     def get_model(self, num_classes, input_shape):
 
         inputs = Input(shape=(1, input_shape))
-        x = LSTM(units=2048, return_sequences=True)(inputs)
         # LSTM layers with dropout and recurrent dropout
-        x = LSTM(units=1024, return_sequences=True)(x)
+        x = LSTM(units=1024, return_sequences=True)(inputs)
 
         x = LSTM(units=512, return_sequences=True)(x)
 

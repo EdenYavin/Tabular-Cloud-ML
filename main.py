@@ -79,6 +79,13 @@ def main():
     )
 
     parser.add_argument(
+        "--use-raw-features",
+        dest="experiment_use_embedding",
+        action="store_true",  # Sets to True if flag is present
+        help="Use the raw dataset features as part of the feature engineering pipeline."
+    )
+
+    parser.add_argument(
         "--use-horizontal-cloud-features",
         type=bool,
         default=True,

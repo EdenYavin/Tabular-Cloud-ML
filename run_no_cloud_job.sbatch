@@ -14,6 +14,8 @@ echo "Running experiment": $EXPERIMENT_NAME
 # Load environment
 module load anaconda
 source activate tabml
+echo "Currently active conda env: $CONDA_DEFAULT_ENV"
+which python
 
 # Run the Python script
 python main.py \

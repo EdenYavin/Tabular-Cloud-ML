@@ -12,7 +12,7 @@ echo "SLURM_JOB_NODELIST=$SLURM_JOB_NODELIST"
 echo "Running dataset: $DATASET_NAME"
 echo "Using Cloud Model: $CLOUD_MODEL"
 echo "Running experiment: $EXPERIMENT_NAME"
-
+echo "Number of triangulation $TRIANGULATIONS_NUMBER"
 # Load environment
 module load anaconda
 source activate tabml
@@ -29,4 +29,5 @@ python main.py \
     --use-cloud-models $CLOUD_MODEL \
     --iim-epochs 100 \
     --triangulation-choosing "$CHOOSE" \
-    --dataset-use-cache
+    --dataset-use-cache \
+    --triangulation-samples "$TRIANGULATIONS_NUMBER" \

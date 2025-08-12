@@ -99,4 +99,3 @@ class FeatureEngineeringPipeline(ABC):
     @abstractmethod
     def _get_features(self, X, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         pass
-

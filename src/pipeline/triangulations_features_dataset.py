@@ -11,7 +11,7 @@ from src.pipeline.base import FeatureEngineeringPipeline
 from src.utils.config import config
 from loguru import logger
 
-class DatasetCreation(FeatureEngineeringPipeline):
+class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
 
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
                  metadata = None):

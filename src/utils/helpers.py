@@ -108,7 +108,13 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pat
     rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
     use_cloud_features = "cloud" if (config.cloud_config.names  and use_cloud) else "no_cloud"
     cloud_models = "_".join(config.cloud_config.names) if (config.cloud_config.names and use_cloud) else ""
-    use_raw_features = "raw" if (config.experiment_config.use_embedding) else ""
+
+    use_raw_features = ""
+    if config.experiment_config.use_embedding and config.experiment_config.n_triangulation_samples > 0:
+        use_raw_features = "triangulation_and_raw"
+    elif config.experiment_config.n_triangulation_samples <= 0:
+        use_raw_features = "raw"
+
     triang_type = config.experiment_config.triangulation_choosing
     path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / use_raw_features / str(n_pred_vectors) / triang_type
     os.makedirs(path, exist_ok = True)

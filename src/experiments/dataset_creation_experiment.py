@@ -4,7 +4,8 @@ import pickle
 
 from tqdm import tqdm
 
-from src.pipeline.feature_engineering_pipeline import DatasetCreation as FeatureEngineeringPipeline
+from src.pipeline.triangulations_features_dataset import TriangulationFeatureEngineering
+from src.pipeline.raw_features_engineering import RawFeaturesEngineering
 from src.cloud import CLOUD_MODELS, DEFAULT_CLOUD_OUTPUT_SHAPE
 from src.encryptor import EncryptorFactory
 from src.embeddings import EmbeddingsFactory
@@ -54,12 +55,23 @@ class DatasetCreationHandler(ExperimentHandler):
                     logger.debug(f"Experiment name is {self.experiment_name}, Dataset is {dataset_name}. "
                                  f"#### Number of datasets versions: {n_pred_vectors} ####")
 
-                    dataset_creator = FeatureEngineeringPipeline(
-                        dataset_name=dataset_name,
-                        encryptor=encryptor,
-                        embeddings_model=embedding_model,
-                        metadata=raw_dataset.metadata
-                    )
+
+                    if config.experiment_config.n_triangulation_samples > 0:
+                        # Create dataset with triangulations
+                        dataset_creator = TriangulationFeatureEngineering(
+                            dataset_name=dataset_name,
+                            encryptor=encryptor,
+                            embeddings_model=embedding_model,
+                            metadata=raw_dataset.metadata
+                        )
+                    else:
+                        # No need for triangulations
+                        dataset_creator = RawFeaturesEngineering(
+                            dataset_name=dataset_name,
+                            encryptor=encryptor,
+                            embeddings_model=embedding_model,
+                            metadata=raw_dataset.metadata
+                        )
 
                     dataset, emb_baseline_dataset = (
                         dataset_creator.create(X_sample, y_sample, X_test, y_test)

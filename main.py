@@ -96,10 +96,19 @@ def main():
     parser.add_argument(
         "--triangulation-choosing",  # User-facing name
         type=str,
-        default='first',
+        default="classes",
         dest="experiment_triangulation_choosing",  # Internal name for your config
-        help="Specify how to choose the embedding - first (First N samples), last, random (random N samples)"
+        help="Specify how to choose the triangulation - first (First N samples), last, random (random N samples)"
     )
+
+    parser.add_argument(
+        "--triangulation-samples",  # User-facing name
+        type=int,
+        default=3,
+        dest="experiment_n_triangulation_samples",  # Internal name for your config
+        help="Specify how many triangulation samples to use in case of first / last / random triangulation type."
+    )
+
 
     args = parser.parse_args()
 

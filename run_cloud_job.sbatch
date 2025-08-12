@@ -30,4 +30,4 @@ python main.py \
     --iim-epochs 100 \
     --triangulation-choosing "$CHOOSE" \
     --dataset-use-cache \
-    --triangulation-samples "$TRIANGULATIONS_NUMBER" \
+    --triangulation-samples "$TRIANGULATIONS_NUMBER"

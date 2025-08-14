@@ -1,178 +1,101 @@
+import gc
+import pickle
+
+import keras.src.backend.common.global_state
 import numpy as np
 from tqdm import tqdm
 
-from src.embeddings import EmbeddingsFactory
-import src.utils.constansts as consts
-from src.internal_model.baseline import EmbeddingBaseline
-from src.pipeline.encoding_pipeline import FeatureEngineeringPipeline
-from src.cloud import CloudModel, CLOUD_MODELS
-from src.encryptor import EncryptorFactory
-from src.encryptor.base import BaseEncryptor
-from src.internal_model.base import InternalInferenceModelFactory
-
-from src.dataset import DATASETS, RawDataset
+from src.internal_model import InternalInferenceModelFactory
+from src.dataset import DatasetFactory, RawDataset
 from src.utils.config import config
-import pandas as pd
+from loguru import logger
+from src.experiments.base import ExperimentHandler
+from src.utils.helpers import get_experiment_name, get_dataset_path
+from src.utils.constansts import DATASET_FILE_NAME, REPORT_PATH
 
-from src.utils.db import RawSplitDBFactory
 
+class KModelTrainingExperimentHandler(ExperimentHandler):
 
-class KFoldExperimentHandler:
+    def __init__(self, report_path: str = REPORT_PATH):
+        super().__init__(get_experiment_name(), report_path=report_path)
 
-    def __init__(self):
-        w_emb = "w_emb" if config.experiment_config.use_embedding else "wo_emb"
-        w_noise_labels = "w_noise_labels" if config.experiment_config.use_labels else "wo_noise_labels"
-        w_pred = "w_pred" if config.experiment_config.use_preds else "wo_pred"
-        self.experiment_name = f"{w_emb}_{w_noise_labels}_{w_pred}"
-        self.n_pred_vectors = config.experiment_config.n_pred_vectors
-        self.n_noise_samples = config.experiment_config.n_noise_samples
-        self.k_folds = config.experiment_config.k_folds
+    def _collect_datasets(self, dataset_name):
+        X_train, y_train = [], []
+        for folder in range(1, self.n_pred_vectors + 1):
+            path = get_dataset_path(dataset_name, folder) / DATASET_FILE_NAME
+            logger.info(f"Loading dataset from {path}")
+            with open(path, "rb") as f:
+                data = pickle.load(f)
+                X_train.append(data.train.features)
+                y_train.append(data.train.labels)
+
+        return np.vstack(X_train), np.vstack(y_train), data.test.features, data.test.labels
+
 
 
     def run_experiment(self):
-        print(f"##### STARTING {self.k_folds}-FOLD EXPERIMENT ########\n\n")
-        if type(self.n_noise_samples) is int:
-            self.n_noise_samples = [self.n_noise_samples]
 
-        if type(self.n_pred_vectors) is int:
-            self.n_pred_vectors = [self.n_pred_vectors]
+        logger.info(f"Training Model Experiment: {get_experiment_name()}")
 
-        reports = []
-        datasets = config.dataset_config.names
+        for dataset_name in config.dataset_config.names:
 
-        for dataset_name in tqdm(datasets, total=len(datasets), desc="Datasets Progress", unit="dataset"):
+            try:
+                raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
+                logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}")
+                n_classes = raw_dataset.get_n_classes()
+                original_size = raw_dataset.get_dataset()[0].shape
+                del raw_dataset
 
-            progress = tqdm(total=self.k_folds, desc="K-Folds", unit="Fold")
-
-
-            raw_dataset: RawDataset = DATASETS[dataset_name]()
-
-            cloud_model: CloudModel = CLOUD_MODELS[config.cloud_config.name](
-                num_classes=raw_dataset.get_n_classes()
-            )
-            embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y)
-            encryptor: BaseEncryptor = EncryptorFactory().get_model(
-                output_shape=(1, *cloud_model.input_shape),
-            )
-
-            X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
-            print(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
+            except:
+                logger.warning(f"Error loading Dataset {dataset_name}, using default number of classes -> 2")
+                n_classes, original_size = 2, 0
 
 
-            cloud_model.fit(X_train, y_train, **raw_dataset.metadata)
+            for model_name in config.iim_config.name:
 
-            print("#### GETTING CLOUD DATASET FULL BASELINE####")
-            cloud_acc, cloud_f1 = raw_dataset.get_cloud_model_baseline(X_train, X_test, y_train, y_test)
+                logger.info(f"#### Training model experiment: "
+                            f"Dataset: {dataset_name}, n_pred_vectors: {self.n_pred_vectors} ####\n")
 
-            print("#### GETTING RAW BASELINE PREDICTION ####")
-            raw_baseline_acc, raw_baseline_f1 = raw_dataset.get_baseline(X_sample, X_test, y_sample, y_test)
+                path = get_dataset_path(dataset_name=dataset_name, n_pred_vectors=self.n_pred_vectors)
 
-            # Initialize lists to store metrics across folds
-            cloud_acc_scores = []
-            cloud_f1_scores = []
-            baseline_acc_scores = []
-            baseline_emb_acc_scores = []
-            baseline_f1_scores = []
-            baseline_emb_f1_scores = []
-            train_acc_scores = []
-            train_f1_scores = []
-            test_acc_scores = []
-            test_f1_scores = []
 
-            for X_train, X_test, X_sample, y_sample, y_train, y_test in raw_dataset.k_fold_iterator(n_splits=self.k_folds):
+                if path.exists():
 
-                for n_noise_samples in self.n_noise_samples:
-                    for n_pred_vectors in self.n_pred_vectors:
+                    history_path = path / "history.pkl"
+                    plot_path = path / f"{model_name}_{config.experiment_config.to_run}_train_plot.png"
 
-                        print(f"CREATING THE CLOUD-TRAINSET FROM {dataset_name},"
-                              f" WITH {n_noise_samples} NOISE SAMPLES AND {n_pred_vectors} PREDICTION VECTORS")
+                    X_train, y_train, X_test, y_test = self._collect_datasets(dataset_name=dataset_name)
 
-                        dataset_creator = FeatureEngineeringPipeline(
-                            dataset_name=dataset_name,
-                            cloud_models=cloud_model,
-                            encryptor=encryptor,
-                            embeddings_model=embedding_model,
-                            n_noise_samples=n_noise_samples,
-                            n_pred_vectors=n_pred_vectors,
-                            metadata=raw_dataset.metadata
-                        )
-                        dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
-                        print("Finished Creating the dataset")
-
-                        print("#### GETTING EMBEDDING BASELINE PREDICTION ####")
-                        baseline_model = EmbeddingBaseline(
-                            num_classes=raw_dataset.get_n_classes(),
-                            input_shape=dataset[consts.IIM_BASELINE_TRAIN_SET_TOKEN][0].shape[1:],
-                        )
-                        baseline_model.fit(
-                            *dataset[consts.IIM_BASELINE_TRAIN_SET_TOKEN]
-                        )
-                        baseline_emb_acc, baseline_emb_f1 = baseline_model.evaluate(
-                            *dataset[consts.IIM_BASELINE_TEST_SET_TOKEN])
+                    for k in tqdm(range(config.experiment_config.k_folds), total=config.experiment_config.k_folds, desc="K Trainings"):
 
                         internal_model = InternalInferenceModelFactory().get_model(
-                            num_classes=raw_dataset.get_n_classes(),
-                            input_shape=dataset[consts.IIM_TRAIN_SET_TOKEN][0].shape[1],
-                            # Only give the number of features
+                            num_classes=n_classes,
+                            input_shape=X_train.shape[1],
+                            type=model_name
                         )
-
-                        print(f"Training the IIM {internal_model.name} Model")
+                        logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} ####"
+                                     f" Dataset Shape: Train - {X_train.shape}, Test: {X_test.shape}")
                         internal_model.fit(
-                            *dataset[consts.IIM_TRAIN_SET_TOKEN]
+                            X=X_train[:10], y=y_train[:10],
+                            validation_data=(X_test[:100], y_test[:100]),
                         )
-                        train_acc, train_f1 = internal_model.evaluate(*dataset[consts.IIM_TRAIN_SET_TOKEN])
-                        test_acc, test_f1 = internal_model.evaluate(*dataset[consts.IIM_TEST_SET_TOKEN])
 
-                        # Append scores for each fold
-                        cloud_acc_scores.append(cloud_acc)
-                        cloud_f1_scores.append(cloud_f1)
-                        baseline_acc_scores.append(raw_baseline_acc)
-                        baseline_emb_acc_scores.append(baseline_emb_acc)
-                        baseline_f1_scores.append(raw_baseline_f1)
-                        baseline_emb_f1_scores.append(baseline_emb_f1)
-                        train_acc_scores.append(train_acc)
-                        train_f1_scores.append(train_f1)
-                        test_acc_scores.append(test_acc)
-                        test_f1_scores.append(test_f1)
+                        internal_model.save_history(history_path)
+                        internal_model.plot_history(plot_path)
 
-                progress.update(1)
-
-            # Create a final report with average metrics
-            average_cloud_acc = np.mean(cloud_acc_scores)
-            average_cloud_f1 = np.mean(cloud_f1_scores)
-            average_baseline_acc = np.mean(baseline_acc_scores)
-            average_emb_acc = np.mean(baseline_emb_acc_scores)
-            average_baseline_f1 = np.mean(baseline_f1_scores)
-            average_emb_f1 = np.mean(baseline_emb_f1_scores)
-            average_train_acc = np.mean(train_acc_scores)
-            average_train_f1 = np.mean(train_f1_scores)
-            average_test_acc = np.mean(test_acc_scores)
-            average_test_f1 = np.mean(test_f1_scores)
-
-            final_report = pd.DataFrame(
-                {
-                    "exp_name": [self.experiment_name],
-                    "dataset": [dataset_name],
-                    "train_size_ratio": [config.dataset_config.split_ratio],
-                    "n_pred_vectors": [self.n_pred_vectors],
-                    "n_noise_sample": [self.n_noise_samples],
-                    "iim_model": [config.iim_config.name],
-                    "encryptor": [config.encoder_config.name],
-                    "cloud_model": [cloud_model.name],
-                    "iim_train_acc": [average_train_acc],
-                    "iim_train_f1": [average_train_f1],
-                    "iim_test_acc": [average_test_acc],
-                    "iim_test_f1": [average_test_f1],
-                    "raw_baseline_acc": [average_baseline_acc],
-                    "raw_baseline_f1": [average_baseline_f1],
-                    "emb_baseline_acc": [average_emb_acc],
-                    "emb_baseline_f1": [average_emb_f1],
-                    "cloud_acc": [average_cloud_acc],
-                    "cloud_f1": [average_cloud_f1],
-                }
-            )
-
-            reports.append(final_report)
+                        test_accuracy =  max(internal_model.history.history.get("val_accuracy", []))
+                        self.log_k_results(
+                            dataset_name=dataset_name,
+                            cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
+                            iim_name=model_name,
+                            test_accuracy=test_accuracy,
+                            k=k
+                        )
 
 
-        return pd.concat(reports)
+            del X_train,X_test,y_test, y_train, internal_model
+            gc.collect()
+            keras.src.backend.common.global_state.clear_session()
+
+
+        return self.report

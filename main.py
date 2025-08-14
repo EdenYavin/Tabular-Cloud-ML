@@ -1,13 +1,14 @@
 import argparse
-
+from pathlib import Path
 import src.utils.constansts as consts
 from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandler, ModelTrainingExperimentHandler
 from src.experiments.model_training_loop import ModelTrainingLoopExperimentHandler
+from src.experiments.k_fold_handler import KModelTrainingExperimentHandler
 from src.utils.config import config, update_config_from_args
 import tensorflow as tf
 import numpy as np
 
-from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS
+from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS, REPORT_PATH, OUTPUT_DIR_PATH
 
 np.random.seed(42)
 
@@ -109,6 +110,14 @@ def main():
         help="Specify how many triangulation samples to use in case of first / last / random triangulation type."
     )
 
+    parser.add_argument(
+        "--k-training",  # User-facing name
+        type=int,
+        default=1,
+        dest="experiment_k_folds",  # Internal name for your config
+        help="Number of times we will train the iim to get number of results. Useful for testing statistic about model performance."
+    )
+
 
     args = parser.parse_args()
 
@@ -123,7 +132,7 @@ def main():
         except RuntimeError as e:
             print(e)
 
-
+    report_path = REPORT_PATH
     # Use GPU only when using Decon
     if config.encoder_config.name not in consts.GPU_MODELS:
         # Hide GPU from visible devices
@@ -139,9 +148,12 @@ def main():
         experiment_handler = ModelTrainingLoopExperimentHandler
     else:
         experiment_handler = ModelTrainingExperimentHandler
+        if config.experiment_config.k_folds > 1:
+            report_path = Path(OUTPUT_DIR_PATH) / "k_report.csv"
+            experiment_handler = KModelTrainingExperimentHandler
 
 
-    with experiment_handler() as experiment:
+    with experiment_handler(report_path=report_path) as experiment:
         experiment.run_experiment()
 
 

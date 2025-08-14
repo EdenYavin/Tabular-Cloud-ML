@@ -10,13 +10,13 @@ from src.utils.config import config
 from loguru import logger
 from src.experiments.base import ExperimentHandler
 from src.utils.helpers import get_experiment_name, get_dataset_path
-from src.utils.constansts import DATASET_FILE_NAME, BASELINE_DATASET_FILE_NAME
+from src.utils.constansts import DATASET_FILE_NAME, BASELINE_DATASET_FILE_NAME, REPORT_PATH
 
 
 class ModelTrainingExperimentHandler(ExperimentHandler):
 
-    def __init__(self):
-        super().__init__(get_experiment_name())
+    def __init__(self, report_path=REPORT_PATH):
+        super().__init__(get_experiment_name(), report_path=report_path)
 
     def _collect_datasets(self, dataset_name):
         X_train, y_train = [], []

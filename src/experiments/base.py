@@ -17,7 +17,11 @@ class ExperimentHandler(ABC):
         self.experiment_name: str = experiment_name
         self.n_pred_vectors = config.experiment_config.n_pred_vectors
         self.report_path = report_path
-        if os.path.exists(self.report_path):
+
+        if config.experiment_config.k_folds > 1:
+            self.report = pd.DataFrame()
+
+        elif os.path.exists(self.report_path):
             try:
                 self.report = pd.read_csv(report_path)
             except Exception as e:
@@ -72,6 +76,32 @@ class ExperimentHandler(ABC):
 
         return baseline_pred_acc, baseline_pred_f1
 
+    def log_k_results(self, dataset_name, cloud_models_names, iim_name, test_accuracy: float, k: int):
+
+        trian_samples = config.experiment_config.n_triangulation_samples if config.encoder_config.rotating_key else 0
+        triangulation_method = config.experiment_config.triangulation_choosing if trian_samples else "None"
+        if trian_samples and triangulation_method == "classes":
+            trian_samples = 2 # Special case where it is always two
+
+        new_col = f"k_fold_{k}_acc"
+
+        if len(self.report) > 0:
+            mask = (self.report["dataset_name"] == dataset_name) & (self.report["iim_name"] == iim_name)
+            self.report[new_col] = 0
+            self.report.loc[mask, new_col] = test_accuracy
+
+        else:
+            new_row = {
+                "dataset_name": [dataset_name],
+                "iim_name": [iim_name],
+                "cloud_models": [cloud_models_names],
+                "triangulation_method": triangulation_method,
+                "triangulation_samples": trian_samples,
+                new_col: test_accuracy
+            }
+            self.report = pd.concat([self.report, pd.DataFrame(new_row)], ignore_index=True)
+
+
     def log_results(self,
                     dataset_name: str, train_shape: tuple, new_train_shape: tuple, test_shape: tuple, cloud_models_names,
                     embeddings_baseline_acc: float, embeddings_baseline_f1: float,
@@ -94,10 +124,12 @@ class ExperimentHandler(ABC):
 
         logger.info(log_msg)
 
-        train_samples = config.experiment_config.n_triangulation_samples if config.encoder_config.rotating_key else 0
+        trian_samples = config.experiment_config.n_triangulation_samples if config.encoder_config.rotating_key else 0
+        triangulation_method = config.experiment_config.triangulation_choosing if trian_samples else "None"
         new_row = {
             "exp_name": [self.experiment_name],
-            "triangulation_samples": [train_samples],
+            "triangulation_samples": [trian_samples],
+            "triangulation_method": [triangulation_method],
             "n_pred_vectors": [n_pred_vectors],
             "dataset": [dataset_name],
             "train_size": [str(train_shape)],

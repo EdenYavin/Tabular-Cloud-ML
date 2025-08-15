@@ -267,6 +267,7 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
     if categorical_cols:
         print("\nEncoding categorical columns...")
         X_categorical = pd.get_dummies(X[categorical_cols], drop_first=True)
+        X_categorical = X_categorical.astype(int) # Tensorflow can't process boolean
         # label_encoder = LabelEncoder()
         # X_categorical = pd.DataFrame()
         # for col in categorical_cols:

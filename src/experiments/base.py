@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from loguru import logger
 import pandas as pd
@@ -92,7 +93,9 @@ class ExperimentHandler(ABC):
 
         else:
             new_row = {
+                "date": [datetime.now().strftime("%d/%m/%Y %H:%M:%S")],
                 "dataset_name": [dataset_name],
+                "using_raw_features": [True if config.experiment_config.use_embedding else False],
                 "iim_name": [iim_name],
                 "cloud_models": [cloud_models_names],
                 "triangulation_method": triangulation_method,

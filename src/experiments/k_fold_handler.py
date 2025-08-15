@@ -88,7 +88,7 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                             dataset_name=dataset_name,
                             cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
                             iim_name=model_name,
-                            test_accuracy=test_accuracy,
+                            test_accuracy=round(test_accuracy, 4),
                             k=k
                         )
 

@@ -76,8 +76,8 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                         logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} ####"
                                      f" Dataset Shape: Train - {X_train.shape}, Test: {X_test.shape}")
                         internal_model.fit(
-                            X=X_train[:10], y=y_train[:10],
-                            validation_data=(X_test[:100], y_test[:100]),
+                            X=X_train, y=y_train,
+                            validation_data=(X_test, y_test),
                         )
 
                         internal_model.save_history(history_path)

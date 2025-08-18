@@ -35,7 +35,6 @@ class ExperimentHandler(ABC):
 
         self.report_path = report_path
         if not os.path.exists(report_path):
-            os.makedirs(report_path, exist_ok=True)
             self.report = pd.DataFrame()
 
         else:

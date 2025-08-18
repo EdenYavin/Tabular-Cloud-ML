@@ -1,5 +1,7 @@
 import gc
+import os.path
 import pickle
+from pathlib import Path
 
 import keras.src.backend.common.global_state
 import numpy as np
@@ -11,7 +13,7 @@ from src.utils.config import config
 from loguru import logger
 from src.experiments.base import ExperimentHandler
 from src.utils.helpers import get_experiment_name, get_dataset_path
-from src.utils.constansts import DATASET_FILE_NAME, REPORT_PATH
+from src.utils.constansts import DATASET_FILE_NAME, REPORT_PATH, OUTPUT_DIR_PATH
 
 
 class KModelTrainingExperimentHandler(ExperimentHandler):
@@ -39,11 +41,13 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
 
         for dataset_name in config.dataset_config.names:
 
+            report_path = os.path.join(OUTPUT_DIR_PATH, f"k_report_{dataset_name}.csv")
+            self.set_report_path(report_path)
+
             try:
                 raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
                 logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}")
                 n_classes = raw_dataset.get_n_classes()
-                original_size = raw_dataset.get_dataset()[0].shape
                 del raw_dataset
 
             except:

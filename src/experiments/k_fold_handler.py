@@ -65,6 +65,7 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
 
                 if path.exists():
 
+                    test_accs = []
                     history_path = path / "history.pkl"
                     plot_path = path / f"{model_name}_{config.experiment_config.to_run}_train_plot.png"
 
@@ -88,13 +89,14 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                         internal_model.plot_history(plot_path)
 
                         test_accuracy =  max(internal_model.history.history.get("val_accuracy", []))
-                        self.log_k_results(
-                            dataset_name=dataset_name,
-                            cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
-                            iim_name=model_name,
-                            test_accuracy=round(test_accuracy, 4),
-                            k=k
-                        )
+                        test_accs.append(round(test_accuracy, 4))
+
+                    self.log_k_results(
+                        dataset_name=dataset_name,
+                        cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
+                        iim_name=model_name,
+                        k_test_accuracies=test_accs
+                    )
 
 
             del X_train,X_test,y_test, y_train, internal_model

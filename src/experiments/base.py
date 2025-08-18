@@ -90,32 +90,26 @@ class ExperimentHandler(ABC):
 
         return baseline_pred_acc, baseline_pred_f1
 
-    def log_k_results(self, dataset_name, cloud_models_names, iim_name, test_accuracy: float, k: int):
+    def log_k_results(self, dataset_name, cloud_models_names, iim_name, k_test_accuracies: list[float]):
 
         trian_samples = config.experiment_config.n_triangulation_samples if config.encoder_config.rotating_key else 0
         triangulation_method = config.experiment_config.triangulation_choosing if trian_samples else "None"
         if trian_samples and triangulation_method == "classes":
             trian_samples = 2 # Special case where it is always two
 
-        new_col = f"k_fold_{k}_acc"
+        new_row = {
+            "date": [datetime.now().strftime("%d/%m/%Y %H:%M")],
+            "dataset_name": [dataset_name],
+            "using_raw_features": [True if config.experiment_config.use_embedding else False],
+            "iim_name": [iim_name],
+            "cloud_models": [cloud_models_names],
+            "triangulation_method": triangulation_method,
+            "triangulation_samples": trian_samples
+        }
+        for k in range(len(k_test_accuracies)):
+            new_row[f"k_fold_{k}_acc"] = k_test_accuracies[k]
 
-        if len(self.report) > 0:
-            mask = (self.report["dataset_name"] == dataset_name) & (self.report["iim_name"] == iim_name)
-            self.report[new_col] = 0
-            self.report.loc[mask, new_col] = test_accuracy
-
-        else:
-            new_row = {
-                "date": [datetime.now().strftime("%d/%m/%Y %H:%M")],
-                "dataset_name": [dataset_name],
-                "using_raw_features": [True if config.experiment_config.use_embedding else False],
-                "iim_name": [iim_name],
-                "cloud_models": [cloud_models_names],
-                "triangulation_method": triangulation_method,
-                "triangulation_samples": trian_samples,
-                new_col: test_accuracy
-            }
-            self.report = pd.concat([self.report, pd.DataFrame(new_row)], ignore_index=True)
+        self.report = pd.concat([self.report, pd.DataFrame(new_row)], ignore_index=True)
 
 
     def log_results(self,

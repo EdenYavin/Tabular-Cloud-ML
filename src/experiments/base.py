@@ -92,6 +92,10 @@ class ExperimentHandler(ABC):
 
     def log_k_results(self, dataset_name, cloud_models_names, iim_name, k_test_accuracies: list[float]):
 
+        if not k_test_accuracies:
+            logger.warning(f"No test accuracies found for {dataset_name}")
+            return
+
         trian_samples = config.experiment_config.n_triangulation_samples if config.encoder_config.rotating_key else 0
         triangulation_method = config.experiment_config.triangulation_choosing if trian_samples else "None"
         if trian_samples and triangulation_method == "classes":

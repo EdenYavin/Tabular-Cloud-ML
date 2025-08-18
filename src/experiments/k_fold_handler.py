@@ -71,7 +71,7 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
 
                     X_train, y_train, X_test, y_test = self._collect_datasets(dataset_name=dataset_name)
 
-                    for k in tqdm(range(config.experiment_config.k_folds), total=config.experiment_config.k_folds, desc="K Trainings"):
+                    for _ in tqdm(range(config.experiment_config.k_folds), total=config.experiment_config.k_folds, desc="K Trainings"):
 
                         internal_model = InternalInferenceModelFactory().get_model(
                             num_classes=n_classes,

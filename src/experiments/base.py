@@ -38,6 +38,7 @@ class ExperimentHandler(ABC):
             self.report = pd.DataFrame()
 
         else:
+            logger.info(f"Loaded existing report: {report_path}")
             self.report = pd.read_csv(report_path)
 
         logger.info(f"New report path: {self.report_path}")

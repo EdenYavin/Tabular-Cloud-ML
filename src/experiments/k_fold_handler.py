@@ -41,7 +41,7 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
 
         for dataset_name in config.dataset_config.names:
 
-            report_path = os.path.join(OUTPUT_DIR_PATH, f"k_report_{dataset_name}.csv")
+            report_path = os.path.join(OUTPUT_DIR_PATH, dataset_name, "k_report.csv")
             self.set_report_path(report_path)
 
             try:

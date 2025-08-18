@@ -32,11 +32,15 @@ class ExperimentHandler(ABC):
             self.report = pd.DataFrame()
 
     def set_report_path(self, report_path: str):
-        if not os.path.exists(report_path):
-            os.makedirs(report_path, exist_ok=True)
 
         self.report_path = report_path
-        self.report = pd.read_csv(report_path)
+        if not os.path.exists(report_path):
+            os.makedirs(report_path, exist_ok=True)
+            self.report = pd.DataFrame()
+
+        else:
+            self.report = pd.read_csv(report_path)
+
         logger.info(f"New report path: {self.report_path}")
 
 

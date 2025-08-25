@@ -15,6 +15,7 @@ echo "Running dataset: $DATASET_NAME"
 echo "Running experiment": $EXPERIMENT_NAME
 echo "Number of triangulation $TRIANGULATIONS_NUMBER"
 echo "Number of prediction vectors: $N_P"
+echo "Number of K Iteration $K"
 
 # Load environment
 module load anaconda
@@ -23,4 +24,4 @@ echo "Currently active conda env: $CONDA_DEFAULT_ENV"
 which python
 
 # Run the Python script
-python main.py --experiment-to-run model_training --encoder-rotating-key --use-cloud-models xception --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name lstm --iim-epochs 100 --triangulation-choosing classes --triangulation-samples 2 --k-training 3
+python main.py --experiment-to-run model_training --encoder-rotating-key --use-cloud-models xception --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name lstm --iim-epochs 100 --triangulation-choosing classes --triangulation-samples 2 --k-training $K

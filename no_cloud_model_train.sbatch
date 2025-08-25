@@ -23,4 +23,4 @@ echo "Currently active conda env: $CONDA_DEFAULT_ENV"
 which python
 
 # Run the Python script
-python main.py --experiment-to-run model_training --encoder-rotating-key --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name lstm --iim-epochs 100 --triangulation-choosing classes --triangulation-samples 2 --k-training --k-training $K
+python main.py --experiment-to-run model_training --encoder-rotating-key --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name lstm --iim-epochs 100 --triangulation-choosing classes --triangulation-samples 2 --k-training $K

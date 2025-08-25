@@ -12,7 +12,6 @@
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "SLURM_JOB_NODELIST=$SLURM_JOB_NODELIST"
 echo "Running dataset: $DATASET_NAME"
-echo "Running experiment": $EXPERIMENT_NAME
 echo "Number of triangulation $TRIANGULATIONS_NUMBER"
 echo "Number of prediction vectors: $N_P"
 echo "Number of K Iteration $K"

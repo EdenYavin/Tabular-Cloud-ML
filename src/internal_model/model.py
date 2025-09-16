@@ -4,7 +4,7 @@ from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
 from keras.src.models import Model
 from keras.src.layers import Dense, Dropout, Input,  BatchNormalization, concatenate, LSTM
-from keras.src.metrics import F1Score
+from keras.src.metrics import F1Score, AUC
 from keras.src import regularizers
 import numpy as np
 import tensorflow as tf
@@ -121,7 +121,7 @@ class LSTMIIM(NeuralNetworkInternalModel):
         model = Model(inputs=inputs, outputs=outputs)
         model.compile(optimizer='adam',
                       loss='categorical_crossentropy',
-                      metrics=['accuracy'])
+                      metrics=['accuracy', AUC(multi_label=True)])
         return model
 
     @staticmethod

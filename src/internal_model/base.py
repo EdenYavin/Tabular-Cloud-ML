@@ -2,7 +2,7 @@ import pickle
 
 from keras.src.callbacks import LearningRateScheduler, EarlyStopping
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 import numpy as np
 from keras.src.models import Model
 import tensorflow as tf
@@ -54,7 +54,7 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
                            validation_data=validation_data, epochs=self.epochs,
                            batch_size=config.iim_config.neural_net_config.batch_size,
                            verbose=2,
-                           callbacks=[lr_scheduler])#, early_stopping])
+                           callbacks=[lr_scheduler]),#, early_stopping])
 
     def save_history(self, filename):
         logger.info(f'saving history to {filename}')
@@ -72,11 +72,22 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
     def predict_proba(self, X):
         return self.model.predict(X)
 
-    def evaluate(self, X, y):
+    def evaluate(self, X, y, metrics=None):
+        if metrics is None:
+            metrics = ["accuracy"]
+
         if len(y.shape) == 2:
             y = np.argmax(y, axis=1)
 
         pred = self.predict(X)
-        return accuracy_score(y, pred), f1_score(y, pred, average='weighted')
+        metrics_results = {}
+        for metric in metrics:
+            if metric == "accuracy":
+                metrics_results[metric] = accuracy_score(y, pred)
+            elif metric == "f1_score":
+                metrics_results[metric] = f1_score(y, pred, average='weighted')
+            elif metric == "auc":
+                metrics_results[metric] = roc_auc_score(y, pred)
+        return metrics_results
 
 

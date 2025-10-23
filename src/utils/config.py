@@ -1,6 +1,8 @@
 import argparse
 
 from pydantic import BaseModel, Field
+from tensorflow.python.keras.saving.saved_model.serialized_attributes import metrics
+
 from src.utils.constansts import (EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, EXPERIMENTS,
                                   HARD_DATASETS, LARGE_DATASETS, ALL_DATASETS,
                                     PMLB_DATASETS_IMBALANCE, PMLB_DATASETS, DATASETS
@@ -36,7 +38,7 @@ class Config(BaseModel):
         name: list[str] | str = Field(description="IIM model to use. Can be multiple models", default=IIM_MODELS.NEURAL_NET)
         stacking: bool = Field(description="A flag to indicate if the stacking should be used in training the IIM")
         train_baseline: bool = Field(description="A flag to indicate if the baseline should be used in training the IIM")
-
+        metrics: list[str] | str = Field(description="Metrics to use in training the IIM")
 
     class CloudModelsConfig(BaseModel):
         names: list[str] = Field(description="Cloud model to use")
@@ -66,7 +68,9 @@ class Config(BaseModel):
                                           batch_size=10,
                                           dropout=0,
                                           epochs=30
-                                      ))
+                                      ),
+                                      metrics=["accuracy", "auc"]
+                                      )
     dataset_config: DatasetConfig = DatasetConfig(split_ratio=1,
                                                   names=PMLB_DATASETS,
                                                   batch_size=100

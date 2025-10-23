@@ -76,7 +76,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         validation_data=(X_test, y_test),
                     )
                     test_acc, test_f1 = internal_model.evaluate(
-                        X=X_test, y=y_test
+                        X=X_test, y=y_test, metrics=config.iim_config.metrics
                     )
 
                     internal_model.save_history(history_path)

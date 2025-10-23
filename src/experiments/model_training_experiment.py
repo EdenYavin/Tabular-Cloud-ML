@@ -75,7 +75,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         X=X_train, y=y_train,
                         validation_data=(X_test, y_test),
                     )
-                    test_acc, test_f1 = internal_model.evaluate(
+                    test_metrics = internal_model.evaluate(
                         X=X_test, y=y_test, metrics=config.iim_config.metrics
                     )
 
@@ -101,7 +101,7 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                         test_shape=X_test.shape,
                         cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
                         embeddings_baseline_acc=baseline_emb_acc, embeddings_baseline_f1=embeddings_baseline_f1,
-                        iim_baseline_acc=test_acc, iim_baseline_f1=test_f1,
+                        test_metrics=test_metrics,
                         iim_model_name=model_name,
                         total_params=internal_model.model.count_params(),
                         n_pred_vectors=self.n_pred_vectors,

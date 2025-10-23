@@ -121,7 +121,7 @@ class ExperimentHandler(ABC):
                     dataset_name: str, train_shape: tuple, new_train_shape: tuple, test_shape: tuple, cloud_models_names,
                     embeddings_baseline_acc: float, embeddings_baseline_f1: float,
                     # prediction_baseline_acc: float, prediction_baseline_f1: float,
-                    iim_baseline_acc: float, iim_baseline_f1: float,
+                    test_metrics: dict,
                     iim_model_name: str, total_params: int, n_pred_vectors: int,
                     raw_baseline_acc: float = None, raw_baseline_f1: float = None,
                     ):
@@ -134,7 +134,7 @@ class ExperimentHandler(ABC):
 
         log_msg += f"""
          Emb Baseline: {embeddings_baseline_acc}, {embeddings_baseline_f1}\n
-         IIM {iim_name}: {iim_baseline_acc}, {iim_baseline_f1}\n
+         IIM {iim_name}: {test_metrics}\n
         """
 
         logger.info(log_msg)
@@ -159,9 +159,7 @@ class ExperimentHandler(ABC):
             # "pred_baseline_f1": [prediction_baseline_f1],
             "emb_baseline_acc": [embeddings_baseline_acc],
             "emb_baseline_f1": [embeddings_baseline_f1],
-            "iim_test_acc": [iim_baseline_acc],
-            "iim_test_f1": [iim_baseline_f1],
-        }
+        } | test_metrics
         if raw_baseline_acc:
             new_row["raw_baseline_acc"] = [raw_baseline_acc]
             new_row["raw_baseline_f1"] = [raw_baseline_f1]

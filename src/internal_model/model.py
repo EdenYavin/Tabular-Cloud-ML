@@ -137,9 +137,9 @@ class LSTMIIM(NeuralNetworkInternalModel):
 
         super().fit(X, y, validation_data=validation_data)
 
-    def evaluate(self, X, y):
+    def evaluate(self, X, y, metrics=None):
         X = X.reshape(-1, 1, X.shape[1])
-        return super().evaluate(X, y)
+        return super().evaluate(X, y, metrics=metrics)
 
 
 class DoubleDenseInternalModel(NeuralNetworkInternalModel):

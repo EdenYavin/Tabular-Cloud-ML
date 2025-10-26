@@ -121,7 +121,7 @@ class LSTMIIM(NeuralNetworkInternalModel):
         model = Model(inputs=inputs, outputs=outputs)
         model.compile(optimizer='adam',
                       loss='categorical_crossentropy',
-                      metrics=['accuracy', AUC(multi_label=False)])
+                      metrics=['accuracy', AUC(multi_label=False, name='auc')])
         return model
 
     @staticmethod

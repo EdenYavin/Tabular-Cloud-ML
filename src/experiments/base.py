@@ -90,7 +90,8 @@ class ExperimentHandler(ABC):
 
         return baseline_pred_acc, baseline_pred_f1
 
-    def log_k_results(self, dataset_name, cloud_models_names, iim_name, k_test_accuracies: list[float]):
+    def log_k_results(self, dataset_name, cloud_models_names, iim_name, k_test_accuracies: list[float],
+                      k_test_aucs: list[float]):
 
         if not k_test_accuracies:
             logger.warning(f"No test accuracies found for {dataset_name}")
@@ -113,6 +114,8 @@ class ExperimentHandler(ABC):
         }
         for k in range(len(k_test_accuracies)):
             new_row[f"k_fold_{k}_acc"] = k_test_accuracies[k]
+        for k in range(len(k_test_aucs)):
+            new_row[f"k_fold_{k}_auc"] = k_test_aucs[k]
 
         self.report = pd.concat([self.report, pd.DataFrame(new_row)], ignore_index=True)
 

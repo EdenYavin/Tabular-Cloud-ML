@@ -88,11 +88,13 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                         internal_model.save_history(history_path)
                         internal_model.plot_history(plot_path)
 
-                        test_accuracy =  max(internal_model.history.history.get("val_accuracy", []))
                         test_aucs.append(
-                            max(internal_model.history.history.get("test_auc", []))
+                            round(max(internal_model.history.history.get("val_auc", [])),
+                                  4)
                         )
-                        test_accs.append(round(test_accuracy, 4))
+                        test_accs.append(
+                            round(max(internal_model.history.history.get("val_accuracy", []))
+                                               , 4))
 
 
                     self.log_k_results(
@@ -100,7 +102,7 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                         cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
                         iim_name=model_name,
                         k_test_accuracies=test_accs,
-                        k_test_auc=test_aucs
+                        k_test_aucs=test_aucs
                     )
 
 

@@ -88,8 +88,15 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                         internal_model.save_history(history_path)
                         internal_model.plot_history(plot_path)
 
+                        if "val_auc" in internal_model.history.history:
+                            test_auc = internal_model.history.history["val_auc"]
+                        elif "val_auc_1" in internal_model.history.history:
+                            test_auc = internal_model.history.history["val_auc_1"]
+                        else:
+                            test_auc = []
+
                         test_aucs.append(
-                            round(max(internal_model.history.history.get("val_auc", [])),
+                            round(max(test_auc),
                                   4)
                         )
                         test_accs.append(

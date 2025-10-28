@@ -16,7 +16,6 @@ echo "Running dataset: $DATASET_NAME"
 echo "Number of triangulation $TRIANGULATIONS_NUMBER"
 echo "Number of prediction vectors: $N_P"
 echo "Number of K Iteration $K"
-echo "Use raw features flag: $RAW_FEATURES_FLAG"
 
 # Load environment
 module load anaconda

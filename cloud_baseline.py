@@ -47,33 +47,11 @@ def main():
         dataset_creator.create(X_sample, y_sample, X_test, y_test)
     )
 
-    path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / "rotate" / "_".join(config.cloud_config.names) / "only_cloud"
-    os.makedirs(path, exist_ok=True)
+    return dataset, emb_baseline_dataset
 
-    logger.debug("Finished Creating the dataset.\n"
-                 f"Saving to {path}")
+def train(dataset):
 
-    with open(path / DATASET_FILE_NAME, "wb") as f:
-        pickle.dump(dataset, f)
-
-    del dataset, emb_baseline_dataset
-    gc.collect()
-    return path / DATASET_FILE_NAME
-
-def train(path):
-
-    def collect_datasets():
-        X_train, y_train = [], []
-        for folder in range(1, 1 + 1):
-            logger.info(f"Loading dataset from {path}")
-            with open(path, "rb") as f:
-                data = pickle.load(f)
-                X_train.append(data.train.features)
-                y_train.append(data.train.labels)
-
-        return np.vstack(X_train), np.vstack(y_train), data.test.features, data.test.labels
-
-    X_train, y_train, X_test, y_test = collect_datasets()
+    X_train, y_train, X_test, y_test = np.vstack(dataset.train.features), np.vstack(dataset.train.labels), dataset.test.features, dataset.test.labels
 
     internal_model = InternalInferenceModelFactory().get_model(
         num_classes=2,
@@ -203,6 +181,6 @@ if __name__ == "__main__":
 
     update_config_from_args(config, args)
 
-    path = main()
-    train(path)
+    dataset, _ = main()
+    train(dataset)
     logger.info("Finished.")

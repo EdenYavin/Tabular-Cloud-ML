@@ -1,5 +1,6 @@
 import gc
 import os
+import pathlib
 import pickle
 
 import numpy as np
@@ -13,7 +14,7 @@ from src.encryptor import EncryptorFactory
 from src.pipeline.cloud_features_dataset import CloudFeatureEngineering
 from src.utils.config import config, update_config_from_args
 import argparse
-from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS
+from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS, OUTPUT_DIR_PATH
 from src.utils.db import RawSplitDBFactory
 from src.utils.helpers import get_experiment_name, get_dataset_path
 from loguru import logger
@@ -46,7 +47,7 @@ def main():
         dataset_creator.create(X_sample, y_sample, X_test, y_test)
     )
 
-    path = get_dataset_path(dataset_name, 1)
+    path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / "rotate" / "_".join(config.cloud_config.names) / "only_cloud"
     os.makedirs(path, exist_ok=True)
 
     logger.debug("Finished Creating the dataset.\n"
@@ -57,13 +58,13 @@ def main():
 
     del dataset, emb_baseline_dataset
     gc.collect()
+    return path / DATASET_FILE_NAME
 
-def train():
+def train(path):
 
-    def collect_datasets(dataset_name):
+    def collect_datasets():
         X_train, y_train = [], []
         for folder in range(1, 1 + 1):
-            path = "/Users/eden.yavin/Projects/Tabular-Cloud-ML/output/magic/rotate/cloud/xception/raw/1/classes/dataset.pkl"
             logger.info(f"Loading dataset from {path}")
             with open(path, "rb") as f:
                 data = pickle.load(f)
@@ -72,7 +73,7 @@ def train():
 
         return np.vstack(X_train), np.vstack(y_train), data.test.features, data.test.labels
 
-    X_train, y_train, X_test, y_test = collect_datasets(dataset_name="magic")
+    X_train, y_train, X_test, y_test = collect_datasets()
 
     internal_model = InternalInferenceModelFactory().get_model(
         num_classes=2,
@@ -202,6 +203,6 @@ if __name__ == "__main__":
 
     update_config_from_args(config, args)
 
-    main()
-    train()
+    path = main()
+    train(path)
     logger.info("Finished.")

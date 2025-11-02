@@ -64,10 +64,10 @@ def train(dataset):
         X=X_train, y=y_train,
         validation_data=(X_test, y_test),
     )
-    test_acc, test_f1 = internal_model.evaluate(
+    metrics_results = internal_model.evaluate(
         X=X_test, y=y_test, metrics=["accuracy", "auc"]
     )
-    print(f"Test Accuracy: {test_acc}")
+    print(f"Metrics Result: {metrics_results}")
 
 
 if __name__ == "__main__":

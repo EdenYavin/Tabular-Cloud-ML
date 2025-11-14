@@ -59,63 +59,57 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
         cloud = self.cloud_model_manager.__enter__()
 
-        if config.cloud_config.names:
-            observations = []
+        observations = []
 
-            with tqdm(total=len(X), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
-                with tf.device(GPU_DEVICE):  # Run the models on the GPU
-                    logger.debug(f"Running ON GPU device: {GPU_DEVICE}")
+        with tqdm(total=len(X), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
+            with tf.device(GPU_DEVICE):  # Run the models on the GPU
+                logger.debug(f"Running ON GPU device: {GPU_DEVICE}")
 
-                    for x, label in zip(X, y):
-                        pbar.update(1)
+                for x, label in zip(X, y):
+                    pbar.update(1)
 
-                        # Triangulation features vector = X', Y_1', Y_2',...
-                        x_tag = self.encryptor.encode(x.reshape(1, -1))
+                    # Triangulation features vector = X', Y_1', Y_2',...
+                    x_tag = self.encryptor.encode(x.reshape(1, -1))
 
-                        # 1. Encrypt them using the new key
-                        y_tag = self.encryptor.encode(triangulation_samples)
-                        # 2. Embed the encryption
-                        y_tag_emb = self.triangulation_embedding.forward(y_tag)
+                    # 1. Encrypt them using the new key
+                    y_tag = self.encryptor.encode(triangulation_samples)
+                    # 2. Embed the encryption
+                    y_tag_emb = self.triangulation_embedding.forward(y_tag)
 
-                        # Embedding for triangulation using CLIP, those are the new features
-                        x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
+                    # Embedding for triangulation using CLIP, those are the new features
+                    x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
 
-                        if config.experiment_config.use_embedding:
-                            observation = np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten()])
-                        else:
-                            observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
+                    if config.experiment_config.use_embedding:
+                        observation = np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten()])
+                    else:
+                        observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
 
-                        # Add the cloud predictions as features if needed:
-                        if config.cloud_config.names:
-                            predictions = []
-                            for cloud_model in config.cloud_config.names:
-                                predictions.append(cloud.predict(model_name=cloud_model, batch=x_tag))
+                    # Add the cloud predictions as features if needed:
+                    if config.cloud_config.names:
+                        predictions = []
+                        for cloud_model in config.cloud_config.names:
+                            predictions.append(cloud.predict(model_name=cloud_model, batch=x_tag))
 
-                            # Flatten prediction to be stacked correctly
-                            predictions = [p.flatten() for p in predictions]
+                        # Flatten prediction to be stacked correctly
+                        predictions = [p.flatten() for p in predictions]
 
-                            if config.cloud_config.horizontal_append:
-                                observation = np.hstack([observation, np.hstack(predictions)])
-                                observations.append(observation)
-
-
-                            del predictions
-
-                        else:
-                            # No cloud models need to be used, just use the features up until now
-                            observations.append(np.hstack(observation))
+                        if config.cloud_config.horizontal_append:
+                            observation = np.hstack([observation, np.hstack(predictions)])
+                            observations.append(observation)
 
 
-                        if config.encoder_config.rotating_key:
-                            # Switch key for the next example
-                            self.encryptor.switch_key()
+                        del predictions
 
-                    del x_tag, x_tag_emb, y_tag, y_tag_emb
+                    else:
+                        # No cloud models need to be used, just use the features up until now
+                        observations.append(np.hstack(observation))
 
-            cloud.__exit__(None, None, None)
 
-        else:
-            observations = X
+                    if config.encoder_config.rotating_key:
+                        # Switch key for the next example
+                        self.encryptor.switch_key()
+
+                del x_tag, x_tag_emb, y_tag, y_tag_emb
 
         cloud.__exit__(None, None, None)
         return np.vstack(observations), y, predictions_for_baseline

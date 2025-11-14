@@ -3,6 +3,7 @@ from tqdm import tqdm
 import numpy as np
 from loguru import logger
 import tensorflow as tf
+from src.embeddings import ClipEmbedding
 
 from src.encryptor.base import BaseEncryptor
 from src.pipeline.base import FeatureEngineeringPipeline
@@ -16,9 +17,11 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                  metadata=None):
         super().__init__(dataset_name, encryptor, embeddings_model, metadata)
 
-
         if config.cloud_config.names:
             logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")
+        if config.encoder_config.rotating_key:
+                logger.info(f"Triangulation model is on, using {ClipEmbedding.name}")
+                self.triangulation_embedding = ClipEmbedding()
 
     def _get_features(self, X, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -48,26 +51,39 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
         Raises:
         None
         """
+
         # Add the new triangulation samples' embedding as well
+        triangulation_samples = self._get_triangulation_samples(X, y)
 
         # For test data we won't duplicate but encrypt it only once
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
+        cloud = self.cloud_model_manager.__enter__()
 
         if config.cloud_config.names:
-            cloud = self.cloud_model_manager.__enter__()
             observations = []
 
-            with tqdm(total=len(embeddings), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
+            with tqdm(total=len(X), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
                 with tf.device(GPU_DEVICE):  # Run the models on the GPU
                     logger.debug(f"Running ON GPU device: {GPU_DEVICE}")
 
-                    for x, x_emb, label in zip(X, embeddings, y):
+                    for x, label in zip(X, y):
                         pbar.update(1)
 
                         # Triangulation features vector = X', Y_1', Y_2',...
-                        x_tag = self.encryptor.encode(x_emb.reshape(1, -1))
+                        x_tag = self.encryptor.encode(x.reshape(1, -1))
 
-                        observation = np.hstack([x])
+                        # 1. Encrypt them using the new key
+                        y_tag = self.encryptor.encode(triangulation_samples)
+                        # 2. Embed the encryption
+                        y_tag_emb = self.triangulation_embedding.forward(y_tag)
+
+                        # Embedding for triangulation using CLIP, those are the new features
+                        x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
+
+                        if config.experiment_config.use_embedding:
+                            observation = np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten()])
+                        else:
+                            observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
 
                         # Add the cloud predictions as features if needed:
                         if config.cloud_config.names:
@@ -94,11 +110,12 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                             # Switch key for the next example
                             self.encryptor.switch_key()
 
-                    del x_tag
+                    del x_tag, x_tag_emb, y_tag, y_tag_emb
 
             cloud.__exit__(None, None, None)
 
         else:
             observations = X
 
+        cloud.__exit__(None, None, None)
         return np.vstack(observations), y, predictions_for_baseline

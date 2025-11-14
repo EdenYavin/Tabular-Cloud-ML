@@ -9,7 +9,7 @@ from src.domain.dataset import IIMFeatures, IIMDataset, PredictionBaselineFeatur
 from src.encryptor.base import BaseEncryptor
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
-from src.utils.helpers import get_triangulation_samples_clustering, get_class_representative_samples
+from src.utils.traingulations import get_triangulation_samples_clustering, get_class_representative_samples
 
 
 class FeatureEngineeringPipeline(ABC):

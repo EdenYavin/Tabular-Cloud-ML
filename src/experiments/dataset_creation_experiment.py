@@ -56,7 +56,7 @@ class DatasetCreationHandler(ExperimentHandler):
                                  f"#### Number of datasets versions: {n_pred_vectors} ####")
 
 
-                    if config.experiment_config.n_triangulation_samples > 0:
+                    if config.experiment_config.n_triangulation_samples > 0 and not config.experiment_config.use_raw:
                         # Create dataset with triangulations
                         dataset_creator = TriangulationFeatureEngineering(
                             dataset_name=dataset_name,

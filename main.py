@@ -81,7 +81,7 @@ def main():
 
     parser.add_argument(
         "--use-raw-features",
-        dest="experiment_use_embedding",
+        dest="experiment_use_raw",
         action="store_true",  # Sets to True if flag is present
         help="Use the raw dataset features as part of the feature engineering pipeline."
     )

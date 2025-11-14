@@ -5,73 +5,13 @@ from typing import Generator
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
 from PIL import Image, ImageDraw, ImageFont
 import tensorflow as tf
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OUTPUT_DIR_PATH
 from src.utils.config import config
 
-def get_triangulation_samples_clustering(n_samples, embeddings):
-    # Cluster the embeddings
-    kmeans = KMeans(n_clusters=n_samples, random_state=42, n_init=10) # Set n_init explicitly
-    kmeans.fit(embeddings)
 
-    # Find the embedding closest to each centroid
-    triangulation_samples = []
-    for i in range(n_samples):
-        # Get the centroid
-        centroid = kmeans.cluster_centers_[i]
-
-        # Find the index of the closest embedding in the original data
-        distances = np.linalg.norm(embeddings - centroid, axis=1)
-        closest_embedding_index = np.argmin(distances)
-
-        triangulation_samples.append(embeddings[closest_embedding_index])
-
-    return np.array(triangulation_samples)
-
-from sklearn.metrics.pairwise import euclidean_distances
-
-def get_class_representative_samples(embeddings, labels):
-    """
-    Selects one representative sample from each of two classes.
-
-    The function calculates the centroid for each class and finds the sample
-    closest to that centroid.
-
-    Args:
-        embeddings (np.ndarray): The matrix of embeddings.
-        labels (np.ndarray): The array of class labels corresponding to the embeddings.
-
-    Returns:
-        np.ndarray: An array containing the two representative embeddings.
-    """
-    representative_samples = []
-
-    # Get the unique class labels
-    unique_labels = np.unique(labels)
-    if len(unique_labels) != 2:
-        raise ValueError("This function is designed for exactly two classes.")
-
-    for label in unique_labels:
-        # Get the embeddings for the current class
-        class_embeddings = embeddings[labels.argmax(axis=1) == label]
-
-        # Calculate the centroid (mean) of the class embeddings
-        centroid = np.mean(class_embeddings, axis=0)
-
-        # Calculate the distance from each point in the class to the centroid
-        distances = euclidean_distances(class_embeddings, centroid.reshape(1, -1))
-
-        # Find the index of the point closest to the centroid
-        closest_point_index = np.argmin(distances)
-
-        # Get the representative sample
-        representative_sample = class_embeddings[closest_point_index]
-        representative_samples.append(representative_sample)
-
-    return np.array(representative_samples)
 
 
 def plot_history(history, filename=None, title=None):
@@ -112,7 +52,7 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pat
     use_raw_features = ""
     if config.experiment_config.use_embedding and config.experiment_config.n_triangulation_samples > 0:
         use_raw_features = "triangulation_and_raw"
-    elif config.experiment_config.n_triangulation_samples <= 0:
+    elif config.experiment_config.n_triangulation_samples <= 0 or config.experiment_config.use_raw:
         use_raw_features = "raw"
 
     triang_type = config.experiment_config.triangulation_choosing
@@ -125,7 +65,8 @@ def get_experiment_name() -> str:
     use_embed = "emb" if config.experiment_config.use_embedding else "no_emb"
     use_cloud = "cloud_vec" if config.cloud_config.names else "no_cloud_vec"
     use_rotate_key = "rotate_key" if config.encoder_config.rotating_key else "no_rotate_key"
-    return f"{use_rotate_key}_{use_embed}_{use_cloud}"
+    use_raw_features = "_raw" if config.experiment_config.use_raw else ""
+    return f"{use_rotate_key}_{use_embed}_{use_cloud}{use_raw_features}"
 
 def get_num_classes(y: np.ndarray) -> int:
     return len(np.unique(y))

@@ -47,6 +47,7 @@ class Config(BaseModel):
 
     class ExperimentConfig(BaseModel):
         use_embedding: bool = Field(description="A flag to indicate if the embedding should be used in training the IIM")
+        use_raw: bool = Field(description="A flag to indicate if the raw features should be used in training the IIM")
         n_pred_vectors: int = Field(description="Number of prediction vectors to query from the cloud models")
         n_triangulation_samples: int = Field(description="Number samples to sample from the dataset to use for the triangulation")
         triangulation_choosing: str = Field(description="How to choose the triangulation: first (first N samples), last, kmeans (use kmeans algo, classes (1 for each class)", default=None)
@@ -55,7 +56,7 @@ class Config(BaseModel):
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,
-                                                           use_embedding=False,
+                                                           use_embedding=False,use_raw=False,
                                                            to_run=EXPERIMENTS.DATASET_CREATION,
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[

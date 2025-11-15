@@ -56,7 +56,8 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pat
         use_raw_features = "raw"
 
     triang_type = config.experiment_config.triangulation_choosing
-    path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / use_raw_features / str(n_pred_vectors) / triang_type
+    train_num = config.experiment_config.n_triangulation_samples
+    path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / use_raw_features / str(n_pred_vectors) / triang_type / train_num
     os.makedirs(path, exist_ok = True)
     return path
 

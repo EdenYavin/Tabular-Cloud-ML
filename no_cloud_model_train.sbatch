@@ -12,9 +12,11 @@
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "SLURM_JOB_NODELIST=$SLURM_JOB_NODELIST"
 echo "Running dataset: $DATASET_NAME"
+echo "Running triangulation method $CHOOSE"
 echo "Number of triangulation $TRIANGULATIONS_NUMBER"
 echo "Number of prediction vectors: $N_P"
 echo "Number of K Iteration $K"
+
 
 # Load environment
 module load anaconda
@@ -25,10 +27,10 @@ which python
 # Run the Python script
 if [ -n "$USE_RAW_FEATURES" ]; then
     echo "Raw Features Flag is Turned ON"
-    python main.py --experiment-to-run model_training --encoder-rotating-key --use-raw-features --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name lstm --iim-epochs 100 --triangulation-choosing classes --triangulation-samples 2 --k-training $K
+    python main.py --experiment-to-run model_training --encoder-rotating-key --use-raw-features --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name lstm --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 else
     echo "Raw Features Flag is Turned OFF"
-    python main.py --experiment-to-run model_training --encoder-rotating-key --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name lstm --iim-epochs 100 --triangulation-choosing classes --triangulation-samples 2 --k-training $K
+    python main.py --experiment-to-run model_training --encoder-rotating-key --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name lstm --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 fi
 
 

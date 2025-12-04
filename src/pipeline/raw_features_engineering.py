@@ -53,7 +53,7 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
         """
 
         # Add the new triangulation samples' embedding as well
-        triangulation_samples1 = self._get_triangulation_samples(X, y, how_to_choose="kmeans", n_triangulation_samples=2)
+        triangulation_samples1 = self._get_triangulation_samples(X, y, how_to_choose="kmeans", n_samples=2)
         triangulation_samples2 = self._get_triangulation_samples(X, y, how_to_choose="classes")
         triangulation_samples = np.concatenate([triangulation_samples1, triangulation_samples2], axis=1)
         logger.info(f"Triangulation Shape: {triangulation_samples.shape}")

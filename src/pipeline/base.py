@@ -26,9 +26,13 @@ class FeatureEngineeringPipeline(ABC):
         self.original_train_size = None
         self.cloud_model_manager = CloudModelManager()
 
-    def _get_triangulation_samples(self, embeddings, labels=None):
-        how_to_choose = config.experiment_config.triangulation_choosing
-        n_samples = config.experiment_config.n_triangulation_samples
+    def _get_triangulation_samples(self, embeddings, labels=None, how_to_choose=None, n_triangulation_samples=None):
+
+        if not how_to_choose:
+            how_to_choose = config.experiment_config.triangulation_choosing
+
+        if not n_triangulation_samples:
+            n_samples = config.experiment_config.n_triangulation_samples
 
         logger.info(f"Choosing the {how_to_choose} {n_samples} triangulation samples")
 

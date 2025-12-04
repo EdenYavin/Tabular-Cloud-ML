@@ -56,7 +56,7 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
         triangulation_samples1 = self._get_triangulation_samples(X, y, how_to_choose="kmeans", n_triangulation_samples=2)
         triangulation_samples2 = self._get_triangulation_samples(X, y, how_to_choose="classes")
         triangulation_samples = np.concatenate([triangulation_samples1, triangulation_samples2], axis=1)
-
+        logger.info(f"Triangulation Shape: {triangulation_samples.shape}")
         # For test data we won't duplicate but encrypt it only once
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
         cloud = self.cloud_model_manager.__enter__()

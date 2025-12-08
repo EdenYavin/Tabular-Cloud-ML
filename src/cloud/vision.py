@@ -1,3 +1,5 @@
+import os
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 from keras.api.applications import ResNet50V2, VGG16, Xception, MobileNetV2
 from keras.api.applications.xception import preprocess_input as xception_preprocess_input

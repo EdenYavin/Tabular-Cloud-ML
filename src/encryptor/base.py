@@ -1,7 +1,7 @@
 import gc
 
 import numpy as np
-from keras.api.models import load_model
+from keras.models import load_model
 import os
 
 from keras.src import initializers

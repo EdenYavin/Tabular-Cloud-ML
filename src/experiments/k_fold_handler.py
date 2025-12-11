@@ -3,8 +3,8 @@ import os.path
 import pickle
 from pathlib import Path
 
-import keras.src.backend.common.global_state
 import numpy as np
+from keras import backend as K
 from tqdm import tqdm
 
 from src.internal_model import InternalInferenceModelFactory
@@ -115,7 +115,7 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
 
             del X_train,X_test,y_test, y_train, internal_model
             gc.collect()
-            keras.src.backend.common.global_state.clear_session()
+            K.clear_session()
 
 
         return self.report

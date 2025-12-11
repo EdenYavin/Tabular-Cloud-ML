@@ -1,13 +1,23 @@
 import os
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
-from keras.api.applications import ResNet50V2, VGG16, Xception, MobileNetV2
-from keras.api.applications.xception import preprocess_input as xception_preprocess_input
-from keras.api.applications.vgg16 import preprocess_input as vgg_preprocess
-from keras.api.applications.efficientnet_v2 import preprocess_input as efficientnet_v2_preprocess, EfficientNetV2B3
-from keras.api.applications.densenet import preprocess_input as densenet_preprocess, DenseNet201
-from keras.api.applications.inception_v3 import preprocess_input as inception_v3_preprocess, InceptionV3
-from keras.api.applications.mobilenet import preprocess_input as mobilenet_preprocess
+try:
+    from keras.api.applications import ResNet50V2, VGG16, Xception, MobileNetV2
+    from keras.api.applications.xception import preprocess_input as xception_preprocess_input
+    from keras.api.applications.vgg16 import preprocess_input as vgg_preprocess
+    from keras.api.applications.efficientnet_v2 import preprocess_input as efficientnet_v2_preprocess, EfficientNetV2B3
+    from keras.api.applications.densenet import preprocess_input as densenet_preprocess, DenseNet201
+    from keras.api.applications.inception_v3 import preprocess_input as inception_v3_preprocess, InceptionV3
+    from keras.api.applications.mobilenet import preprocess_input as mobilenet_preprocess
+except ModuleNotFoundError:
+    from keras.applications import ResNet50V2, VGG16, Xception, MobileNetV2
+    from keras.applications.xception import preprocess_input as xception_preprocess_input
+    from keras.applications.vgg16 import preprocess_input as vgg_preprocess
+    from keras.applications.efficientnet_v2 import preprocess_input as efficientnet_v2_preprocess, EfficientNetV2B3
+    from keras.applications.densenet import preprocess_input as densenet_preprocess, DenseNet201
+    from keras.applications.inception_v3 import preprocess_input as inception_v3_preprocess, InceptionV3
+    from keras.applications.mobilenet import preprocess_input as mobilenet_preprocess
+
 
 from keras import Model, Sequential
 from keras.src.layers import GlobalAveragePooling2D, Conv2D, Activation, BatchNormalization, Dropout, MaxPooling2D, \

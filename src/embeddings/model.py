@@ -22,8 +22,14 @@ from src.utils.config import config
 from src.utils.constansts import CPU_DEVICE, EMBEDDING_MODEL_PATH, MODELS_PATH
 import sys
 
+
+print("python:", sys.version)
+print("torch:", torch.__version__, "torch cuda:", torch.version.cuda, "cuda_available:", torch.cuda.is_available())
+print("tf:", tf.__version__, "gpus:", tf.config.list_physical_devices("GPU"))
 logger.info("torch:", torch.__version__, "cuda:", torch.version.cuda)
 logger.info("python:", sys.version)
+logger.info("tf:", tf.__version__)
+logger.info("GPUs:", tf.config.list_physical_devices("GPU"))
 
 class DNNEmbedding(nn.Module):
 

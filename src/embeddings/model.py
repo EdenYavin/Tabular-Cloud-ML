@@ -26,10 +26,9 @@ import sys
 print("python:", sys.version)
 print("torch:", torch.__version__, "torch cuda:", torch.version.cuda, "cuda_available:", torch.cuda.is_available())
 print("tf:", tf.__version__, "gpus:", tf.config.list_physical_devices("GPU"))
-logger.info("torch:", torch.__version__, "cuda:", torch.version.cuda)
-logger.info("python:", sys.version)
-logger.info("tf:", tf.__version__)
-logger.info("GPUs:", tf.config.list_physical_devices("GPU"))
+logger.info(f"torch: {torch.__version__}, torch cuda: {torch.version.cuda}, cuda_available: {torch.cuda.is_available()}")
+logger.info(f"python: {sys.version}")
+logger.info(f"tf: {tf.__version__}, gpus: {tf.config.list_physical_devices('GPU')}")
 
 class DNNEmbedding(nn.Module):
 

@@ -1,3 +1,4 @@
+from loguru import logger
 import argparse
 from pathlib import Path
 import src.utils.constansts as consts
@@ -123,20 +124,34 @@ def main():
 
     update_config_from_args(config, args)
 
-    # Enable TensorFlow’s “allow growth” option so it only uses as much GPU memory as needed, rather than trying to allocate all memory up front
-    gpus = tf.config.experimental.list_physical_devices('GPU')
+    # 1. First, decide if TF should see the GPU at all.
+    # If the current encoder is NOT a GPU model, hide the GPU from TensorFlow immediately.
+    # This prevents TF from touching the GPU, leaving it entirely free for DINO (PyTorch).
+    if config.encoder_config.name not in consts.GPU_MODELS:
+        try:
+            tf.config.set_visible_devices([], 'GPU')
+            logger.info("GPU hidden from TensorFlow (reserved for PyTorch/DINO or CPU execution).")
+        except RuntimeError as e:
+            # This happens if TF was somehow initialized before this point
+            logger.error(f"Could not hide GPU: {e}")
+
+    # 2. If TF *can* see the GPU, enable memory growth.
+    # This ensures that if TF uses the GPU, it doesn't grab 100% of the VRAM,
+    # allowing PyTorch/DINO to coexist if they are sharing the GPU.
+    gpus = tf.config.list_physical_devices(
+        'GPU')  # list_physical_devices sees all GPUs regardless of visibility settings above?
+    # Actually, set_visible_devices affects what list_logical_devices sees,
+    # but set_memory_growth must be called on physical devices.
     if gpus:
         try:
             for gpu in gpus:
+                # Only set growth if the device is actually visible/available to TF context?
+                # It's safer to just set it. If it was hidden above, TF won't use it anyway.
                 tf.config.experimental.set_memory_growth(gpu, True)
         except RuntimeError as e:
-            print(e)
+            print(f"Memory growth setting failed: {e}")
 
     report_path = REPORT_PATH
-    # Use GPU only when using Decon
-    if config.encoder_config.name not in consts.GPU_MODELS:
-        # Hide GPU from visible devices
-        tf.config.set_visible_devices([], 'GPU')
 
     if config.experiment_config.to_run == consts.EXPERIMENTS.INCREMENT_EVALUATION:
         experiment_handler = IncrementEvalExperimentHandler

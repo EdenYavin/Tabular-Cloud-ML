@@ -5,10 +5,10 @@ from typing import Generator
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, LabelEncoder
+from sklearn.preprocessing import MinMaxScaler
 from PIL import Image, ImageDraw, ImageFont
 import tensorflow as tf
-from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OUTPUT_DIR_PATH
+from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OUTPUT_DIR_PATH, EMBEDDING_TYPES
 from src.utils.config import config
 
 
@@ -57,7 +57,9 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pat
 
     triang_type = config.experiment_config.triangulation_choosing
     train_num = config.experiment_config.n_triangulation_samples
-    path = pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / use_raw_features / str(n_pred_vectors) / triang_type / str(train_num)
+    embedding_model = EMBEDDING_TYPES.DINO.value
+    path = (pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / embedding_model
+            / use_raw_features / str(n_pred_vectors) / triang_type / str(train_num))
     os.makedirs(path, exist_ok = True)
     return path
 

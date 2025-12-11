@@ -1,5 +1,5 @@
 from src.utils.config import config
-from src.embeddings.model import DNNEmbedding, ImageEmbedding, SparseAE, RawDataEmbedding, ClipEmbedding
+from src.embeddings.model import DNNEmbedding, ImageEmbedding, SparseAE, RawDataEmbedding, ClipEmbedding, DinoEmbedding
 
 
 class EmbeddingsFactory:
@@ -9,7 +9,8 @@ class EmbeddingsFactory:
         ImageEmbedding.name: ImageEmbedding,
         SparseAE.name: SparseAE,
         RawDataEmbedding.name: RawDataEmbedding,
-        ClipEmbedding.name: ClipEmbedding
+        ClipEmbedding.name: ClipEmbedding,
+        DinoEmbedding.name: DinoEmbedding
     }
 
     @staticmethod

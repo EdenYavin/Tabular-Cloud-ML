@@ -16,6 +16,8 @@ from transformers import CLIPModel, CLIPProcessor
 from src.utils.helpers import expand_matrix_to_img_size
 from src.utils.config import config
 from src.utils.constansts import CPU_DEVICE, EMBEDDING_MODEL_PATH, MODELS_PATH
+from PIL import Image
+from transformers import AutoImageProcessor, AutoModel
 
 class DNNEmbedding(nn.Module):
 
@@ -181,6 +183,43 @@ class ClipEmbedding(nn.Module):
             embeddings = self.model.get_image_features(pixel_values=image_input)
         # embedding is your flat vector (e.g., 512-dim)[6]
         return embeddings.numpy()
+
+
+class DinoEmbedding(nn.Module):
+    name = "dino_embedding"
+
+    def __init__(self, device=None, **kwargs):
+        super(DinoEmbedding, self).__init__()
+        model_id = "facebook/dinov2-base"
+        self.input_shape = (224, 224)
+        self.output_shape = (1, 768)
+
+        # 1. Determine Device automatically if not passed
+        self.device = device if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        try:
+            self.model = AutoModel.from_pretrained(model_id, cache_dir=MODELS_PATH)
+            self.processor = AutoImageProcessor.from_pretrained(model_id, cache_dir=MODELS_PATH)
+        except:
+            self.model = AutoModel.from_pretrained(model_id, cache_dir=MODELS_PATH, local_files_only=True)
+            self.processor = AutoImageProcessor.from_pretrained(model_id, cache_dir=MODELS_PATH, local_files_only=True)
+
+        # 2. Move Model to GPU
+        self.model.to(self.device)
+
+    def forward(self, x):
+        # 3. Move Inputs to GPU
+        # Note: We must move the tensors created by the processor to the same device as the model
+        inputs = self.processor(images=x, return_tensors="pt", do_rescale=False).to(self.device)
+
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+
+        last_hidden_states = outputs.last_hidden_state
+        cls_embedding = last_hidden_states[:, 0, :]
+
+        # Move back to CPU for numpy conversion
+        return cls_embedding.cpu().numpy()
 
 
 class RawDataEmbedding(nn.Module):

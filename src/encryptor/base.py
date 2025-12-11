@@ -9,6 +9,7 @@ from keras.src import layers
 from src.utils.constansts import ENCRYPTOR_MODELS_DIR_PATH
 from src.utils.config import config
 import tensorflow as tf
+from loguru import logger
 
 
 embedding_name = config.embedding_config.name
@@ -82,7 +83,14 @@ class BaseEncryptor:
         model_path = os.path.join(ENCRYPTOR_MODELS_DIR_PATH, f"{self.dataset_name}_{embedding_name}.keras")
         if self.model is None:
             if os.path.exists(model_path) and not config.encoder_config.rotating_key:
-                self.model = load_model(model_path)
+                try:
+                    self.model = load_model(model_path)
+                    logger.info(f"Loaded encryptor model from {model_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to load encryptor model from {model_path}: {e}. Rebuilding model.")
+                    self.model = self.build_generator(self.input_shape, self.output_shape)
+                    self.seed += 1
+                    self.save_model(model_path)
             else:
                 self.model = self.build_generator(self.input_shape, self.output_shape)
                 self.seed += 1

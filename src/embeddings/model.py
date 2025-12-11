@@ -41,7 +41,13 @@ class DNNEmbedding(nn.Module):
         dataset_name = kwargs.get("dataset_name", None)
         path = EMBEDDING_MODEL_PATH / f"{dataset_name}.h5" or ""
         if path.exists():
-            model = keras.models.load_model(path)
+            try:
+                model = keras.models.load_model(path)
+                logger.info(f"Loaded DNN embedding model from {path}")
+            except Exception as e:
+                logger.warning(f"Failed to load DNN embedding model from {path}: {e}. Rebuilding model.")
+                model = self._get_trained_model(X, y)
+                model.save(path)
         else:
             model = self._get_trained_model(X,y)
             model.save(path)
@@ -89,7 +95,12 @@ class SparseAE(nn.Module):
 
         if path.exists() and not force:
             logger.info(f"Loading sparse autoencoder model from {path}")
-            self.model = keras.models.load_model(path)
+            try:
+                self.model = keras.models.load_model(path)
+            except Exception as e:
+                logger.warning(f"Failed to load sparse autoencoder model from {path}: {e}. Recreating model.")
+                self.model = self._get_trained_model(X.astype(float))
+                self.model.save(path)
         else:
             logger.info("Creating new sparse autoencoder model")
             self.model = self._get_trained_model(X.astype(float))

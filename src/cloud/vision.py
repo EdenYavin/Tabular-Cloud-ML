@@ -24,7 +24,7 @@ from keras.src.layers import GlobalAveragePooling2D, Conv2D, Activation, BatchNo
     Flatten, Dense
 import tensorflow as tf
 from keras import regularizers
-from keras.api.models import load_model
+from keras.models import load_model
 
 from src.cloud.base import CloudModel, KerasApplicationCloudModel
 from src.utils.constansts import VGG16_CIFAR10_MODEL_PATH, CIFAR_100_VGG16_MODEL_PATH

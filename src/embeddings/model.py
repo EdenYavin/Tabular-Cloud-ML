@@ -20,7 +20,10 @@ import keras
 from src.utils.helpers import expand_matrix_to_img_size
 from src.utils.config import config
 from src.utils.constansts import CPU_DEVICE, EMBEDDING_MODEL_PATH, MODELS_PATH
-from PIL import Image
+import sys
+
+logger.info("torch:", torch.__version__, "cuda:", torch.version.cuda)
+logger.info("python:", sys.version)
 
 class DNNEmbedding(nn.Module):
 

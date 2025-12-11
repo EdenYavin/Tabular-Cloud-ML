@@ -6,11 +6,10 @@ from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandl
 from src.experiments.model_training_loop import ModelTrainingLoopExperimentHandler
 from src.experiments.k_fold_handler import KModelTrainingExperimentHandler
 from src.utils.config import config, update_config_from_args
-import tensorflow as tf
-import numpy as np
-
 from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS, REPORT_PATH, OUTPUT_DIR_PATH
 
+import tensorflow as tf
+import numpy as np
 np.random.seed(42)
 
 def main():

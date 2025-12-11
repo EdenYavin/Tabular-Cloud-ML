@@ -1,23 +1,26 @@
+# 1. Import Torch FIRST (before TensorFlow)
+import torch
+import torch.nn as nn
+from transformers import AutoImageProcessor, AutoModel # Load these early
+from transformers import CLIPModel, CLIPProcessor
+
+# 2. Import TensorFlow SECOND
+import tensorflow as tf
+import numpy as np
 import pandas as pd
 from keras.src.applications import resnet
 from keras.src.applications.resnet import preprocess_input
 from keras.src.layers import Dense, BatchNormalization, Input, LeakyReLU
 from keras.src import Sequential
-import numpy as np
-import torch.nn as nn
-import tensorflow as tf
 from tab2img.converter import Tab2Img
 from keras.src.callbacks import EarlyStopping
 from keras.src.utils import to_categorical
 from loguru import logger
-import torch
 import keras
-from transformers import CLIPModel, CLIPProcessor
 from src.utils.helpers import expand_matrix_to_img_size
 from src.utils.config import config
 from src.utils.constansts import CPU_DEVICE, EMBEDDING_MODEL_PATH, MODELS_PATH
 from PIL import Image
-from transformers import AutoImageProcessor, AutoModel
 
 class DNNEmbedding(nn.Module):
 

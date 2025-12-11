@@ -2,8 +2,8 @@
 from tqdm import tqdm
 import numpy as np
 from loguru import logger
-import tensorflow as tf
 from src.embeddings import ClipEmbedding, DinoEmbedding
+from src.embeddings.model import tf
 
 from src.encryptor.base import BaseEncryptor
 from src.pipeline.base import FeatureEngineeringPipeline

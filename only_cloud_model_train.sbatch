@@ -22,7 +22,7 @@ module load anaconda
 source activate tabml
 echo "Currently active conda env: $CONDA_DEFAULT_ENV"
 which python
-
+export TF_XLA_FLAGS=--tf_xla_auto_jit=0
 # Run the Python script
 
 python cloud_baseline.py --experiment-to-run dataset_creation --encoder-rotating-key --datasets "$DATASET_NAME" --use-cloud-models xception --number-of-prediction-vector 1 --iim-name lstm --iim-epochs 100 --triangulation-choosing classes --triangulation-samples 2

@@ -23,7 +23,7 @@ module load anaconda
 source activate tabml
 echo "Currently active conda env: $CONDA_DEFAULT_ENV"
 which python
-
+export TF_XLA_FLAGS=--tf_xla_auto_jit=0
 # Run the Python script
 if [ -n "$USE_RAW_FEATURES" ]; then
     echo "Raw Features Flag is Turned ON"

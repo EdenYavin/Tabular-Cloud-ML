@@ -21,7 +21,7 @@ class ExperimentHandler(ABC):
         self.report = pd.DataFrame()
 
 
-    def save(self, new_report: dict):
+    def log(self, new_report: dict):
 
         if os.path.exists(self.report_path):
             try:
@@ -115,7 +115,7 @@ class ExperimentHandler(ABC):
         for k in range(len(k_test_aucs)):
             new_row[f"k_fold_{k}_auc"] = k_test_aucs[k]
 
-        self.save(new_row)
+        self.log(new_row)
 
     def log_results(self,
                     dataset_name: str, train_shape: tuple, new_train_shape: tuple, test_shape: tuple, cloud_models_names,

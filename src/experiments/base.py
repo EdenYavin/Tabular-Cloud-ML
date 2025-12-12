@@ -18,29 +18,27 @@ class ExperimentHandler(ABC):
         self.experiment_name: str = experiment_name
         self.n_pred_vectors = config.experiment_config.n_pred_vectors
         self.report_path = report_path
+        self.report = pd.DataFrame()
 
-        if config.experiment_config.k_folds > 1:
-            self.report = pd.DataFrame()
 
-        elif os.path.exists(self.report_path):
+    def save(self, new_report: dict):
+
+        if os.path.exists(self.report_path):
             try:
-                self.report = pd.read_csv(report_path)
+                logger.info(f"Loaded existing report: {self.report_path}")
+                self.report = pd.read_csv(self.report_path)
             except Exception as e:
                 logger.error(f"Error loading report: {e} \n Starting a new one")
                 self.report = pd.DataFrame()
         else:
             self.report = pd.DataFrame()
 
+        self.report = pd.concat([self.report, pd.DataFrame(new_report)], ignore_index=True)
+
+
     def set_report_path(self, report_path: str):
 
         self.report_path = report_path
-        if not os.path.exists(report_path):
-            self.report = pd.DataFrame()
-
-        else:
-            logger.info(f"Loaded existing report: {report_path}")
-            self.report = pd.read_csv(report_path)
-
         logger.info(f"New report path: {self.report_path}")
 
 
@@ -117,8 +115,7 @@ class ExperimentHandler(ABC):
         for k in range(len(k_test_aucs)):
             new_row[f"k_fold_{k}_auc"] = k_test_aucs[k]
 
-        self.report = pd.concat([self.report, pd.DataFrame(new_row)], ignore_index=True)
-
+        self.save(new_row)
 
     def log_results(self,
                     dataset_name: str, train_shape: tuple, new_train_shape: tuple, test_shape: tuple, cloud_models_names,

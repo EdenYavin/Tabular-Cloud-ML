@@ -105,7 +105,7 @@ class ExperimentHandler(ABC):
         new_row = {
             "date": [datetime.now().strftime("%d/%m/%Y %H:%M")],
             "dataset_name": [dataset_name],
-            "using_raw_features": [True if config.experiment_config.use_embedding else False],
+            "using_raw_features": [True if (config.experiment_config.use_raw or config.experiment_config.use_embedding) else False],
             "iim_name": [iim_name],
             "cloud_models": [cloud_models_names],
             "triangulation_method": triangulation_method,

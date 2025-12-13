@@ -53,7 +53,7 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
         """
         logger.info("### USING RAW FEATURES TRIANGULATION ###")
         # Add the new triangulation samples' embedding as well
-        triangulation_samples1 = self._get_triangulation_samples(X, y, how_to_choose="kmeans", n_samples=2)
+        triangulation_samples1 = self._get_triangulation_samples(X, y, how_to_choose="kmeans", n_samples=config.triangulation_n_samples)
         # triangulation_samples2 = self._get_triangulation_samples(X, y, how_to_choose="classes")
         # For test data we won't duplicate but encrypt it only once
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it

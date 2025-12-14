@@ -99,6 +99,7 @@ class ExperimentHandler(ABC):
 
         trian_samples = config.experiment_config.n_triangulation_samples if config.encoder_config.rotating_key else 0
         triangulation_method = config.experiment_config.triangulation_choosing if trian_samples else "None"
+        triangulation_method = "_".join(triangulation_method) if type(triangulation_method) is list else triangulation_method
         if trian_samples and triangulation_method == "classes":
             trian_samples = 2 # Special case where it is always two
 

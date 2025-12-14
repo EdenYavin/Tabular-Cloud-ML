@@ -34,7 +34,7 @@ def main():
         "--dataset-batch-size",
         type=int,
         default=100,
-        dest="dastaset_batch_size",
+        dest="dataset_batch_size",
         help="Batch size for dataset creation. In the feature engineering pipeline we will iterate the raw dataset"
              " with batches where each batch has the dataset_batch_size"
     )
@@ -97,7 +97,8 @@ def main():
     parser.add_argument(
         "--triangulation-choosing",  # User-facing name
         type=str,
-        default="classes",
+        nargs="+",
+        default=["classes"],
         dest="experiment_triangulation_choosing",  # Internal name for your config
         help="Specify how to choose the triangulation - first (First N samples), last, random (random N samples)"
     )

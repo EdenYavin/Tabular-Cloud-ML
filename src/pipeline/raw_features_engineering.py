@@ -53,8 +53,10 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
         """
         logger.info("### USING RAW FEATURES TRIANGULATION ###")
         # Add the new triangulation samples' embedding as well
-        triangulation_samples1 = self._get_triangulation_samples(X, y, how_to_choose="kmeans", n_samples=config.experiment_config.n_triangulation_samples)
-        # triangulation_samples2 = self._get_triangulation_samples(X, y, how_to_choose="classes")
+        triangulation_samples = self._get_triangulation_samples(X, y,
+         how_to_choose=config.experiment_config.triangulation_choosing,
+         n_samples=config.experiment_config.n_triangulation_samples
+        )
         # For test data we won't duplicate but encrypt it only once
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
         cloud = self.cloud_model_manager.__enter__()
@@ -72,21 +74,17 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                     x_tag = self.encryptor.encode(x.reshape(1, -1))
 
                     # 1. Encrypt them using the new key
-                    y_tag1 = self.encryptor.encode(triangulation_samples1)
-                    # y_tag2 = self.encryptor.encode(triangulation_samples2)
+                    y_tag = self.encryptor.encode(triangulation_samples)
                     # 2. Embed the encryption
-                    y_tag_1emb = self.triangulation_embedding.forward(y_tag1)
-                    # y_tag_2emb = self.triangulation_embedding.forward(y_tag2)
+                    y_tag_emb = self.triangulation_embedding.forward(y_tag)
 
                     # Embedding for triangulation using CLIP, those are the new features
                     x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
 
                     if config.experiment_config.use_embedding:
-                        # observation = np.hstack([x, x_tag_emb.flatten(), y_tag_1emb.flatten(), y_tag_2emb.flatten()])
-                        observation = np.hstack([x, x_tag_emb.flatten(), y_tag_1emb.flatten()])
+                        observation = np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten()])
                     else:
-                        # observation = np.hstack([x_tag_emb.flatten(), y_tag_1emb.flatten(), y_tag_2emb.flatten()])
-                        observation = np.hstack([x_tag_emb.flatten(), y_tag_1emb.flatten()])
+                        observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
 
                     # Add the cloud predictions as features if needed:
                     if config.cloud_config.names:
@@ -113,7 +111,7 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                         # Switch key for the next example
                         self.encryptor.switch_key()
 
-                del x_tag, x_tag_emb, y_tag1, y_tag_1emb#, y_tag_2emb, y_tag2
+                del x_tag, x_tag_emb, y_tag, y_tag_emb
 
         cloud.__exit__(None, None, None)
         return np.vstack(observations), y, predictions_for_baseline

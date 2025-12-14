@@ -55,7 +55,10 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pat
     elif config.experiment_config.n_triangulation_samples <= 0 or config.experiment_config.use_raw:
         use_raw_features = "raw"
 
-    triang_type = config.experiment_config.triangulation_choosing
+    triang_type = (config.experiment_config.triangulation_choosing
+                   if type(config.experiment_config.n_triangulation_samples) is str
+                   else "_".join(config.experiment_config.triangulation_choosing).replace(",", "")
+                   )
     train_num = config.experiment_config.n_triangulation_samples
     embedding_model = EMBEDDING_TYPES.DINO.value
     path = (pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / embedding_model

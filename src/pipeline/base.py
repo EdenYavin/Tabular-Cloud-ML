@@ -26,32 +26,39 @@ class FeatureEngineeringPipeline(ABC):
         self.original_train_size = None
         self.cloud_model_manager = CloudModelManager()
 
-    def _get_triangulation_samples(self, embeddings, labels=None, how_to_choose=None, n_samples=None):
+    def _get_triangulation_samples(self, embeddings, labels=None, how_to_choose: list[str] | str=None, n_samples=None):
+
+        if type(how_to_choose) == str:
+            how_to_choose = [how_to_choose]
 
         if not how_to_choose:
-            how_to_choose = config.experiment_config.triangulation_choosing
+            how_to_choose = [config.experiment_config.triangulation_choosing]
 
         if not n_samples:
             n_samples = config.experiment_config.n_triangulation_samples
 
         logger.info(f"Choosing the {how_to_choose} {n_samples} triangulation samples")
 
-        if how_to_choose == 'random':
-            indices = np.random.choice(len(embeddings), size=n_samples,
-                                       replace=False)
-            triangulation_samples = embeddings[indices]
+        triangulation_samples = []
+        for method in how_to_choose:
 
-        elif how_to_choose == 'first':
-            triangulation_samples = embeddings[:n_samples]
+            if method == 'random':
+                indices = np.random.choice(len(embeddings), size=n_samples,
+                                           replace=False)
+                triangulation_samples.append(embeddings[indices])
 
-        elif how_to_choose == 'kmeans':
-            triangulation_samples = get_triangulation_samples_clustering(n_samples, embeddings)
-        elif how_to_choose == 'classes':
-            triangulation_samples = get_class_representative_samples(embeddings, labels)
-        else:
-            triangulation_samples = embeddings[-n_samples:]
+            elif method == 'first':
+                triangulation_samples.append(embeddings[:n_samples])
 
-        return triangulation_samples
+            elif method == 'kmeans':
+                triangulation_samples.append(get_triangulation_samples_clustering(n_samples, embeddings))
+            elif method == 'classes':
+                triangulation_samples.append(get_class_representative_samples(embeddings, labels))
+            else:
+                # Last method
+                triangulation_samples.append(embeddings[-n_samples:])
+
+        return np.vstack(triangulation_samples) # Stack all the triangulation vertically
 
     def create(self, X_train, y_train, X_test, y_test) -> tuple[list[IIMDataset] | IIMDataset, EmbeddingBaselineDataset]:#, PredictionBaselineDataset]:
 

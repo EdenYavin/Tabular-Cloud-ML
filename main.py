@@ -124,7 +124,7 @@ def main():
 
     # Check if the list contains a single string with spaces and split it if necessary
     triang_args = args.experiment_triangulation_choosing
-    if triang_args and len(triang_args) == 1 and len(triang_args[0].split() > 1) :
+    if triang_args and len(triang_args) == 1 and len(triang_args[0].split()) > 1 :
         # Split the single string "kmeans classes" into ["kmeans", "classes"]
         args.experiment_triangulation_choosing = triang_args[0].split()
         logger.debug(f"DEBUG: Fixed triangulation args to: {args.experiment_triangulation_choosing}")

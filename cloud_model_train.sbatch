@@ -17,6 +17,7 @@ echo "Running triangulation method $CHOOSE"
 echo "Number of triangulation $TRIANGULATIONS_NUMBER"
 echo "Number of prediction vectors: $N_P"
 echo "Number of K Iteration $K"
+echo "IIM Models to train $MODELS"
 
 # Load environment
 module load anaconda
@@ -28,9 +29,9 @@ which python
 
 if [ -n "$USE_RAW_FEATURES" ]; then
     echo "Raw Features Flag is Turned ON"
-    python main.py --experiment-to-run model_training --encoder-rotating-key --use-raw-features --use-cloud-models xception --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name lstm --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
+    python main.py --experiment-to-run model_training --encoder-rotating-key --use-raw-features --use-cloud-models xception --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 else
     echo "Raw Features Flag is Turned OFF"
-    python main.py --experiment-to-run model_training --encoder-rotating-key --use-cloud-models xception --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name lstm --iim-epochs 100 --triangulation-choosing classes --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
+    python main.py --experiment-to-run model_training --encoder-rotating-key --use-cloud-models xception --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing classes --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 fi
 

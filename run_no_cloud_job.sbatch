@@ -18,6 +18,18 @@ if [ -n "$TRIANGULATION_MODE" ]; then
 else
     TRIANG_MODE_FLAG=""
 fi
+
+# --- NEW: Check for Embedding Model ---
+if [ -n "$TRIANGULATION_EMBEDDING" ]; then
+    TRIANG_EMB_FLAG="--triangulation-embedding-model $TRIANGULATION_EMBEDDING"
+else
+    TRIANG_EMB_FLAG=""
+fi
+# --------------------------------------
+
+# Echo info
+# ... existing echoes
+echo "Triangulation Embedding: $TRIANGULATION_EMBEDDING"
 # -----------------------------------------
 
 # Echo info
@@ -42,6 +54,7 @@ python main.py \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG  \
     $TRIANG_MODE_FLAG \
+    $TRIANG_EMB_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
     --iim-epochs 100 \

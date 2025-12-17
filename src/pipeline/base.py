@@ -6,6 +6,7 @@ from loguru import logger
 from src.cloud import CloudModelManager
 from src.domain.dataset import IIMFeatures, IIMDataset, PredictionBaselineFeatures, PredictionBaselineDataset, \
     EmbeddingBaselineFeatures, EmbeddingBaselineDataset
+from src.embeddings import DinoEmbedding, ClipEmbedding
 from src.encryptor.base import BaseEncryptor
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
@@ -25,6 +26,15 @@ class FeatureEngineeringPipeline(ABC):
         self.encryptor = encryptor
         self.original_train_size = None
         self.cloud_model_manager = CloudModelManager()
+
+        if config.encoder_config.embedding == "dino":
+            logger.info(f"Triangulation model is ON, using: DINO")
+            self.triangulation_embedding = DinoEmbedding()
+        elif config.encoder_config.embedding == "clip":
+            logger.info(f"Triangulation model is ON, using: CLIP")
+            self.triangulation_embedding = ClipEmbedding()
+        else:
+            raise ValueError(f"Unknown triangulation embedding model: {config.encoder_config.embedding}")
 
     def _get_triangulation_samples(self, embeddings, labels=None, how_to_choose: list[str] | str=None, n_samples=None):
 

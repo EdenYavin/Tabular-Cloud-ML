@@ -2,7 +2,6 @@
 from tqdm import tqdm
 import numpy as np
 from loguru import logger
-from src.embeddings import ClipEmbedding, DinoEmbedding
 from src.embeddings.model import tf
 
 from src.encryptor.base import BaseEncryptor
@@ -16,12 +15,8 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
                  metadata=None):
         super().__init__(dataset_name, encryptor, embeddings_model, metadata)
-
         if config.cloud_config.names:
             logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")
-        if config.encoder_config.rotating_key:
-                logger.info(f"Triangulation model is on, using {DinoEmbedding.name}")
-                self.triangulation_embedding = DinoEmbedding()
 
     def _get_features(self, X, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """

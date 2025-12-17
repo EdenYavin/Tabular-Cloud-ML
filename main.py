@@ -128,6 +128,15 @@ def main():
         help="Choose how to represent triangulation features: 'concat' (Original: Sample + Anchors) or 'diff' (Relative: Sample - Anchors)"
     )
 
+    parser.add_argument(
+        "--triangulation-embedding-model",
+        type=str,
+        default="dino",
+        dest="encoder_config_embedding",
+        choices=["clip", "dino"],
+        help="Choose the embedding model for triangulation: 'clip' (original thesis) or 'dino' (new experiment)"
+    )
+
     args = parser.parse_args()
 
     # Check if the list contains a single string with spaces and split it if necessary

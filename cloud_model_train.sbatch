@@ -12,6 +12,12 @@ if [ -n "$TRIANGULATION_MODE" ]; then
 else
     TRIANG_MODE_FLAG=""
 fi
+
+if [ -n "$TRIANGULATION_EMBEDDING" ]; then
+    TRIANG_EMB_FLAG="--triangulation-embedding-model $TRIANGULATION_EMBEDDING"
+else
+    TRIANG_EMB_FLAG=""
+fi
 # -----------------------------------------
 
 # Echo info
@@ -24,6 +30,7 @@ echo "Number of prediction vectors: $N_P"
 echo "Number of K Iteration $K"
 echo "IIM Models to train $MODELS"
 echo "Triangulation Mode: $TRIANGULATION_MODE"
+echo "Triangulation Embedding: $TRIANG_EMB_FLAG" # Log the mode
 
 # Load environment
 module load anaconda
@@ -35,8 +42,8 @@ which python
 
 if [ -n "$USE_RAW_FEATURES" ]; then
     echo "Raw Features Flag is Turned ON"
-    python main.py --experiment-to-run model_training --encoder-rotating-key --use-raw-features $TRIANG_MODE_FLAG --use-cloud-models xception --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
+    python main.py --experiment-to-run model_training --encoder-rotating-key --use-raw-features $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG --use-cloud-models xception --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 else
     echo "Raw Features Flag is Turned OFF"
-    python main.py --experiment-to-run model_training --encoder-rotating-key $TRIANG_MODE_FLAG --use-cloud-models xception --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing classes --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
+    python main.py --experiment-to-run model_training --encoder-rotating-key $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG --use-cloud-models xception --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing classes --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 fi

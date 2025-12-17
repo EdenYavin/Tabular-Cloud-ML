@@ -18,6 +18,7 @@ class Config(BaseModel):
     class EncoderConfig(BaseModel):
         name: str = Field(description="Name of encryptor / encoder model to use", default=ENCODERS_TYPES.DCONV)
         rotating_key: bool = Field(description="A flag indicating if the encryptor should switch to a new encryption key on each new samples", default=False)
+        embedding: str = Field(description="Name of the embedding model to use on the encrypted data", default="clip")
 
 
     class DatasetConfig(BaseModel):
@@ -82,7 +83,7 @@ class Config(BaseModel):
                                                   batch_size=100
                                                   )
     embedding_config: EmbeddingConfig = EmbeddingConfig(name=EMBEDDING_TYPES.SPARSE_AE)
-    encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV, rotating_key=True)
+    encoder_config: EncoderConfig = EncoderConfig(name=ENCODERS_TYPES.DCONV, rotating_key=True, embedding="dino")
 
 
 config = Config()

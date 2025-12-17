@@ -18,7 +18,17 @@ if [ -n "$TRIANGULATION_MODE" ]; then
 else
     TRIANG_MODE_FLAG=""
 fi
-# -----------------------------------------
+
+if [ -n "$TRIANGULATION_EMBEDDING" ]; then
+    TRIANG_EMB_FLAG="--triangulation-embedding-model $TRIANGULATION_EMBEDDING"
+else
+    TRIANG_EMB_FLAG=""
+fi
+# --------------------------------------
+
+# Echo info
+# ... existing echoes
+echo "Triangulation Embedding: $TRIANGULATION_EMBEDDING"
 
 # Echo info
 echo "SLURM_JOBID=$SLURM_JOBID"
@@ -29,6 +39,7 @@ echo "Running experiment: $EXPERIMENT_NAME"
 echo "Number of triangulation: $TRIANGULATIONS_NUMBER"
 echo "Use raw features flag: $RAW_FEATURES_FLAG"
 echo "Triangulation Mode: $TRIANGULATION_MODE" # Log the mode
+echo "Triangulation Embedding: $TRIANG_EMB_FLAG" # Log the mode
 
 # Load environment
 module load anaconda
@@ -43,6 +54,7 @@ python main.py \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG  \
     $TRIANG_MODE_FLAG \
+    $TRIANG_EMB_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
     --use-cloud-models $CLOUD_MODEL \

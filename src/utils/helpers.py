@@ -59,10 +59,11 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pat
                    if type(config.experiment_config.n_triangulation_samples) is str
                    else "_".join(config.experiment_config.triangulation_choosing).replace(",", "")
                    )
-    train_num = config.experiment_config.n_triangulation_samples
+    triang_num = config.experiment_config.n_triangulation_samples
     embedding_model = EMBEDDING_TYPES.DINO.value
+    triang_features = config.experiment_config.triangulation_mode
     path = (pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / embedding_model
-            / use_raw_features / str(n_pred_vectors) / triang_type / str(train_num))
+            / use_raw_features / str(n_pred_vectors) / triang_type / triang_features / str(triang_num))
     os.makedirs(path, exist_ok = True)
     return path
 

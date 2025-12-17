@@ -12,6 +12,13 @@ else
     RAW_FEATURES_FLAG=""
 fi
 
+# --- NEW: Check for Triangulation Mode ---
+if [ -n "$TRIANGULATION_MODE" ]; then
+    TRIANG_MODE_FLAG="--triangulation-mode $TRIANGULATION_MODE"
+else
+    TRIANG_MODE_FLAG=""
+fi
+# -----------------------------------------
 
 # Echo info
 echo "SLURM_JOBID=$SLURM_JOBID"
@@ -21,6 +28,8 @@ echo "Using Cloud Model: $CLOUD_MODEL"
 echo "Running experiment: $EXPERIMENT_NAME"
 echo "Number of triangulation: $TRIANGULATIONS_NUMBER"
 echo "Use raw features flag: $RAW_FEATURES_FLAG"
+echo "Triangulation Mode: $TRIANGULATION_MODE" # Log the mode
+
 # Load environment
 module load anaconda
 source activate tabml
@@ -33,6 +42,7 @@ python main.py \
     --experiment-to-run "$EXPERIMENT_NAME" \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG  \
+    $TRIANG_MODE_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
     --use-cloud-models $CLOUD_MODEL \

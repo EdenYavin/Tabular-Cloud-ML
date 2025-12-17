@@ -51,7 +51,7 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
         Raises:
         None
         """
-        logger.info("### USING RAW FEATURES TRIANGULATION ###")
+        logger.info(f"### USING RAW FEATURES TRIANGULATION WITH {config.experiment_config.triangulation_mode} TRIANGULATION MODE ###")
         # Add the new triangulation samples' embedding as well
         triangulation_samples = self._get_triangulation_samples(X, y,
          how_to_choose=config.experiment_config.triangulation_choosing,

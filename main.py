@@ -119,6 +119,14 @@ def main():
         help="Number of times we will train the iim to get number of results. Useful for testing statistic about model performance."
     )
 
+    parser.add_argument(
+        "--triangulation-mode",
+        type=str,
+        default="diff",
+        dest="experiment_triangulation_mode",  # Maps to config.experiment_config.triangulation_mode
+        choices=["concat", "diff"],
+        help="Choose how to represent triangulation features: 'concat' (Original: Sample + Anchors) or 'diff' (Relative: Sample - Anchors)"
+    )
 
     args = parser.parse_args()
 

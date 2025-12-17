@@ -3,7 +3,10 @@ from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
 from keras.src.models import Model
-from keras.src.layers import Dense, Dropout, Input,  BatchNormalization, concatenate, LSTM
+from keras.src.layers import (
+    Dense, Dropout, Input, BatchNormalization, concatenate, LSTM,
+    MultiHeadAttention, LayerNormalization, GlobalAveragePooling1D, Reshape, Lambda
+)
 from keras.src.metrics import F1Score, AUC
 from keras.src import regularizers
 import numpy as np
@@ -18,7 +21,90 @@ models = {
 }
 
 
+class TransformerIIM(NeuralNetworkInternalModel):
+    """
+    Attention-based IIM that treats triangulation anchors as a sequence.
+    It learns to 'attend' to the most relevant anchors/differentials.
+    """
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "transformer_iim"
+        self.num_classes = kwargs.get("num_classes")
+        self.input_shape_total = kwargs.get("input_shape")
+
+        # --- Dimensions Configuration ---
+        # UPDATED: Default DINO dimension set to 768 (ViT-B/Base)
+        # If you use DINOv2 Small, pass embedding_dim=384 in kwargs.
+        self.embedding_dim = kwargs.get("embedding_dim", 768)
+
+        # Default ImageNet size (1000) or Binary Xception (2) - adjust based on your Cloud Model
+        self.cloud_vector_size = kwargs.get("cloud_vector_size", 1000)
+
+        self.model = self.get_model()
+
+    def get_model(self):
+        # 1. Input: The flat concatenated vector [Triangulation_Seq, Cloud_Pred]
+        inputs = Input(shape=(self.input_shape_total,))
+
+        # 2. Slice the input into two parts: Triangulation Sequence and Cloud Vector
+        # Calculate where the sequence ends
+        triangulation_flat_size = self.input_shape_total - self.cloud_vector_size
+
+        # Safety Check: Ensure the flattened triangulation part is divisible by 768
+        if triangulation_flat_size % self.embedding_dim != 0:
+            raise ValueError(
+                f"Dimension Mismatch: The triangulation part of the input (size={triangulation_flat_size}) "
+                f"is not divisible by the DINO embedding dimension ({self.embedding_dim}). "
+                f"Check if you are using DINO ViT-S (384) or ViT-B (768)."
+            )
+
+        seq_length = triangulation_flat_size // self.embedding_dim
+
+        # Use Lambda layers for slicing to support symbolic tensor operations
+        # Part A: The Encrypted Embeddings (Sample + Anchors)
+        triangulation_part = Lambda(lambda x: x[:, :triangulation_flat_size])(inputs)
+
+        # Part B: The Cloud Prediction Vector
+        cloud_part = Lambda(lambda x: x[:, triangulation_flat_size:])(inputs)
+
+        # 3. Reshape triangulation part into a Sequence: (Batch, Seq_Len, 768)
+        x_seq = Reshape((seq_length, self.embedding_dim))(triangulation_part)
+
+        # 4. Transformer Block
+        # MultiHeadAttention allows the model to "query" the anchors using the sample
+        # We use 8 heads (standard for dim=768)
+        attn_output = MultiHeadAttention(num_heads=8, key_dim=self.embedding_dim)(x_seq, x_seq)
+        x_seq = LayerNormalization(epsilon=1e-6)(x_seq + attn_output)  # Add & Norm
+
+        # Feed Forward Network (FFN)
+        ffn = Dense(self.embedding_dim, activation="relu")(x_seq)
+        ffn = Dropout(0.1)(ffn)
+        x_seq = LayerNormalization(epsilon=1e-6)(x_seq + ffn)  # Add & Norm
+
+        # 5. Pooling (Reduce sequence to a single vector)
+        # GlobalAveragePooling1D is robust; strictly speaking, we could also just take the first token
+        # if the first token is always the "Sample" and subsequent tokens are "Anchors".
+        x_emb = GlobalAveragePooling1D()(x_seq)
+
+        # 6. Fuse with Cloud Prediction
+        # Concatenate the distilled triangulation info with the explicit cloud prediction
+        combined = concatenate([x_emb, cloud_part])
+
+        # 7. Final Classification Head
+        x = BatchNormalization()(combined)
+        x = Dense(256, activation='leaky_relu')(x)
+        x = Dropout(self.dropout_rate)(x)
+        x = Dense(64, activation='leaky_relu')(x)
+
+        outputs = Dense(self.num_classes, activation='softmax')(x)
+
+        model = Model(inputs=inputs, outputs=outputs)
+        model.compile(optimizer='adam',
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy', AUC(multi_label=False, name='auc')])
+
+        return model
 
 class DenseInternalModel(NeuralNetworkInternalModel):
     def __init__(self, **kwargs):

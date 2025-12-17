@@ -24,6 +24,7 @@ class IIM_MODELS(str, enum.Enum):
     BIGGER_NEURAL_NET = "big_neural_network"
     XGBOOST = "xgboost"
     LSTM = "lstm"
+    TRANSFORMER = "transformer"
 
 class CLOUD_MODELS(str, enum.Enum):
     ENSEMBLE_OF_TABULAR_MODELS = "ensemble"

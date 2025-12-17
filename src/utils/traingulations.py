@@ -2,6 +2,43 @@ from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.cluster import KMeans
 import numpy as np
 
+
+class TriangulationTransformer:
+    """
+    Handles the mathematical transformation of embeddings for triangulation.
+    """
+
+    @staticmethod
+    def compute_differential(target_embedding: np.ndarray, anchor_embeddings: np.ndarray) -> np.ndarray:
+        """
+        Computes the differential vectors: [Enc(Sample) - Enc(Anchor_i)]
+        Returns a flattened vector of differentials.
+        """
+        # target: (1, D), anchors: (N, D) -> diffs: (N, D)
+        diffs = target_embedding - anchor_embeddings
+        return diffs.flatten()
+
+    @staticmethod
+    def compute_concatenation(target_embedding: np.ndarray, anchor_embeddings: np.ndarray) -> np.ndarray:
+        """
+        Original Method: Simply stacks the sample embedding with the anchor embeddings.
+        Returns flattened [Enc(Sample), Enc(Anchor_1), ..., Enc(Anchor_N)]
+        """
+        # We flatten both and stack them
+        return np.hstack([target_embedding.flatten(), anchor_embeddings.flatten()])
+
+    @staticmethod
+    def compute_cosine_distances(target_embedding: np.ndarray, anchor_embeddings: np.ndarray) -> np.ndarray:
+        """
+        Alternative: Computes cosine similarity scores (scalars) instead of full vectors.
+        Useful if the embedding dimension is too large.
+        """
+        from sklearn.metrics.pairwise import cosine_similarity
+
+        # Result shape (1, N) -> flatten to (N,)
+        scores = cosine_similarity(target_embedding, anchor_embeddings)
+        return scores.flatten()
+
 def get_class_representative_samples(embeddings, labels):
     """
     Selects one representative sample from each of two classes.

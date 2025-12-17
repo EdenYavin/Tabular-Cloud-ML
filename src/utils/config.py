@@ -53,11 +53,16 @@ class Config(BaseModel):
         triangulation_choosing: list[str] | str = Field(description="How to choose the triangulation: first (first N samples), last, kmeans (use kmeans algo, classes (1 for each class)", default=None)
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
         to_run: str = Field(description="type of the experiment - dataset creation, model training, etc")
+        triangulation_mode: str = Field(
+            description="Method to construct features: 'concat' (original) or 'diff' (differential)",
+            default="concat"
+        )
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,
                                                            use_embedding=False,use_raw=False,
                                                            to_run=EXPERIMENTS.DATASET_CREATION,
+                                                           triangulation_mode="diff"  # Default to original behavior
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         # CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,

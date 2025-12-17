@@ -9,7 +9,7 @@ from src.encryptor.base import BaseEncryptor
 from src.pipeline.base import FeatureEngineeringPipeline
 from src.utils.constansts import GPU_DEVICE
 from src.utils.config import config
-
+from src.utils.traingulations import TriangulationTransformer
 
 class RawFeaturesEngineering(FeatureEngineeringPipeline):
 
@@ -81,10 +81,35 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                     # Embedding for triangulation using CLIP, those are the new features
                     x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
 
-                    if config.experiment_config.use_embedding:
-                        observation = np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten()])
+                    # 3. Apply Triangulation Strategy based on Config
+                    if config.experiment_config.triangulation_mode == "diff":
+                        # New Strategy: Relative Differentials
+                        triangulation_features = TriangulationTransformer.compute_differential(
+                            target_embedding=x_tag_emb,
+                            anchor_embeddings=y_tag_emb
+                        )
+                    # 3. Apply Triangulation Strategy based on Config
+                    elif config.experiment_config.triangulation_mode == "cos":
+                        # New Strategy: Relative Differentials
+                        triangulation_features = TriangulationTransformer.compute_cosine_distances(
+                            target_embedding=x_tag_emb,
+                            anchor_embeddings=y_tag_emb
+                        )
+
                     else:
-                        observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
+                        # Default Strategy: Concatenation (Original)
+                        triangulation_features = TriangulationTransformer.compute_concatenation(
+                            target_embedding=x_tag_emb,
+                            anchor_embeddings=y_tag_emb
+                        )
+
+                    # If 'use_raw' is enabled, we prepend the raw data 'x' (usually False in TEP-KD)
+                    # Note: Original code had logic for `config.experiment_config.use_embedding`
+                    # which effectively meant "append x".
+                    if config.experiment_config.use_embedding:  # This naming in original code implied "use raw x + embedding"
+                        observation = np.hstack([x, triangulation_features])
+                    else:
+                        observation = np.hstack([triangulation_features])
 
                     # Add the cloud predictions as features if needed:
                     if config.cloud_config.names:

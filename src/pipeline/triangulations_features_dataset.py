@@ -15,9 +15,6 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
                  metadata = None):
         super().__init__(dataset_name, encryptor, embeddings_model, metadata)
         self.triangulation_embedding = None
-        if config.encoder_config.rotating_key:
-            logger.info(f"Triangulation model is on, using {ClipEmbedding.name}")
-            self.triangulation_embedding = ClipEmbedding()
 
         if config.cloud_config.names:
             logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")

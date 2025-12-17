@@ -132,7 +132,7 @@ def main():
         "--triangulation-embedding-model",
         type=str,
         default="dino",
-        dest="encoder_config_embedding",
+        dest="encoder_embedding",
         choices=["clip", "dino"],
         help="Choose the embedding model for triangulation: 'clip' (original thesis) or 'dino' (new experiment)"
     )

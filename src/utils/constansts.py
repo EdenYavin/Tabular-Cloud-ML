@@ -9,8 +9,8 @@ class EMBEDDING_TYPES(str, enum.Enum):
     DNN = "dnn_embedding"
     SPARSE_AE = "sparse_ae"
     RAW_EMBEDDING = "raw_data_embedding"
-    CLIP = "clip_embedding"
-    DINO = "dino_embedding"
+    CLIP = "clip"
+    DINO = "dino"
 
 class ENCODERS_TYPES(str, enum.Enum):
     tabular_dc = "tabular_dc"

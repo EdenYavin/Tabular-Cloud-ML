@@ -109,9 +109,10 @@ class ExperimentHandler(ABC):
             "using_raw_features": [True if (config.experiment_config.use_raw or config.experiment_config.use_embedding) else False],
             "iim_name": [iim_name],
             "cloud_models": [cloud_models_names],
-            "triangulation_method": triangulation_method,
-            "triangulation_mode": config.experiment_config.triangulation_mode,
-            "triangulation_samples": trian_samples,
+            "triangulation_embedding": [config.encoder_config.embedding],
+            "triangulation_method": [triangulation_method],
+            "triangulation_mode": [config.experiment_config.triangulation_mode],
+            "triangulation_samples": [trian_samples],
             "dataset_size": [config.experiment_config.n_pred_vectors],
         }
         for k in range(len(k_test_accuracies)):

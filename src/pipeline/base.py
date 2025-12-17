@@ -11,7 +11,7 @@ from src.encryptor.base import BaseEncryptor
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
 from src.utils.traingulations import get_triangulation_samples_clustering, get_class_representative_samples
-
+from src.utils.constansts import EMBEDDING_TYPES
 
 class FeatureEngineeringPipeline(ABC):
 
@@ -27,10 +27,10 @@ class FeatureEngineeringPipeline(ABC):
         self.original_train_size = None
         self.cloud_model_manager = CloudModelManager()
 
-        if config.encoder_config.embedding == "dino":
+        if config.encoder_config.embedding == EMBEDDING_TYPES.DINO:
             logger.info(f"Triangulation model is ON, using: DINO")
             self.triangulation_embedding = DinoEmbedding()
-        elif config.encoder_config.embedding == "clip":
+        elif config.encoder_config.embedding == EMBEDDING_TYPES.CLIP:
             logger.info(f"Triangulation model is ON, using: CLIP")
             self.triangulation_embedding = ClipEmbedding()
         else:

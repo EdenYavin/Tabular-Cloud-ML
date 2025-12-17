@@ -124,7 +124,7 @@ def main():
         type=str,
         default="diff",
         dest="experiment_triangulation_mode",  # Maps to config.experiment_config.triangulation_mode
-        choices=["concat", "diff"],
+        choices=["concat", "diff", "cos"],
         help="Choose how to represent triangulation features: 'concat' (Original: Sample + Anchors) or 'diff' (Relative: Sample - Anchors)"
     )
 

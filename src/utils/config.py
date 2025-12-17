@@ -55,7 +55,7 @@ class Config(BaseModel):
         k_folds : int = Field(description="Number of folds to use for cross-validation. If 1 - No k-fold", default=1)
         to_run: str = Field(description="type of the experiment - dataset creation, model training, etc")
         triangulation_mode: str = Field(
-            description="Method to construct features: 'concat' (original) or 'diff' (differential)",
+            description="Method to construct features: 'concat' (original) or 'diff' (differential) or cos (cosine)",
             default="concat"
         )
 

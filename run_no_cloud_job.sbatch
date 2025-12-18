@@ -6,58 +6,83 @@
 #SBATCH --gpus=rtx_3090:1
 #SBATCH --mem=50G
 
+# ==========================================
+# 1. SETUP & LOGGING
+# ==========================================
+
+# Handle Flags
 if [ -n "$USE_RAW_FEATURES" ]; then
     RAW_FEATURES_FLAG="--use-raw-features"
 else
     RAW_FEATURES_FLAG=""
 fi
 
-# --- NEW: Check for Triangulation Mode ---
 if [ -n "$TRIANGULATION_MODE" ]; then
     TRIANG_MODE_FLAG="--triangulation-mode $TRIANGULATION_MODE"
 else
     TRIANG_MODE_FLAG=""
 fi
 
-# --- NEW: Check for Embedding Model ---
 if [ -n "$TRIANGULATION_EMBEDDING" ]; then
     TRIANG_EMB_FLAG="--triangulation-embedding-model $TRIANGULATION_EMBEDDING"
 else
     TRIANG_EMB_FLAG=""
 fi
-# --------------------------------------
 
-# Echo info
-# ... existing echoes
-echo "Triangulation Embedding: $TRIANGULATION_EMBEDDING"
-# -----------------------------------------
-
-# Echo info
+# Echo Configuration
 echo "SLURM_JOBID=$SLURM_JOBID"
-echo "SLURM_JOB_NODELIST=$SLURM_JOB_NODELIST"
-echo "Running dataset: $DATASET_NAME"
-echo "Running experiment": $EXPERIMENT_NAME
-echo "Number of triangulation $TRIANGULATIONS_NUMBER"
-echo "Use raw features flag: $RAW_FEATURES_FLAG"
-echo "Triangulation Mode: $TRIANGULATION_MODE"
+echo "Dataset: $DATASET_NAME"
+echo "Triangulations: $TRIANGULATIONS_NUMBER | Method: $CHOOSE"
+echo "Mode: $TRIANGULATION_MODE | Embedding: $TRIANGULATION_EMBEDDING"
+echo "N_P (Pred Vectors): $N_P | K-Folds: $K"
 
-# Load environment
 module load anaconda
 source activate tabml
-echo "Currently active conda env: $CONDA_DEFAULT_ENV"
-which python
-
 export TF_XLA_FLAGS=--tf_xla_auto_jit=0
-# Run the Python script
+
+# ==========================================
+# 2. STEP 1: DATASET CREATION
+# ==========================================
+echo "----------------------------------------------------------------"
+echo "STARTING STEP 1: DATASET CREATION"
+echo "----------------------------------------------------------------"
+
 python main.py \
-    --experiment-to-run "$EXPERIMENT_NAME" \
+    --experiment-to-run dataset_creation \
     --encoder-rotating-key \
-    $RAW_FEATURES_FLAG  \
+    $RAW_FEATURES_FLAG \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
     --datasets "$DATASET_NAME" \
-    --number-of-prediction-vector "$NUMBER_OF_DATASETS" \
+    --number-of-prediction-vector "$N_P" \
+    --triangulation-choosing "$CHOOSE" \
+    --triangulation-samples "$TRIANGULATIONS_NUMBER" \
+    --dataset-use-cache
+
+# Check exit code to ensure creation succeeded
+if [ $? -ne 0 ]; then
+    echo "❌ Dataset Creation Failed! Exiting."
+    exit 1
+fi
+
+# ==========================================
+# 3. STEP 2: MODEL TRAINING
+# ==========================================
+echo "----------------------------------------------------------------"
+echo "STARTING STEP 2: MODEL TRAINING"
+echo "----------------------------------------------------------------"
+
+python main.py \
+    --experiment-to-run model_training \
+    --encoder-rotating-key \
+    $RAW_FEATURES_FLAG \
+    $TRIANG_MODE_FLAG \
+    $TRIANG_EMB_FLAG \
+    --datasets "$DATASET_NAME" \
+    --number-of-prediction-vector "$N_P" \
+    --iim-name "$MODELS" \
     --iim-epochs 100 \
-    --triangulation-choosing $CHOOSE \
-    --dataset-use-cache \
-    --triangulation-samples "$TRIANGULATIONS_NUMBER"
+    --k-training "$K" \
+    --triangulation-choosing "$CHOOSE" \
+    --triangulation-samples "$TRIANGULATIONS_NUMBER" \
+    --dataset-use-cache

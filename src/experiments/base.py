@@ -4,6 +4,17 @@ from datetime import datetime
 from loguru import logger
 import pandas as pd
 import os
+import tempfile
+
+# -----------------------------------------------------------------------------
+# New Import: Handles cross-platform locking automatically
+# Run: pip install filelock
+# -----------------------------------------------------------------------------
+try:
+    from filelock import FileLock
+except ImportError:
+    logger.error("The 'filelock' library is missing. Please install it using: pip install filelock")
+    raise
 
 from src.domain.dataset import PredictionBaselineDataset, EmbeddingBaselineDataset
 from src.internal_model.baseline import EmbeddingBaselineModelFactory
@@ -18,31 +29,41 @@ class ExperimentHandler(ABC):
         self.experiment_name: str = experiment_name
         self.n_pred_vectors = config.experiment_config.n_pred_vectors
         self.report_path = report_path
+        self._synced_report_rows: int = 0
 
         if config.experiment_config.k_folds > 1:
             self.report = pd.DataFrame()
 
         elif os.path.exists(self.report_path):
             try:
-                self.report = pd.read_csv(report_path)
+                self.report = pd.read_csv(self.report_path)
+                self._synced_report_rows = len(self.report)
             except Exception as e:
                 logger.error(f"Error loading report: {e} \n Starting a new one")
                 self.report = pd.DataFrame()
+                self._synced_report_rows = 0
         else:
             self.report = pd.DataFrame()
+            self._synced_report_rows = 0
 
     def set_report_path(self, report_path: str):
 
         self.report_path = report_path
         if not os.path.exists(report_path):
             self.report = pd.DataFrame()
+            self._synced_report_rows = 0
 
         else:
-            logger.info(f"Loaded existing report: {report_path}")
-            self.report = pd.read_csv(report_path)
+            try:
+                logger.info(f"Loaded existing report: {report_path}")
+                self.report = pd.read_csv(report_path)
+                self._synced_report_rows = len(self.report)
+            except Exception as e:
+                logger.error(f"Error loading report: {e} \n Starting a new one")
+                self.report = pd.DataFrame()
+                self._synced_report_rows = 0
 
         logger.info(f"New report path: {self.report_path}")
-
 
     def get_embedding_baseline(self, dataset: EmbeddingBaselineDataset) -> tuple[float, float]:
         logger.debug(
@@ -99,14 +120,16 @@ class ExperimentHandler(ABC):
 
         trian_samples = config.experiment_config.n_triangulation_samples if config.encoder_config.rotating_key else 0
         triangulation_method = config.experiment_config.triangulation_choosing if trian_samples else "None"
-        triangulation_method = "_".join(triangulation_method) if type(triangulation_method) is list else triangulation_method
+        triangulation_method = "_".join(triangulation_method) if type(
+            triangulation_method) is list else triangulation_method
         if trian_samples and triangulation_method == "classes":
-            trian_samples = 2 # Special case where it is always two
+            trian_samples = 2  # Special case where it is always two
 
         new_row = {
             "date": [datetime.now().strftime("%d/%m/%Y %H:%M")],
             "dataset_name": [dataset_name],
-            "using_raw_features": [True if (config.experiment_config.use_raw or config.experiment_config.use_embedding) else False],
+            "using_raw_features": [
+                True if (config.experiment_config.use_raw or config.experiment_config.use_embedding) else False],
             "iim_name": [iim_name],
             "cloud_models": [cloud_models_names],
             "triangulation_embedding": [config.encoder_config.embedding],
@@ -122,9 +145,9 @@ class ExperimentHandler(ABC):
 
         self.report = pd.concat([self.report, pd.DataFrame(new_row)], ignore_index=True)
 
-
     def log_results(self,
-                    dataset_name: str, train_shape: tuple, new_train_shape: tuple, test_shape: tuple, cloud_models_names,
+                    dataset_name: str, train_shape: tuple, new_train_shape: tuple, test_shape: tuple,
+                    cloud_models_names,
                     embeddings_baseline_acc: float, embeddings_baseline_f1: float,
                     # prediction_baseline_acc: float, prediction_baseline_f1: float,
                     test_metrics: dict,
@@ -148,24 +171,24 @@ class ExperimentHandler(ABC):
         trian_samples = config.experiment_config.n_triangulation_samples if config.encoder_config.rotating_key else 0
         triangulation_method = config.experiment_config.triangulation_choosing if trian_samples else "None"
         new_row = {
-            "exp_name": [self.experiment_name],
-            "triangulation_samples": [trian_samples],
-            "triangulation_method": [triangulation_method],
-            "n_pred_vectors": [n_pred_vectors],
-            "dataset": [dataset_name],
-            "train_size": [str(train_shape)],
-            "new_train_size": [str(new_train_shape)],
-            "test_size": [str(test_shape)],
-            "iim_model": [iim_name],
-            "total_params": [total_params],
-            "embedding": [config.embedding_config.name],
-            "encryptor": [config.encoder_config.name],
-            "cloud_model": [cloud_models_names],
-            # "pred_baseline_acc": [prediction_baseline_acc],
-            # "pred_baseline_f1": [prediction_baseline_f1],
-            "emb_baseline_acc": [embeddings_baseline_acc],
-            "emb_baseline_f1": [embeddings_baseline_f1],
-        } | test_metrics
+                      "exp_name": [self.experiment_name],
+                      "triangulation_samples": [trian_samples],
+                      "triangulation_method": [triangulation_method],
+                      "n_pred_vectors": [n_pred_vectors],
+                      "dataset": [dataset_name],
+                      "train_size": [str(train_shape)],
+                      "new_train_size": [str(new_train_shape)],
+                      "test_size": [str(test_shape)],
+                      "iim_model": [iim_name],
+                      "total_params": [total_params],
+                      "embedding": [config.embedding_config.name],
+                      "encryptor": [config.encoder_config.name],
+                      "cloud_model": [cloud_models_names],
+                      # "pred_baseline_acc": [prediction_baseline_acc],
+                      # "pred_baseline_f1": [prediction_baseline_f1],
+                      "emb_baseline_acc": [embeddings_baseline_acc],
+                      "emb_baseline_f1": [embeddings_baseline_f1],
+                  } | test_metrics
         if raw_baseline_acc:
             new_row["raw_baseline_acc"] = [raw_baseline_acc]
             new_row["raw_baseline_f1"] = [raw_baseline_f1]
@@ -174,14 +197,78 @@ class ExperimentHandler(ABC):
         self.report = pd.concat([self.report, new_row])
 
         # Save results every 5 rows
-        if len(self.report)  // 5 and config.experiment_config.to_run == EXPERIMENTS.INCREMENT_EVALUATION:
+        if len(self.report) // 5 and config.experiment_config.to_run == EXPERIMENTS.INCREMENT_EVALUATION:
             self.save()
         else:
-            self.save() # or each time if it is a regular experiments
+            self.save()  # or each time if it is a regular experiments
 
     def save(self):
+        """
+        Saves the report safely using filelock to prevent race conditions
+        between multiple processes.
+        """
         logger.info(f"Saving report to {self.report_path}")
-        self.report.to_csv(self.report_path, index=False)
+        report_path = str(self.report_path)
+        report_dir = os.path.dirname(report_path)
+
+        if report_dir:
+            os.makedirs(report_dir, exist_ok=True)
+
+        lock_path = f"{report_path}.lock"
+        lock = FileLock(lock_path)
+
+        with lock:
+            # 1. Determine which rows are new in memory (the "Delta")
+            synced_rows = getattr(self, "_synced_report_rows", 0)
+
+            # Safety reset if sync count is invalid
+            if synced_rows < 0 or synced_rows > len(self.report):
+                synced_rows = 0
+
+            new_rows_from_memory = self.report.iloc[synced_rows:]
+
+            # If we haven't added anything, we can technically skip,
+            # unless we want to sync up with what's on disk.
+            if len(new_rows_from_memory) == 0:
+                # Optional: Read disk just to sync self.report with other processes?
+                # For now, we assume we only write when we have something to add.
+                return
+
+            # 2. Read what is currently on disk (inside the lock)
+            if os.path.exists(report_path):
+                try:
+                    existing_report_on_disk = pd.read_csv(report_path)
+                except Exception as e:
+                    logger.error(f"Error loading existing report during save: {e}")
+                    existing_report_on_disk = pd.DataFrame()
+            else:
+                existing_report_on_disk = pd.DataFrame()
+
+            # 3. Merge Disk Data + Local New Data
+            merged_report = pd.concat([existing_report_on_disk, new_rows_from_memory], ignore_index=True)
+
+            # 4. Atomic Write (Write to temp -> Rename)
+            # This ensures we don't corrupt the file if the script crashes mid-write
+            fd, tmp_path = tempfile.mkstemp(
+                prefix=f"{os.path.basename(report_path)}.",
+                suffix=".tmp",
+                dir=report_dir if report_dir else None,
+            )
+            os.close(fd)
+
+            try:
+                merged_report.to_csv(tmp_path, index=False)
+                os.replace(tmp_path, report_path)
+            except Exception as e:
+                logger.error(f"Failed to save report: {e}")
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+                return
+
+            # 5. Update Local State
+            # We update our local report to match the merged one so we don't re-save rows
+            self.report = merged_report
+            self._synced_report_rows = len(self.report)
 
     def __enter__(self):
         return self

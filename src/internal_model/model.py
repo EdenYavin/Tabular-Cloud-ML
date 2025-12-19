@@ -1,4 +1,4 @@
-
+from loguru import logger
 from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
@@ -23,8 +23,10 @@ models = {
 
 class TransformerIIM(NeuralNetworkInternalModel):
     """
-    Attention-based IIM that treats triangulation anchors as a sequence.
-    It learns to 'attend' to the most relevant anchors/differentials.
+    Robust Attention-based IIM that automatically adapts to:
+    - Different Embeddings (DINO=768 / CLIP=512)
+    - Cloud Vectors (Present=1000 / Absent=0)
+    - Raw Features (Present / Absent)
     """
 
     def __init__(self, **kwargs):
@@ -33,65 +35,126 @@ class TransformerIIM(NeuralNetworkInternalModel):
         self.num_classes = kwargs.get("num_classes")
         self.input_shape_total = kwargs.get("input_shape")
 
-        # --- Dimensions Configuration ---
-        # UPDATED: Default DINO dimension set to 768 (ViT-B/Base)
-        # If you use DINOv2 Small, pass embedding_dim=384 in kwargs.
-        self.embedding_dim = kwargs.get("embedding_dim", 768)
+        # -------------------------------------------------------------------------
+        # 1. Determine Embedding Dimension (DINO vs CLIP)
+        # -------------------------------------------------------------------------
+        # Check kwargs first, then config, then default to DINO (768)
+        if "embedding_dim" in kwargs:
+            self.embedding_dim = kwargs["embedding_dim"]
+        elif hasattr(config.experiment_config, "triangulation_embedding_name"):
+            name = config.experiment_config.triangulation_embedding_name.lower()
+            if "dino" in name:
+                self.embedding_dim = 768
+            elif "clip" in name:
+                self.embedding_dim = 512
+            else:
+                self.embedding_dim = 768
+        else:
+            self.embedding_dim = 768  # Default
 
-        # Default ImageNet size (1000) or Binary Xception (2) - adjust based on your Cloud Model
-        self.cloud_vector_size = kwargs.get("cloud_vector_size", 1000)
+        # -------------------------------------------------------------------------
+        # 2. Determine Cloud Vector Size
+        # -------------------------------------------------------------------------
+        # If cloud models are used in config, assume 1000 (ImageNet/Xception), else 0
+        if config.cloud_config.names:
+            self.cloud_vector_size = kwargs.get("cloud_vector_size", 1000)
+        else:
+            self.cloud_vector_size = 0
 
         self.model = self.get_model()
 
     def get_model(self):
-        # 1. Input: The flat concatenated vector [Triangulation_Seq, Cloud_Pred]
         inputs = Input(shape=(self.input_shape_total,))
 
-        # 2. Slice the input into two parts: Triangulation Sequence and Cloud Vector
-        # Calculate where the sequence ends
-        triangulation_flat_size = self.input_shape_total - self.cloud_vector_size
+        # -------------------------------------------------------------------------
+        # 3. Dynamic Parsing of Input Vector
+        # -------------------------------------------------------------------------
+        # Input Structure: [Raw Features (Optional) | Triangulation Seq | Cloud Vector (Optional)]
 
-        # Safety Check: Ensure the flattened triangulation part is divisible by 768
-        if triangulation_flat_size % self.embedding_dim != 0:
-            raise ValueError(
-                f"Dimension Mismatch: The triangulation part of the input (size={triangulation_flat_size}) "
-                f"is not divisible by the DINO embedding dimension ({self.embedding_dim}). "
-                f"Check if you are using DINO ViT-S (384) or ViT-B (768)."
-            )
+        # Step A: Identify Cloud Part
+        # We assume Cloud Vector is always at the END if present
+        remainder_size = self.input_shape_total - self.cloud_vector_size
 
-        seq_length = triangulation_flat_size // self.embedding_dim
+        # Safety Check: If subtracting cloud makes size negative, assume NO cloud
+        if remainder_size < 0:
+            logger.warning(
+                f"Input size {self.input_shape_total} is smaller than expected cloud vector {self.cloud_vector_size}. Assuming NO Cloud vector.")
+            self.cloud_vector_size = 0
+            remainder_size = self.input_shape_total
 
-        # Use Lambda layers for slicing to support symbolic tensor operations
-        # Part A: The Encrypted Embeddings (Sample + Anchors)
-        triangulation_part = Lambda(lambda x: x[:, :triangulation_flat_size])(inputs)
+        # Step B: Identify Raw Features vs Triangulation
+        # The Triangulation part MUST be a multiple of embedding_dim (e.g. N * 768)
+        # Any 'leftover' bytes are assumed to be Raw Features (e.g., 20 dims for 'ring' dataset)
+        raw_feature_size = remainder_size % self.embedding_dim
+        triangulation_size = remainder_size - raw_feature_size
 
-        # Part B: The Cloud Prediction Vector
-        cloud_part = Lambda(lambda x: x[:, triangulation_flat_size:])(inputs)
+        seq_length = triangulation_size // self.embedding_dim
 
-        # 3. Reshape triangulation part into a Sequence: (Batch, Seq_Len, 768)
+        logger.info(f"TransformerIIM Structure Detected: "
+                    f"Total={self.input_shape_total} | "
+                    f"Raw={raw_feature_size} | "
+                    f"Triangulation={triangulation_size} ({seq_length}x{self.embedding_dim}) | "
+                    f"Cloud={self.cloud_vector_size}")
+
+        # -------------------------------------------------------------------------
+        # 4. Slicing
+        # -------------------------------------------------------------------------
+        # Use Lambda layers to slice the flat input tensor
+
+        # Slice 1: Raw Features (Start)
+        if raw_feature_size > 0:
+            raw_part = Lambda(lambda x: x[:, :raw_feature_size])(inputs)
+            start_triang = raw_feature_size
+        else:
+            raw_part = None
+            start_triang = 0
+
+        # Slice 2: Triangulation (Middle)
+        end_triang = start_triang + triangulation_size
+        triangulation_part = Lambda(lambda x: x[:, start_triang:end_triang])(inputs)
+
+        # Slice 3: Cloud Vector (End)
+        if self.cloud_vector_size > 0:
+            cloud_part = Lambda(lambda x: x[:, end_triang:])(inputs)
+        else:
+            cloud_part = None
+
+        # -------------------------------------------------------------------------
+        # 5. Transformer Logic (Attention on Triangulation)
+        # -------------------------------------------------------------------------
+        # Reshape to (Batch, Seq_Len, Emb_Dim)
         x_seq = Reshape((seq_length, self.embedding_dim))(triangulation_part)
 
-        # 4. Transformer Block
-        # MultiHeadAttention allows the model to "query" the anchors using the sample
-        # We use 8 heads (standard for dim=768)
+        # Self-Attention
         attn_output = MultiHeadAttention(num_heads=8, key_dim=self.embedding_dim)(x_seq, x_seq)
-        x_seq = LayerNormalization(epsilon=1e-6)(x_seq + attn_output)  # Add & Norm
+        x_seq = LayerNormalization(epsilon=1e-6)(x_seq + attn_output)
 
-        # Feed Forward Network (FFN)
+        # FFN
         ffn = Dense(self.embedding_dim, activation="relu")(x_seq)
         ffn = Dropout(0.1)(ffn)
-        x_seq = LayerNormalization(epsilon=1e-6)(x_seq + ffn)  # Add & Norm
+        x_seq = LayerNormalization(epsilon=1e-6)(x_seq + ffn)
 
-        # 5. Pooling (Reduce sequence to a single vector)
-        # GlobalAveragePooling1D is robust; strictly speaking, we could also just take the first token
-        # if the first token is always the "Sample" and subsequent tokens are "Anchors".
+        # Pooling to vector
         x_emb = GlobalAveragePooling1D()(x_seq)
 
-        # 6. Fuse with Cloud Prediction
-        # Concatenate the distilled triangulation info with the explicit cloud prediction
-        combined = concatenate([x_emb, cloud_part])
+        # -------------------------------------------------------------------------
+        # 6. Fusion (Concatenate Raw + Attended_Triangulation + Cloud)
+        # -------------------------------------------------------------------------
+        components_to_concat = [x_emb]
 
-        # 7. Final Classification Head
+        if raw_part is not None:
+            components_to_concat.insert(0, raw_part)  # Prepend Raw
+        if cloud_part is not None:
+            components_to_concat.append(cloud_part)  # Append Cloud
+
+        if len(components_to_concat) > 1:
+            combined = concatenate(components_to_concat)
+        else:
+            combined = x_emb
+
+        # -------------------------------------------------------------------------
+        # 7. Classification Head
+        # -------------------------------------------------------------------------
         x = BatchNormalization()(combined)
         x = Dense(256, activation='leaky_relu')(x)
         x = Dropout(self.dropout_rate)(x)

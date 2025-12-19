@@ -195,10 +195,9 @@ class DenseInternalModel(NeuralNetworkInternalModel):
         # Compile the model with F1 Score
         model.compile(optimizer='adam',
                       loss='categorical_crossentropy',
-                      metrics=['accuracy']#, F1Score()]
-                      )
-
+                      metrics=['accuracy', AUC(multi_label=False, name='auc')])
         return model
+
 
 class BiggerDense(DenseInternalModel):
     def __init__(self, **kwargs):
@@ -232,13 +231,11 @@ class BiggerDense(DenseInternalModel):
         # Create the model
         model = Model(inputs=inputs, outputs=outputs)
 
-        # Compile the model with F1 Score
         model.compile(optimizer='adam',
                       loss='categorical_crossentropy',
-                      metrics=['accuracy']#, F1Score()]
-                      )
-
+                      metrics=['accuracy', AUC(multi_label=False, name='auc')])
         return model
+
 
 class LSTMIIM(NeuralNetworkInternalModel):
     def __init__(self, **kwargs):

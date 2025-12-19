@@ -80,7 +80,7 @@ python main.py \
     $TRIANG_EMB_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
-    --iim-name "$MODELS" \
+    --iim-name $MODELS \
     --iim-epochs 100 \
     --k-training "$K" \
     --triangulation-choosing "$CHOOSE" \

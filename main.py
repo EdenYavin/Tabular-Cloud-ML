@@ -53,6 +53,7 @@ def main():
         type=str,
         nargs="+",
         default=[IIM_MODELS.LSTM],
+        dest="iim_name",
         help="Specify one or more IIM model names (e.g. --iim-model-name lstm, dense)"
     )
 
@@ -145,7 +146,14 @@ def main():
         # Split the single string "kmeans classes" into ["kmeans", "classes"]
         args.experiment_triangulation_choosing = triang_args[0].split()
         logger.debug(f"DEBUG: Fixed triangulation args to: {args.experiment_triangulation_choosing}")
-    # --- END FIX ---
+
+    # Check if the list contains a single string with spaces and split it if necessary
+    models = args.iim_name
+    # FIX: Use models[0].split(), not models.split()
+    if models and len(models) == 1 and len(models[0].split()) > 1:
+        # FIX: Assign back to iim_name, NOT experiment_triangulation_choosing
+        args.iim_name = models[0].split()
+        logger.debug(f"DEBUG: Fixed IIM models args to: {args.iim_name}")
 
     update_config_from_args(config, args)
 

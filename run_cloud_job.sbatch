@@ -83,7 +83,7 @@ python main.py \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \
-    --iim-name "$MODELS" \
+    --iim-name $MODELS \
     --iim-epochs 100 \
     --k-training "$K" \
     --triangulation-choosing "$CHOOSE" \

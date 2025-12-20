@@ -1,7 +1,7 @@
 import gc
 import os.path
 import pickle
-from pathlib import Path
+
 
 import numpy as np
 from keras import backend as K
@@ -13,7 +13,7 @@ from src.utils.config import config
 from loguru import logger
 from src.experiments.base import ExperimentHandler
 from src.utils.helpers import get_experiment_name, get_dataset_path
-from src.utils.constansts import DATASET_FILE_NAME, REPORT_PATH, OUTPUT_DIR_PATH
+from src.utils.constansts import DATASET_FILE_NAME, REPORT_PATH, OUTPUT_DIR_PATH, IIM_MODELS
 
 
 class KModelTrainingExperimentHandler(ExperimentHandler):
@@ -56,6 +56,10 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
 
 
             for model_name in config.iim_config.name:
+                if model_name == IIM_MODELS.TRANSFORMER and config.experiment_config.triangulation_mode == "cos":
+                    logger.warning("#### TRANSFORMER CAN NOT WORK WITH COSINE DATASET - SKIPPING ###")
+                    # Transformer can't work with cosine dataset
+                    continue
 
                 logger.info(f"#### Training model experiment: "
                             f"Dataset: {dataset_name}, n_pred_vectors: {self.n_pred_vectors} ####\n")

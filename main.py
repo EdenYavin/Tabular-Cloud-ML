@@ -20,6 +20,14 @@ def main():
                         choices=list(EXPERIMENTS), help="Experiment type: training or dataset.")
 
     parser.add_argument(
+        "--iim-dropout",
+        type=float,
+        default=0,
+        dest="iim_neural_net_dropout",  # Auto-maps to config.iim_config.neural_net_config.dropout
+        help="Dropout rate for the IIM (0.0 to 1.0). Overrides config default."
+    )
+
+    parser.add_argument(
         "--use-cloud-models",
         type=str,
         nargs="+",  # Allows passing multiple models: --use-cloud-models xception convnext_large

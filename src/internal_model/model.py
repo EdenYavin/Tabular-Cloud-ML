@@ -5,7 +5,7 @@ from sklearn.linear_model import LogisticRegression
 from keras.src.models import Model
 from keras.src.layers import (
     Dense, Dropout, Input, BatchNormalization, concatenate, LSTM,
-    MultiHeadAttention, LayerNormalization, GlobalAveragePooling1D, Reshape, Lambda
+    MultiHeadAttention, LayerNormalization, GlobalAveragePooling1D, Reshape, Lambda, Multiply
 )
 from keras.src.metrics import F1Score, AUC
 from keras.src import regularizers
@@ -20,6 +20,84 @@ models = {
     IIM_MODELS.XGBOOST.value: XGBClassifier,
 }
 
+
+
+class GatedCloudIIM(NeuralNetworkInternalModel):
+    """
+    An IIM that learns to 'gate' the cloud vector.
+    It applies a learnable sigmoid mask to the cloud predictions, effectively
+    learning to suppress 'noisy' or 'low-confidence' predictions from the cloud
+    while amplifying useful signals.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "gated"
+        self.num_classes = kwargs.get("num_classes")
+        self.input_shape_total = kwargs.get("input_shape")
+
+        # 1. Detect Cloud Vector Presence
+        if config.cloud_config.names:
+            self.cloud_vector_size = kwargs.get("cloud_vector_size", 1000)
+        else:
+            self.cloud_vector_size = 0
+
+        self.model = self.get_model()
+
+    def get_model(self):
+        inputs = Input(shape=(self.input_shape_total,))
+
+        # 2. Dynamic Slicing
+        triangulation_dim = self.input_shape_total - self.cloud_vector_size
+
+        # Slice Triangulation Part
+        triangulation_part = Lambda(lambda x: x[:, :triangulation_dim])(inputs)
+
+        # Slice Cloud Part (only if it exists)
+        if self.cloud_vector_size > 0:
+            cloud_part = Lambda(lambda x: x[:, triangulation_dim:])(inputs)
+        else:
+            cloud_part = None
+
+        # 3. Process Triangulation
+        x_tri = Dense(256, activation='leaky_relu')(triangulation_part)
+        x_tri = BatchNormalization()(x_tri)
+        x_tri = Dropout(0.2)(x_tri)
+
+        features_to_fuse = [x_tri]
+
+        # 4. Gating Mechanism (The Core Logic)
+        if cloud_part is not None:
+            # Learn a mask: Output is 0.0 to 1.0 for each class in the cloud vector
+            # "Is this specific class prediction reliable?"
+            gate = Dense(self.cloud_vector_size, activation='sigmoid', name="validity_gate")(cloud_part)
+
+            # Apply the gate: Element-wise multiplication
+            # If gate is 0, the noise is silenced. If 1, the signal passes.
+            gated_cloud = Multiply(name="gated_cloud_signal")([cloud_part, gate])
+
+            # We explicitly add the Gated signal to the fusion
+            # (Optional: You can also add the raw gate values if you want the IIM to know 'how confident' the gate is)
+            features_to_fuse.append(gated_cloud)
+
+        # 5. Fusion
+        if len(features_to_fuse) > 1:
+            combined = concatenate(features_to_fuse)
+        else:
+            combined = features_to_fuse[0]
+
+        # 6. Classification Head
+        x = Dense(128, activation='leaky_relu')(combined)
+        # x = Dropout(self.dropout_rate)(x)
+        x = Dense(64, activation='leaky_relu')(x)
+        outputs = Dense(self.num_classes, activation='softmax')(x)
+
+        model = Model(inputs=inputs, outputs=outputs)
+        model.compile(optimizer='adam',
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy', AUC(multi_label=False, name='auc')])
+
+        return model
 
 class EntropyAwareIIM(NeuralNetworkInternalModel):
     """

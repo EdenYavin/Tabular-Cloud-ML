@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from PIL import Image, ImageDraw, ImageFont
 import tensorflow as tf
+from loguru import logger
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OUTPUT_DIR_PATH, EMBEDDING_TYPES
 from src.utils.config import config
 
@@ -213,7 +214,7 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
 
     # If there are categorical columns, apply one-hot encoding
     if categorical_cols:
-        print("\nEncoding categorical columns...")
+        logger.info("#### PREPROCESSING: ##### Encoding categorical columns")
         X_categorical = pd.get_dummies(X[categorical_cols], drop_first=True)
         X_categorical = X_categorical.astype(int) # Tensorflow can't process boolean
         # label_encoder = LabelEncoder()
@@ -224,7 +225,7 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
 
     # Apply standard scaling to the numeric columns
     if numeric_cols:
-        print("\nScaling numerical columns...")
+        logger.info("#### PREPROCESSING: ##### Scaling numerical columns")
         scaler = MinMaxScaler()
         # X_numeric = X[numeric_cols]
         # if cloud_dataset:

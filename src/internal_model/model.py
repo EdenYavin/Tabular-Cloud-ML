@@ -88,7 +88,7 @@ class GatedCloudIIM(NeuralNetworkInternalModel):
 
         # 6. Classification Head
         x = Dense(128, activation='leaky_relu')(combined)
-        # x = Dropout(self.dropout_rate)(x)
+        x = Dropout(self.dropout_rate)(x)
         x = Dense(64, activation='leaky_relu')(x)
         outputs = Dense(self.num_classes, activation='softmax')(x)
 
@@ -178,7 +178,7 @@ class EntropyAwareIIM(NeuralNetworkInternalModel):
 
         # 6. Classification Head
         x = Dense(128, activation='leaky_relu')(combined)
-        # x = Dropout(self.dropout_rate)(x)
+        x = Dropout(self.dropout_rate)(x)
         x = Dense(64, activation='leaky_relu')(x)
         outputs = Dense(self.num_classes, activation='softmax')(x)
 

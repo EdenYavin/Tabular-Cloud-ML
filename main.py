@@ -23,7 +23,7 @@ def main():
         "--use-cloud-models",
         type=str,
         nargs="+",  # Allows passing multiple models: --use-cloud-models xception convnext_large
-        default=None,  # CHANGE: Default is None so we don't overwrite config if flag is missing
+        default=[],  # CHANGE: Default is None so we don't overwrite config if flag is missing
         dest="cloud_names",  # Maps to config.cloud_config.names
         help="The cloud models to use (e.g., xception, convnext_large, efficientnet)"
     )

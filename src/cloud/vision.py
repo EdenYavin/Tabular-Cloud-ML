@@ -9,6 +9,7 @@ try:
     from keras.api.applications.densenet import preprocess_input as densenet_preprocess, DenseNet201
     from keras.api.applications.inception_v3 import preprocess_input as inception_v3_preprocess, InceptionV3
     from keras.api.applications.mobilenet import preprocess_input as mobilenet_preprocess
+    from keras.api.applications.convnext import ConvNeXtLarge, preprocess_input as convnext_preprocess
 except ModuleNotFoundError:
     from keras.applications import ResNet50V2, VGG16, Xception, MobileNetV2
     from keras.applications.xception import preprocess_input as xception_preprocess_input
@@ -17,7 +18,7 @@ except ModuleNotFoundError:
     from keras.applications.densenet import preprocess_input as densenet_preprocess, DenseNet201
     from keras.applications.inception_v3 import preprocess_input as inception_v3_preprocess, InceptionV3
     from keras.applications.mobilenet import preprocess_input as mobilenet_preprocess
-
+    from keras.applications.convnext import ConvNeXtLarge, preprocess_input as convnext_preprocess
 
 from keras import Model, Sequential
 from keras.src.layers import GlobalAveragePooling2D, Conv2D, Activation, BatchNormalization, Dropout, MaxPooling2D, \
@@ -28,7 +29,20 @@ from keras.models import load_model
 
 from src.cloud.base import CloudModel, KerasApplicationCloudModel
 from src.utils.constansts import VGG16_CIFAR10_MODEL_PATH, CIFAR_100_VGG16_MODEL_PATH
-from src.utils.config import config
+
+
+class ConvNeXtLargeCloudModel(KerasApplicationCloudModel):
+    name = "convnext"
+    # ConvNeXt standard input is 224x224, but Large often works better with slightly larger inputs
+    input_shape = (224, 224, 3)
+
+    def __init__(self, **kwargs):
+        super().__init__(preprocess_input=convnext_preprocess, **kwargs)
+
+    def get_model(self):
+        # Load ConvNeXtLarge with ImageNet weights
+        return ConvNeXtLarge(weights='imagenet')
+
 
 class ResNetEmbeddingCloudModel:
     name = "resnet"

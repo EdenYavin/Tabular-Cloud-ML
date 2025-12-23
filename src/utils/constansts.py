@@ -25,6 +25,7 @@ class IIM_MODELS(str, enum.Enum):
     XGBOOST = "xgboost"
     LSTM = "lstm"
     TRANSFORMER = "transformer"
+    ENTROPY = "entropy_aware"
 
 class CLOUD_MODELS(str, enum.Enum):
     ENSEMBLE_OF_TABULAR_MODELS = "ensemble"
@@ -39,6 +40,7 @@ class CLOUD_MODELS(str, enum.Enum):
     SEQUENCE_CLASSIFICATION_LLM = "sequence_classification_llm"
     NEXT_TOKEN_LLM = "next_token_llm"
     MOBILE_NET = "mobile_net"
+    CONVNEXT = "convnext"
 
 class DATASETS(str, enum.Enum):
     HELOC = "heloc"

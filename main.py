@@ -19,12 +19,14 @@ def main():
     parser.add_argument("--experiment-to-run", type=EXPERIMENTS,
                         choices=list(EXPERIMENTS), help="Experiment type: training or dataset.")
 
-    parser.add_argument(    "--use-cloud-models",
-    type=str,
-    nargs="+",
-    default=[],
-    dest="cloud_names",
-    help="The cloud models to use")
+    parser.add_argument(
+        "--use-cloud-models",
+        type=str,
+        nargs="+",  # Allows passing multiple models: --use-cloud-models xception convnext_large
+        default=None,  # CHANGE: Default is None so we don't overwrite config if flag is missing
+        dest="cloud_names",  # Maps to config.cloud_config.names
+        help="The cloud models to use (e.g., xception, convnext_large, efficientnet)"
+    )
 
     parser.add_argument("--encoder-rotating-key",
     action="store_true",  # Sets to True if flag is present

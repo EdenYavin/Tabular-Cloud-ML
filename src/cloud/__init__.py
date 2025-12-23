@@ -6,7 +6,7 @@ from src.cloud.vision import (XceptionCloudModel,
       ResNetEmbeddingCloudModel,
       VGG16CloudModel, VGG16Cifer10CloudModel, VGG16Cifar100CloudModel,
       InceptionCloudModel, EfficientNetCloudModel, DenseNetCloudModel,
-        MobileNetCloudModel
+        MobileNetCloudModel, ConvNeXtLargeCloudModel
       )
 from src.cloud.tabular import EnsembleCloudModel, TabularCloudModel, NeuralNetCloudModel
 
@@ -22,6 +22,7 @@ CLOUD_MODELS = {
     InceptionCloudModel.name: InceptionCloudModel,
     DenseNetCloudModel.name: DenseNetCloudModel,
     MobileNetCloudModel.name: MobileNetCloudModel,
+    ConvNeXtLargeCloudModel.name: ConvNeXtLargeCloudModel,
 }
 
 DEFAULT_CLOUD_OUTPUT_SHAPE = XceptionCloudModel.input_shape

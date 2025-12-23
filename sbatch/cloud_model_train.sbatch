@@ -38,7 +38,7 @@ echo "Number of prediction vectors: $N_P"
 echo "Number of K Iteration $K"
 echo "IIM Models to train $MODELS"
 echo "Dropout Config: $DROPOUT" # Log the mode
-echo "Cloud Models To Use: $CLOUD_MODELS""
+echo "Cloud Models To Use: $CLOUD_MODELS"
 echo "Triangulation Mode: $TRIANGULATION_MODE"
 echo "Triangulation Embedding: $TRIANG_EMB_FLAG" # Log the mode
 

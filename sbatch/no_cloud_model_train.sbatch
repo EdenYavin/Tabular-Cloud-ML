@@ -19,6 +19,12 @@ else
     TRIANG_EMB_FLAG=""
 fi
 
+# --- NEW: Check for Dropout ---
+if [ -n "$DROPOUT" ]; then
+    DROPOUT_FLAG="--iim-dropout $DROPOUT"
+else
+    DROPOUT_FLAG=""
+fi
 # -----------------------------------------
 
 # Echo info
@@ -30,6 +36,7 @@ echo "Number of triangulation $TRIANGULATIONS_NUMBER"
 echo "Number of prediction vectors: $N_P"
 echo "Number of K Iteration $K"
 echo "IIM Models to train $MODELS"
+echo "Dropout Config: $DROPOUT" # Log the mode
 echo "Triangulation Mode: $TRIANGULATION_MODE"
 echo "Triangulation Embedding: $TRIANG_EMB_FLAG" # Log the mode
 
@@ -44,8 +51,8 @@ export TF_XLA_FLAGS=--tf_xla_auto_jit=0
 # Run the Python script
 if [ -n "$USE_RAW_FEATURES" ]; then
     echo "Raw Features Flag is Turned ON"
-    python main.py --experiment-to-run model_training --encoder-rotating-key --use-raw-features $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
+    python main.py --experiment-to-run model_training $DROPOUT_FLAG --encoder-rotating-key --use-raw-features $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 else
     echo "Raw Features Flag is Turned OFF"
-    python main.py --experiment-to-run model_training --encoder-rotating-key $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
+    python main.py --experiment-to-run model_training $DROPOUT_FLAG --encoder-rotating-key $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 fi

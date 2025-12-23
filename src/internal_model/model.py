@@ -22,56 +22,93 @@ models = {
 
 
 class EntropyAwareIIM(NeuralNetworkInternalModel):
+    """
+    An IIM that extracts 'trust' features (Entropy, MaxProb) from the cloud vector
+    to decide how much to rely on it vs. the triangulation.
+
+    Robustness: Handles cases where NO cloud vector is present.
+    """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.name = "entropy_aware"
+        self.name = "entropy_aware_iim"
         self.num_classes = kwargs.get("num_classes")
-        self.input_shape = kwargs.get("input_shape")
+        self.input_shape_total = kwargs.get("input_shape")
+
+        # 1. Detect Cloud Vector Presence
+        # If cloud config has names, we assume standard 1000-dim vector exists.
+        if config.cloud_config.names:
+            self.cloud_vector_size = kwargs.get("cloud_vector_size", 1000)
+        else:
+            self.cloud_vector_size = 0
+
         self.model = self.get_model()
 
     def get_model(self):
-        inputs = Input(shape=(self.input_shape,))
+        inputs = Input(shape=(self.input_shape_total,))
 
-        # 1. Split Input: Cloud Vector is the last 1000 dim
-        cloud_dim = 1000
-        triangulation_dim = self.input_shape - cloud_dim
+        # 2. Dynamic Slicing
+        # Calculate where triangulation ends and cloud begins
+        triangulation_dim = self.input_shape_total - self.cloud_vector_size
 
+        # Slice Triangulation Part
         triangulation_part = Lambda(lambda x: x[:, :triangulation_dim])(inputs)
-        cloud_part = Lambda(lambda x: x[:, triangulation_dim:])(inputs)  # Shape (Batch, 1000)
 
-        # 2. Feature Engineering Layer (Math on the Vector)
-        def compute_uncertainty_features(cloud_vector):
-            # Clip to avoid log(0)
-            p = tf.clip_by_value(cloud_vector, 1e-7, 1.0)
+        # Slice Cloud Part (only if it exists)
+        if self.cloud_vector_size > 0:
+            cloud_part = Lambda(lambda x: x[:, triangulation_dim:])(inputs)
+        else:
+            cloud_part = None
 
-            # Entropy: -Sum(p * log(p)) -> High value means "Confused Cloud"
-            entropy = -tf.reduce_sum(p * tf.math.log(p), axis=1, keepdims=True)
-
-            # Max Confidence: Max(p) -> High value means "Sure Cloud"
-            max_prob = tf.reduce_max(p, axis=1, keepdims=True)
-
-            # Standard Deviation -> Spread of predictions
-            std_dev = tf.math.reduce_std(p, axis=1, keepdims=True)
-
-            return concatenate([entropy, max_prob, std_dev])
-
-        # New "Meta-Features" (Shape: Batch, 3)
-        uncertainty_feats = Lambda(compute_uncertainty_features)(cloud_part)
-
-        # 3. Process Triangulation
-        x_tri = Dense(256, activation='relu')(triangulation_part)
+        # 3. Process Triangulation (Standard Dense Network)
+        x_tri = Dense(256, activation='leaky_relu')(triangulation_part)
         x_tri = BatchNormalization()(x_tri)
+        x_tri = Dropout(0.2)(x_tri)
 
-        # 4. Fuse: Triangulation + Raw Cloud + Uncertainty Features
-        # We give the model explicit "trust signals" via the uncertainty features
-        combined = concatenate([x_tri, cloud_part, uncertainty_feats])
+        features_to_fuse = [x_tri]
 
+        # 4. Process Cloud (If Present)
+        if cloud_part is not None:
+            # --- Feature Engineering: Extract Uncertainty ---
+            def compute_uncertainty_features(cloud_vector):
+                # Clip probabilities to avoid log(0)
+                p = tf.clip_by_value(cloud_vector, 1e-7, 1.0)
+
+                # Entropy: -Sum(p * log(p)) -> High = Uncertain
+                entropy = -tf.reduce_sum(p * tf.math.log(p), axis=1, keepdims=True)
+
+                # Max Confidence: Max(p) -> High = Sure
+                max_prob = tf.reduce_max(p, axis=1, keepdims=True)
+
+                # Standard Deviation: Spread of distribution
+                std_dev = tf.math.reduce_std(p, axis=1, keepdims=True)
+
+                return concatenate([entropy, max_prob, std_dev])
+
+            # Generate the 3 meta-features
+            uncertainty_feats = Lambda(compute_uncertainty_features)(cloud_part)
+
+            # Add both raw cloud vector AND the new meta-features to the fusion list
+            features_to_fuse.append(cloud_part)
+            features_to_fuse.append(uncertainty_feats)
+
+        # 5. Fusion
+        if len(features_to_fuse) > 1:
+            combined = concatenate(features_to_fuse)
+        else:
+            combined = features_to_fuse[0]
+
+        # 6. Classification Head
         x = Dense(128, activation='leaky_relu')(combined)
-        x = Dropout(0.3)(x)
+        # x = Dropout(self.dropout_rate)(x)
+        x = Dense(64, activation='leaky_relu')(x)
         outputs = Dense(self.num_classes, activation='softmax')(x)
 
         model = Model(inputs=inputs, outputs=outputs)
-        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        model.compile(optimizer='adam',
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy', AUC(multi_label=False, name='auc')])
+
         return model
 
 class TransformerIIM(NeuralNetworkInternalModel):

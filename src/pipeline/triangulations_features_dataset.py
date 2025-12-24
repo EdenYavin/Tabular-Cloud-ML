@@ -14,7 +14,6 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
                  metadata = None):
         super().__init__(dataset_name, encryptor, embeddings_model, metadata)
-        self.triangulation_embedding = None
 
         if config.cloud_config.names:
             logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")

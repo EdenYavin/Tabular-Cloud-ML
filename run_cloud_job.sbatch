@@ -10,9 +10,10 @@
 # 1. SETUP & LOGGING
 # ==========================================
 
-# Handle Flags
-if [ -n "$USE_RAW_FEATURES" ]; then
+if [ -n "$USE_RAW_FEATURES" ] && [ "$USE_RAW_FEATURES" = "1" ]; then
     RAW_FEATURES_FLAG="--use-raw-features"
+elif [ "$USE_RAW_FEATURES" = "0" ]; then
+    RAW_FEATURES_FLAG=""
 else
     RAW_FEATURES_FLAG=""
 fi

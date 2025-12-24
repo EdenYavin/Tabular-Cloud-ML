@@ -49,7 +49,7 @@ which python
 export TF_XLA_FLAGS=--tf_xla_auto_jit=0
 
 # Run the Python script
-if [ -n "$USE_RAW_FEATURES" ]; then
+if [ -n "$USE_RAW_FEATURES" ] && [ "$USE_RAW_FEATURES" = "1" ]; then
     echo "Raw Features Flag is Turned ON"
     python main.py --experiment-to-run model_training $DROPOUT_FLAG --encoder-rotating-key --use-raw-features $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 else

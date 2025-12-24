@@ -48,9 +48,14 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
         Raises:
         None
         """
-        # Add the new triangulation samples' embedding as well
-        triangulation_samples = self._get_triangulation_samples(embeddings, y)
+        logger.info(f"### USING SAE FEATURES TRIANGULATION WITH {config.experiment_config.triangulation_mode} TRIANGULATION MODE ###")
 
+
+        # Add the new triangulation samples' embedding as well
+        triangulation_samples = self._get_triangulation_samples(embeddings, y,
+         how_to_choose=config.experiment_config.triangulation_choosing,
+         n_samples=config.experiment_config.n_triangulation_samples
+        )
         # For test data we won't duplicate but encrypt it only once
 
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it

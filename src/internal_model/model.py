@@ -4,7 +4,7 @@ from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
 from keras.src.models import Model
 from keras.src.layers import (
-    Dense, Dropout, Input, BatchNormalization, concatenate, LSTM,
+    Dense, Dropout, Input, BatchNormalization, concatenate, LSTM, Flatten,
     MultiHeadAttention, LayerNormalization, GlobalAveragePooling1D, Reshape, Lambda, Multiply
 )
 from keras.src.metrics import F1Score, AUC
@@ -21,75 +21,65 @@ models = {
 }
 
 
-
 class GatedCloudIIM(NeuralNetworkInternalModel):
     """
-    An IIM that learns to 'gate' the cloud vector.
-    It applies a learnable sigmoid mask to the cloud predictions, effectively
-    learning to suppress 'noisy' or 'low-confidence' predictions from the cloud
-    while amplifying useful signals.
+    Robust Gated IIM that supports MULTIPLE cloud models.
+    The gate scales automatically to the total size of the cloud vector.
     """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.name = "gated"
+        self.name = "gated_cloud_iim"
         self.num_classes = kwargs.get("num_classes")
         self.input_shape_total = kwargs.get("input_shape")
 
-        # 1. Detect Cloud Vector Presence
-        if config.cloud_config.names:
-            self.cloud_vector_size = kwargs.get("cloud_vector_size", 1000)
-        else:
-            self.cloud_vector_size = 0
+        # --- FIX: Support Multiple Cloud Models ---
+        self.num_cloud_models = len(config.cloud_config.names) if config.cloud_config.names else 0
+        self.single_cloud_dim = 1000
+        self.cloud_vector_size = self.single_cloud_dim * self.num_cloud_models
 
         self.model = self.get_model()
 
     def get_model(self):
         inputs = Input(shape=(self.input_shape_total,))
 
-        # 2. Dynamic Slicing
+        # 1. Dynamic Slicing
         triangulation_dim = self.input_shape_total - self.cloud_vector_size
 
-        # Slice Triangulation Part
         triangulation_part = Lambda(lambda x: x[:, :triangulation_dim])(inputs)
 
-        # Slice Cloud Part (only if it exists)
         if self.cloud_vector_size > 0:
             cloud_part = Lambda(lambda x: x[:, triangulation_dim:])(inputs)
         else:
             cloud_part = None
 
-        # 3. Process Triangulation
+        # 2. Process Triangulation
         x_tri = Dense(256, activation='leaky_relu')(triangulation_part)
         x_tri = BatchNormalization()(x_tri)
         x_tri = Dropout(0.2)(x_tri)
 
         features_to_fuse = [x_tri]
 
-        # 4. Gating Mechanism (The Core Logic)
+        # 3. Gating Mechanism
         if cloud_part is not None:
-            # Learn a mask: Output is 0.0 to 1.0 for each class in the cloud vector
-            # "Is this specific class prediction reliable?"
+            # The gate layer naturally scales.
+            # If we have 2000 cloud features, we learn 2000 gate weights.
+            # This is valid because we want to gate specific classes from specific models.
             gate = Dense(self.cloud_vector_size, activation='sigmoid', name="validity_gate")(cloud_part)
 
-            # Apply the gate: Element-wise multiplication
-            # If gate is 0, the noise is silenced. If 1, the signal passes.
             gated_cloud = Multiply(name="gated_cloud_signal")([cloud_part, gate])
 
-            # We explicitly add the Gated signal to the fusion
-            # (Optional: You can also add the raw gate values if you want the IIM to know 'how confident' the gate is)
             features_to_fuse.append(gated_cloud)
 
-        # 5. Fusion
+        # 4. Fusion
         if len(features_to_fuse) > 1:
             combined = concatenate(features_to_fuse)
         else:
             combined = features_to_fuse[0]
 
-        # 6. Classification Head
+        # 5. Head
         x = Dense(128, activation='leaky_relu')(combined)
         x = Dropout(self.dropout_rate)(x)
-        x = Dense(64, activation='leaky_relu')(x)
         outputs = Dense(self.num_classes, activation='softmax')(x)
 
         model = Model(inputs=inputs, outputs=outputs)
@@ -99,12 +89,11 @@ class GatedCloudIIM(NeuralNetworkInternalModel):
 
         return model
 
+
 class EntropyAwareIIM(NeuralNetworkInternalModel):
     """
-    An IIM that extracts 'trust' features (Entropy, MaxProb) from the cloud vector
-    to decide how much to rely on it vs. the triangulation.
-
-    Robustness: Handles cases where NO cloud vector is present.
+    Robust Entropy IIM that supports MULTIPLE cloud models.
+    It calculates uncertainty for each cloud model separately and fuses them.
     """
 
     def __init__(self, **kwargs):
@@ -113,73 +102,76 @@ class EntropyAwareIIM(NeuralNetworkInternalModel):
         self.num_classes = kwargs.get("num_classes")
         self.input_shape_total = kwargs.get("input_shape")
 
-        # 1. Detect Cloud Vector Presence
-        # If cloud config has names, we assume standard 1000-dim vector exists.
-        if config.cloud_config.names:
-            self.cloud_vector_size = kwargs.get("cloud_vector_size", 1000)
-        else:
-            self.cloud_vector_size = 0
+        # --- FIX: Support Multiple Cloud Models ---
+        self.num_cloud_models = len(config.cloud_config.names) if config.cloud_config.names else 0
+        # Assuming all cloud models output 1000 classes (ImageNet standard)
+        self.single_cloud_dim = 1000
+        self.cloud_vector_size = self.single_cloud_dim * self.num_cloud_models
 
         self.model = self.get_model()
 
     def get_model(self):
         inputs = Input(shape=(self.input_shape_total,))
 
-        # 2. Dynamic Slicing
-        # Calculate where triangulation ends and cloud begins
+        # 1. Dynamic Slicing
         triangulation_dim = self.input_shape_total - self.cloud_vector_size
 
-        # Slice Triangulation Part
+        # Safety Check
+        if triangulation_dim < 0:
+            raise ValueError(
+                f"Input shape {self.input_shape_total} is too small for {self.num_cloud_models} cloud models.")
+
         triangulation_part = Lambda(lambda x: x[:, :triangulation_dim])(inputs)
 
-        # Slice Cloud Part (only if it exists)
         if self.cloud_vector_size > 0:
             cloud_part = Lambda(lambda x: x[:, triangulation_dim:])(inputs)
         else:
             cloud_part = None
 
-        # 3. Process Triangulation (Standard Dense Network)
+        # 2. Process Triangulation
         x_tri = Dense(256, activation='leaky_relu')(triangulation_part)
         x_tri = BatchNormalization()(x_tri)
         x_tri = Dropout(0.2)(x_tri)
 
         features_to_fuse = [x_tri]
 
-        # 4. Process Cloud (If Present)
+        # 3. Process Cloud (Robust to Multiple Models)
         if cloud_part is not None:
-            # --- Feature Engineering: Extract Uncertainty ---
-            def compute_uncertainty_features(cloud_vector):
-                # Clip probabilities to avoid log(0)
-                p = tf.clip_by_value(cloud_vector, 1e-7, 1.0)
+            # Helper to calculate entropy correctly per model
+            def compute_multi_model_uncertainty(flat_cloud_vector):
+                # Reshape to (Batch, Num_Models, 1000)
+                # We need to process each model's probability distribution separately
+                reshaped = tf.reshape(flat_cloud_vector, (-1, self.num_cloud_models, self.single_cloud_dim))
 
-                # Entropy: -Sum(p * log(p)) -> High = Uncertain
-                entropy = -tf.reduce_sum(p * tf.math.log(p), axis=1, keepdims=True)
+                # Clip for numerical stability
+                p = tf.clip_by_value(reshaped, 1e-7, 1.0)
 
-                # Max Confidence: Max(p) -> High = Sure
-                max_prob = tf.reduce_max(p, axis=1, keepdims=True)
+                # Calculate Entropy per model: Sum over the last axis (classes)
+                # Shape: (Batch, Num_Models)
+                entropies = -tf.reduce_sum(p * tf.math.log(p), axis=2)
 
-                # Standard Deviation: Spread of distribution
-                std_dev = tf.math.reduce_std(p, axis=1, keepdims=True)
+                # Calculate Max Prob per model
+                # Shape: (Batch, Num_Models)
+                max_probs = tf.reduce_max(p, axis=2)
 
-                return concatenate([entropy, max_prob, std_dev])
+                # We flatten these meta-features so we get [Entropy_Model1, Entropy_Model2, Max_Model1...]
+                return concatenate([Flatten()(entropies), Flatten()(max_probs)])
 
-            # Generate the 3 meta-features
-            uncertainty_feats = Lambda(compute_uncertainty_features)(cloud_part)
+            # Extract Uncertainty
+            uncertainty_feats = Lambda(compute_multi_model_uncertainty)(cloud_part)
 
-            # Add both raw cloud vector AND the new meta-features to the fusion list
             features_to_fuse.append(cloud_part)
             features_to_fuse.append(uncertainty_feats)
 
-        # 5. Fusion
+        # 4. Fusion
         if len(features_to_fuse) > 1:
             combined = concatenate(features_to_fuse)
         else:
             combined = features_to_fuse[0]
 
-        # 6. Classification Head
+        # 5. Head
         x = Dense(128, activation='leaky_relu')(combined)
         x = Dropout(self.dropout_rate)(x)
-        x = Dense(64, activation='leaky_relu')(x)
         outputs = Dense(self.num_classes, activation='softmax')(x)
 
         model = Model(inputs=inputs, outputs=outputs)

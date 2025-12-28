@@ -4,13 +4,12 @@ import numpy as np
 from keras.src.utils import to_categorical
 from loguru import logger
 from src.cloud import CloudModelManager
-from src.domain.dataset import IIMFeatures, IIMDataset, PredictionBaselineFeatures, PredictionBaselineDataset, \
-    EmbeddingBaselineFeatures, EmbeddingBaselineDataset
+from src.domain.dataset import IIMFeatures, IIMDataset,EmbeddingBaselineFeatures, EmbeddingBaselineDataset
 from src.embeddings import DinoEmbedding, ClipEmbedding
 from src.encryptor.base import BaseEncryptor
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
-from src.utils.traingulations import get_triangulation_samples_clustering, get_class_representative_samples
+from src.utils.traingulations import get_triangulation_samples_clustering, get_class_representative_samples, get_dense_and_distant_anchors
 from src.utils.constansts import EMBEDDING_TYPES
 
 class FeatureEngineeringPipeline(ABC):
@@ -64,6 +63,16 @@ class FeatureEngineeringPipeline(ABC):
                 triangulation_samples.append(get_triangulation_samples_clustering(n_samples, embeddings))
             elif method == 'classes':
                 triangulation_samples.append(get_class_representative_samples(embeddings, labels))
+            elif method == 'fps':
+                # This function now handles the class splitting internally.
+                # It returns 2 anchors per class (total 4 if binary classification).
+                anchors = get_dense_and_distant_anchors(
+                    embeddings,
+                    labels,
+                    n_samples=2,
+                    density_percentile=60
+                )
+                triangulation_samples.append(anchors)
             else:
                 # Last method
                 triangulation_samples.append(embeddings[-n_samples:])

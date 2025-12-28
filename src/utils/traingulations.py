@@ -1,4 +1,5 @@
 from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import KMeans
 import numpy as np
 
@@ -98,3 +99,90 @@ def get_triangulation_samples_clustering(n_samples, embeddings):
         triangulation_samples.append(embeddings[closest_embedding_index])
 
     return np.array(triangulation_samples)
+
+
+def get_dense_and_distant_anchors(embeddings, labels, n_samples=2, density_percentile=60):
+    """
+    Selects triangulation anchors for each class that are:
+    1. In high-density regions (representative).
+    2. Maximally distant from each other (stable triangulation).
+
+    Args:
+        embeddings (np.ndarray): The matrix of embeddings.
+        labels (np.ndarray): The array of class labels (can be 1D or one-hot encoded).
+        n_samples (int): Number of anchors to select PER CLASS.
+        density_percentile (int): Percentile of density to keep (e.g., 60 means top 60% densest).
+
+    Returns:
+        np.ndarray: An array containing the selected anchors for all classes combined.
+    """
+
+    # Handle One-Hot Encoding if necessary
+    if labels.ndim > 1:
+        y_labels = np.argmax(labels, axis=1)
+    else:
+        y_labels = labels
+
+    unique_classes = np.unique(y_labels)
+    all_anchors = []
+
+    for cls in unique_classes:
+        # Filter embeddings for the current class
+        class_embeddings = embeddings[y_labels == cls]
+
+        # --- Step 1: Density Estimation ---
+        # Estimate density using KNN distance (lower distance = higher density)
+        n_neighbors = min(len(class_embeddings), 10)
+        nbrs = NearestNeighbors(n_neighbors=n_neighbors).fit(class_embeddings)
+        distances, _ = nbrs.kneighbors(class_embeddings)
+
+        # Mean distance to neighbors (excluding self at index 0)
+        avg_neighbor_dist = distances[:, 1:].mean(axis=1)
+
+        # Determine cutoff for "high density"
+        cutoff = np.percentile(avg_neighbor_dist, density_percentile)
+
+        # Indices of candidates that are dense enough
+        candidate_indices = np.where(avg_neighbor_dist <= cutoff)[0]
+        candidate_embeddings = class_embeddings[candidate_indices]
+
+        # Fallback: If filtering removes too many points, use all class data
+        if len(candidate_embeddings) < n_samples:
+            candidate_embeddings = class_embeddings
+            candidate_indices = np.arange(len(class_embeddings))
+            # Recalculate dists for fallback
+            avg_neighbor_dist = avg_neighbor_dist
+
+        # --- Step 2: Furthest Point Sampling (FPS) ---
+        selected_indices_local = []
+
+        # 2a. First Anchor: Pick the absolute densest point (min neighbor dist)
+        # We need the index relative to 'candidate_embeddings'
+        # But avg_neighbor_dist corresponds to original class_embeddings indices
+        # So we look up the densest value among the candidates
+        densest_candidate_idx = np.argmin(avg_neighbor_dist[candidate_indices])
+        selected_indices_local.append(densest_candidate_idx)
+
+        # Distance buffer: Min dist from every candidate to the CURRENT set of selected points
+        min_dists = euclidean_distances(
+            candidate_embeddings[densest_candidate_idx].reshape(1, -1),
+            candidate_embeddings
+        ).flatten()
+
+        # 2b. Subsequent Anchors: Pick point maximizing distance to current set
+        for _ in range(n_samples - 1):
+            next_idx = np.argmax(min_dists)
+            selected_indices_local.append(next_idx)
+
+            # Update minimum distances
+            new_dists = euclidean_distances(
+                candidate_embeddings[next_idx].reshape(1, -1),
+                candidate_embeddings
+            ).flatten()
+            min_dists = np.minimum(min_dists, new_dists)
+
+        # Append found anchors for this class
+        all_anchors.append(candidate_embeddings[selected_indices_local])
+
+    # Stack all class anchors into one array
+    return np.vstack(all_anchors)

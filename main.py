@@ -119,7 +119,7 @@ def main():
         type=int,
         default=3,
         dest="experiment_n_triangulation_samples",  # Internal name for your config
-        help="Specify how many triangulation samples to use in case of first / last / random triangulation type."
+        help="Specify how many triangulation to sample."
     )
 
     parser.add_argument(

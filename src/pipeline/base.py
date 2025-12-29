@@ -9,7 +9,8 @@ from src.embeddings import DinoEmbedding, ClipEmbedding
 from src.encryptor.base import BaseEncryptor
 from src.utils.config import config
 from src.utils.db import EmbeddingDBFactory
-from src.utils.traingulations import get_triangulation_samples_clustering, get_class_representative_samples, get_dense_and_distant_anchors
+from src.utils.traingulations import get_triangulation_samples_clustering, get_class_representative_samples, \
+    get_dense_and_distant_anchors, get_global_dense_and_distant_anchors
 from src.utils.constansts import EMBEDDING_TYPES
 
 class FeatureEngineeringPipeline(ABC):
@@ -69,7 +70,15 @@ class FeatureEngineeringPipeline(ABC):
                 anchors = get_dense_and_distant_anchors(
                     embeddings,
                     labels,
-                    n_samples=2,
+                    n_samples=config.experiment_config.n_triangulation_samples,
+                    density_percentile=60
+                )
+                triangulation_samples.append(anchors)
+            elif method == 'gfps':
+                # Selects 4 anchors from the entire dataset, ignoring class labels
+                anchors = get_global_dense_and_distant_anchors(
+                    embeddings,
+                    n_samples=config.experiment_config.n_triangulation_samples,
                     density_percentile=60
                 )
                 triangulation_samples.append(anchors)

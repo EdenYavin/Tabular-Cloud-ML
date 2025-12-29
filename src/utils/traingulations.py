@@ -186,3 +186,78 @@ def get_dense_and_distant_anchors(embeddings, labels, n_samples=2, density_perce
 
     # Stack all class anchors into one array
     return np.vstack(all_anchors)
+
+
+def get_global_dense_and_distant_anchors(embeddings, n_samples=4, density_percentile=60):
+    """
+    Selects triangulation anchors from the entire dataset (ignoring classes).
+
+    The selection criteria remain:
+    1. High Density: To ensure anchors are representative (not outliers).
+    2. Max Distance (FPS): To ensure anchors span the maximum width of the data manifold.
+
+    Args:
+        embeddings (np.ndarray): The matrix of all embeddings (N, D).
+        n_samples (int): Total number of anchors to select globally.
+        density_percentile (int): Percentile of density to keep (e.g., 60 means top 60% densest).
+
+    Returns:
+        np.ndarray: An array containing the selected anchors (shape: n_samples, D).
+    """
+
+    # --- Step 1: Global Density Estimation ---
+    # We estimate density by looking at the average distance to the k=10 nearest neighbors.
+    n_neighbors = min(len(embeddings), 10)
+    nbrs = NearestNeighbors(n_neighbors=n_neighbors).fit(embeddings)
+    distances, _ = nbrs.kneighbors(embeddings)
+
+    # Mean distance to neighbors (excluding the point itself at index 0)
+    avg_neighbor_dist = distances[:, 1:].mean(axis=1)
+
+    # Filter: Keep only points with low average neighbor distance (High Density)
+    cutoff = np.percentile(avg_neighbor_dist, density_percentile)
+
+    # Indices of candidates that passed the density check
+    candidate_indices = np.where(avg_neighbor_dist <= cutoff)[0]
+    candidate_embeddings = embeddings[candidate_indices]
+
+    # Fallback: If filtering removed too many, use all data
+    if len(candidate_embeddings) < n_samples:
+        candidate_embeddings = embeddings
+        candidate_indices = np.arange(len(embeddings))
+        # Recalculate dists for fallback if needed, or just proceed
+        # For simplicity, we stick to the indices mapping
+
+    # --- Step 2: Furthest Point Sampling (FPS) ---
+    selected_indices_local = []
+
+    # 2a. First Anchor: Pick the absolute densest point globally
+    # Note: avg_neighbor_dist corresponds to original indices, so we map carefully
+    densest_candidate_idx = np.argmin(avg_neighbor_dist[candidate_indices])
+    selected_indices_local.append(densest_candidate_idx)
+
+    # Distance buffer: stores min distance from every point to the CURRENT set of selected points
+    min_dists = euclidean_distances(
+        candidate_embeddings[densest_candidate_idx].reshape(1, -1),
+        candidate_embeddings
+    ).flatten()
+
+    # 2b. Loop until we have exactly n_samples
+    for _ in range(n_samples - 1):
+        # Select the point furthest away from the existing set
+        next_idx = np.argmax(min_dists)
+        selected_indices_local.append(next_idx)
+
+        # Update the minimum distances
+        new_dists = euclidean_distances(
+            candidate_embeddings[next_idx].reshape(1, -1),
+            candidate_embeddings
+        ).flatten()
+
+        # Update the buffer
+        min_dists = np.minimum(min_dists, new_dists)
+
+    # Map back to embedding space
+    final_anchors = candidate_embeddings[selected_indices_local]
+
+    return final_anchors

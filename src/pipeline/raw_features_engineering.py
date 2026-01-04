@@ -121,6 +121,8 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                         # The IIM will see how this 'all-ones' vector got twisted.
                         # -----------------------------------------------------
                         c_tag = self.encryptor.encode(calibration_vector)
+                        # Force values to stay within valid image range [0, 1]
+                        c_tag = np.clip(c_tag, 0.0, 1.0)
                         c_tag_emb = self.triangulation_embedding.forward(c_tag)
                         observation = np.hstack([observation, c_tag_emb.flatten()])
 

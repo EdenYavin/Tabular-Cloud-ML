@@ -148,6 +148,14 @@ def main():
         help="Choose the embedding model for triangulation: 'clip' (original thesis) or 'dino' (new experiment)"
     )
 
+    parser.add_argument(
+        "--use-calibration-vector",
+        type=bool,
+        dest="use_calibration_vector",
+        default=False,
+        help="Flag to indicate if the calibration vector should be used in the IIM training",
+    )
+
     args = parser.parse_args()
 
     # Check if the list contains a single string with spaces and split it if necessary

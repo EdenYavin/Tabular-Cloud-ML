@@ -30,11 +30,18 @@ else
     TRIANG_EMB_FLAG=""
 fi
 
+if [ -n "$CALIB_VECTOR" ]; then
+    USE_CALIB="--use-calibration-vector"
+else
+    USE_CALIB=""
+fi
+
 # Echo Configuration
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "Dataset: $DATASET_NAME"
 echo "Triangulations: $TRIANGULATIONS_NUMBER | Method: $CHOOSE"
 echo "Mode: $TRIANGULATION_MODE | Embedding: $TRIANGULATION_EMBEDDING"
+echo "Use Calibration Vector: $CALIB_VECTOR"
 echo "N_P (Pred Vectors): $N_P | K-Folds: $K"
 echo "Using Cloud Model: $CLOUD_MODEL"
 
@@ -55,6 +62,7 @@ python main.py \
     $RAW_FEATURES_FLAG \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
+    $CA
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \
@@ -79,6 +87,7 @@ python main.py \
     --experiment-to-run model_training \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG \
+    $USE_CALIB \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
     --datasets "$DATASET_NAME" \

@@ -55,7 +55,11 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
          how_to_choose=config.experiment_config.triangulation_choosing,
          n_samples=config.experiment_config.n_triangulation_samples
         )
-        # For test data we won't duplicate but encrypt it only once
+        #Define the Calibration Vector (C) ###
+        # We create a vector of ones with the same shape as a single embedding input (latent dim)
+        # This acts as our "Perfect Compass" before distortion.
+        calibration_vector = np.ones((1, embeddings.shape[1]))
+        # -----------------------------------------------
 
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
         observations, new_y =  [], []
@@ -78,10 +82,24 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
                     # Embedding for triangulation using CLIP, those are the new features
                     x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
 
+                    # ### Encrypt & Embed the Calibration Vector ###
+                    # We encrypt C using the CURRENT key (same as x_tag and y_tag)
+                    # The IIM will see how this 'all-ones' vector got twisted.
+                    c_tag = self.encryptor.encode(calibration_vector)
+                    c_tag_emb = self.triangulation_embedding.forward(c_tag)
+                    # -----------------------------------------------------
+
                     if config.experiment_config.use_embedding:
-                        observation =  np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten()])
+                        if config.experiment_config.use_calibration_vector:
+                            observation =  np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten(), c_tag_emb])
+                        else:
+                            if config.experiment_config.use_calibration_vector:
+                                observation = np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten()])
                     else:
-                        observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
+                        if config.experiment_config.use_calibration_vector:
+                            observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten(), c_tag_emb])
+                        else:
+                            observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
 
                     # Add the cloud predictions as features if needed:
                     if config.cloud_config.names:

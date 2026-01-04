@@ -58,12 +58,17 @@ class Config(BaseModel):
             description="Method to construct features: 'concat' (original) or 'diff' (differential) or cos (cosine)",
             default="concat"
         )
+        use_calibration_vector: bool = Field(
+            description="Flag to indicate if the calibration vector should be used in the IIM training",
+            default=False
+        )
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,
                                                            use_embedding=False,use_raw=False,
                                                            to_run=EXPERIMENTS.DATASET_CREATION,
-                                                           triangulation_mode="diff"  # Default to original behavior
+                                                           triangulation_mode="diff",  # Default to original behavior
+                                                           use_calibration_vector=True
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         # CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,

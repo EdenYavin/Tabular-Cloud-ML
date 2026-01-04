@@ -84,13 +84,6 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                     # Embedding for triangulation using CLIP, those are the new features
                     x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
 
-                    # ### Encrypt & Embed the Calibration Vector ###
-                    # We encrypt C using the CURRENT key (same as x_tag and y_tag)
-                    # The IIM will see how this 'all-ones' vector got twisted.
-                    # -----------------------------------------------------
-                    if config.use_calibration_vector:
-                        c_tag = self.encryptor.encode(calibration_vector)
-                        c_tag_emb = self.triangulation_embedding.forward(c_tag)
 
                     # 3. Apply Triangulation Strategy based on Config
                     if config.experiment_config.triangulation_mode == "diff":
@@ -123,7 +116,13 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                         observation = np.hstack([triangulation_features])
 
                     if config.experiment_config.use_calibration_vector:
-                        observation = np.hstack([observation, c_tag])
+                        # ### Encrypt & Embed the Calibration Vector ###
+                        # We encrypt C using the CURRENT key (same as x_tag and y_tag)
+                        # The IIM will see how this 'all-ones' vector got twisted.
+                        # -----------------------------------------------------
+                        c_tag = self.encryptor.encode(calibration_vector)
+                        c_tag_emb = self.triangulation_embedding.forward(c_tag)
+                        observation = np.hstack([observation, c_tag_emb.flatten()])
 
 
                     # Add the cloud predictions as features if needed:

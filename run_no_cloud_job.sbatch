@@ -29,7 +29,7 @@ else
     TRIANG_EMB_FLAG=""
 fi
 
-if [ -n "$CALIB_VECTOR" ]; then
+if [ -n "$CALIB_VECTOR" ] && [ "$CALIB_VECTOR" = "1" ]; then
     USE_CALIB="--use-calibration-vector"
 else
     USE_CALIB=""

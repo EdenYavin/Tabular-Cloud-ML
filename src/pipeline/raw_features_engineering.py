@@ -75,9 +75,10 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
 
                     # Triangulation features vector = X', Y_1', Y_2',...
                     x_tag = self.encryptor.encode(x.reshape(1, -1))
-
+                    x_tag = np.clip(x_tag, 0.0, 1.0)
                     # 1. Encrypt them using the new key
                     y_tag = self.encryptor.encode(triangulation_samples)
+                    y_tag = np.clip(y_tag, 0.0, 1.0)
                     # 2. Embed the encryption
                     y_tag_emb = self.triangulation_embedding.forward(y_tag)
 

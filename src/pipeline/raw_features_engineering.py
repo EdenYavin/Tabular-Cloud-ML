@@ -87,9 +87,10 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                     # ### Encrypt & Embed the Calibration Vector ###
                     # We encrypt C using the CURRENT key (same as x_tag and y_tag)
                     # The IIM will see how this 'all-ones' vector got twisted.
-                    c_tag = self.encryptor.encode(calibration_vector)
-                    c_tag_emb = self.triangulation_embedding.forward(c_tag)
                     # -----------------------------------------------------
+                    if config.use_calibration_vector:
+                        c_tag = self.encryptor.encode(calibration_vector)
+                        c_tag_emb = self.triangulation_embedding.forward(c_tag)
 
                     # 3. Apply Triangulation Strategy based on Config
                     if config.experiment_config.triangulation_mode == "diff":
@@ -116,17 +117,13 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                     # If 'use_raw' is enabled, we prepend the raw data 'x' (usually False in TEP-KD)
                     # Note: Original code had logic for `config.experiment_config.use_embedding`
                     # which effectively meant "append x".
-                    if config.experiment_config.use_embedding:
-                        if config.experiment_config.use_calibration_vector:
-                            observation =  np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten(), c_tag_emb])
-                        else:
-                            if config.experiment_config.use_calibration_vector:
-                                observation = np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten()])
+                    if config.experiment_config.use_embedding:  # This naming in original code implied "use raw x + embedding"
+                        observation = np.hstack([x, triangulation_features])
                     else:
-                        if config.experiment_config.use_calibration_vector:
-                            observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten(), c_tag_emb])
-                        else:
-                            observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
+                        observation = np.hstack([triangulation_features])
+
+                    if config.experiment_config.use_calibration_vector:
+                        observation = np.hstack([observation, c_tag])
 
 
                     # Add the cloud predictions as features if needed:

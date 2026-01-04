@@ -85,9 +85,9 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
                     # ### Encrypt & Embed the Calibration Vector ###
                     # We encrypt C using the CURRENT key (same as x_tag and y_tag)
                     # The IIM will see how this 'all-ones' vector got twisted.
-                    c_tag = self.encryptor.encode(calibration_vector)
-                    c_tag_emb = self.triangulation_embedding.forward(c_tag)
-                    # -----------------------------------------------------
+                    if config.use_calibration_vector:
+                        c_tag = self.encryptor.encode(calibration_vector)
+                        c_tag_emb = self.triangulation_embedding.forward(c_tag)
 
                     if config.experiment_config.use_embedding:
                         if config.experiment_config.use_calibration_vector:

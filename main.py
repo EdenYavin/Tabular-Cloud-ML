@@ -150,7 +150,7 @@ def main():
 
     parser.add_argument(
         "--use-calibration-vector",
-        type=bool,
+        action="store_true",
         dest="use_calibration_vector",
         default=False,
         help="Flag to indicate if the calibration vector should be used in the IIM training",

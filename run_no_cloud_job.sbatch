@@ -58,6 +58,7 @@ python main.py \
     --experiment-to-run dataset_creation \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG \
+    $USE_CALIB \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
     --datasets "$DATASET_NAME" \

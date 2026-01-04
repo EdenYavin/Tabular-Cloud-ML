@@ -63,8 +63,9 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pat
     triang_num = config.experiment_config.n_triangulation_samples
     embedding_model = config.encoder_config.embedding
     triang_features = config.experiment_config.triangulation_mode
+    use_calib_vector = "calib" if config.experiment_config.use_calibration_vector else ""
     path = (pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / embedding_model
-            / use_raw_features / str(n_pred_vectors) / triang_type / triang_features / str(triang_num))
+            / use_raw_features / str(n_pred_vectors) / triang_type / triang_features / use_calib_vector / str(triang_num))
     os.makedirs(path, exist_ok = True)
     return path
 

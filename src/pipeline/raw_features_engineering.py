@@ -56,7 +56,7 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
         #Define the Calibration Vector (C) ###
         # We create a vector of ones with the same shape as a single embedding input (latent dim)
         # This acts as our "Perfect Compass" before distortion.
-        calibration_vector = np.ones((1, embeddings.shape[1]))
+        calibration_vector = np.ones((1, X.shape[1]))
         # -----------------------------------------------
 
 

@@ -47,7 +47,8 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
         Raises:
         None
         """
-        logger.info(f"### USING SAE FEATURES TRIANGULATION WITH {config.experiment_config.triangulation_mode} TRIANGULATION MODE ###")
+        logger.info(f"### USING SAE FEATURES TRIANGULATION WITH {config.experiment_config.triangulation_mode} TRIANGULATION MODE"
+                    f" {'AND CALIBRATION VECTOR' if config.experiment_config.use_calibration_vector else ''} ###")
 
 
         # Add the new triangulation samples' embedding as well

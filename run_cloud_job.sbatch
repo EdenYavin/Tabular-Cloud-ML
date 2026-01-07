@@ -62,7 +62,7 @@ python main.py \
     $RAW_FEATURES_FLAG \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
-    $CA
+    $USE_CALIB \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \

@@ -9,27 +9,32 @@
 # ==========================================
 # 1. SETUP & LOGGING
 # ==========================================
-if [ -n "$USE_RAW_FEATURES" ] && [ "$USE_RAW_FEATURES" = "1" ]; then
+if [ -n "$USE_RAW_FEATURES" ] && [ "$USE_RAW_FEATURES" = "1" ];
+then
     RAW_FEATURES_FLAG="--use-raw-features"
-elif [ "$USE_RAW_FEATURES" = "0" ]; then
+elif [ "$USE_RAW_FEATURES" = "0" ];
+then
     RAW_FEATURES_FLAG=""
 else
     RAW_FEATURES_FLAG=""
 fi
 
-if [ -n "$TRIANGULATION_MODE" ]; then
+if [ -n "$TRIANGULATION_MODE" ];
+then
     TRIANG_MODE_FLAG="--triangulation-mode $TRIANGULATION_MODE"
 else
     TRIANG_MODE_FLAG=""
 fi
 
-if [ -n "$TRIANGULATION_EMBEDDING" ]; then
+if [ -n "$TRIANGULATION_EMBEDDING" ];
+then
     TRIANG_EMB_FLAG="--triangulation-embedding-model $TRIANGULATION_EMBEDDING"
 else
     TRIANG_EMB_FLAG=""
 fi
 
-if [ -n "$CALIB_VECTOR" ] && [ "$CALIB_VECTOR" = "1" ]; then
+if [ -n "$CALIB_VECTOR" ] && [ "$CALIB_VECTOR" = "1" ];
+then
     USE_CALIB="--use-calibration-vector"
 else
     USE_CALIB=""
@@ -54,6 +59,7 @@ echo "----------------------------------------------------------------"
 echo "STARTING STEP 1: DATASET CREATION"
 echo "----------------------------------------------------------------"
 
+# NOTE: Ensure no spaces exist after the backslashes (\) below
 python main.py \
     --experiment-to-run dataset_creation \
     --encoder-rotating-key \
@@ -80,6 +86,7 @@ echo "----------------------------------------------------------------"
 echo "STARTING STEP 2: MODEL TRAINING"
 echo "----------------------------------------------------------------"
 
+# NOTE: Ensure no spaces exist after the backslashes (\) below
 python main.py \
     --experiment-to-run model_training \
     --encoder-rotating-key \

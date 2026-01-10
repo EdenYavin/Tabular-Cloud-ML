@@ -57,8 +57,9 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
         #Define the Calibration Vector (C) ###
         # We create a vector of ones with the same shape as a single embedding input (latent dim)
         # This acts as our "Perfect Compass" before distortion.
-        calibration_vector = np.ones((1, X.shape[1]))
-        # -----------------------------------------------
+        rng = np.random.default_rng(seed=42)
+        calibration_vector = rng.normal(loc=0.5, scale=0.1, size=(1, X.shape[1]))
+        calibration_vector = np.clip(calibration_vector, 0, 1)  # Ensure input is valid
 
 
         # For test data we won't duplicate but encrypt it only once
@@ -75,15 +76,20 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                     pbar.update(1)
 
                     # Triangulation features vector = X', Y_1', Y_2',...
+                    # --- 1. Encrypt Sample (X) ---
                     x_tag = self.encryptor.encode(x.reshape(1, -1))
-                    x_tag = np.clip(x_tag, 0.0, 1.0)
-                    # 1. Encrypt them using the new key
+                    x_tag = x_tag / config.experiment_config.scaling_factor  # Preserves relative signal
+                    x_tag = np.clip(x_tag, 0.0, 1.0)  # Prevents crash
+
+                    # --- 2 Encrypt Anchors (Y) ---
                     y_tag = self.encryptor.encode(triangulation_samples)
-                    y_tag = np.clip(y_tag, 0.0, 1.0)
-                    # 2. Embed the encryption
+                    y_tag = y_tag / config.experiment_config.scaling_factor  # Apply SAME scaling
+                    y_tag = np.clip(y_tag, 0.0, 1.0)  # Prevents crash
+
+                    # 3. Embed the encryption
                     y_tag_emb = self.triangulation_embedding.forward(y_tag)
 
-                    # Embedding for triangulation using CLIP, those are the new features
+                    # Embedding for triangulation using image embedding, those are the new features
                     x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
 
 
@@ -123,8 +129,11 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                         # The IIM will see how this 'all-ones' vector got twisted.
                         # -----------------------------------------------------
                         c_tag = self.encryptor.encode(calibration_vector)
-                        # Force values to stay within valid image range [0, 1]
+                        # Step 1: Scale down to preserve the "peaks"
+                        c_tag = c_tag / config.experiment_config.scaling_factor
+                        # Step 2: Clip only as a final safety net for extreme outliers (infinity/NaN/huge spikes)
                         c_tag = np.clip(c_tag, 0.0, 1.0)
+
                         c_tag_emb = self.triangulation_embedding.forward(c_tag)
                         observation = np.hstack([observation, c_tag_emb.flatten()])
 

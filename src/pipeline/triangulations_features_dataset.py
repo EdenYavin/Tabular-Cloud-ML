@@ -2,113 +2,110 @@ from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
 
-from src.embeddings import ClipEmbedding
 from src.encryptor.base import BaseEncryptor
 from src.utils.constansts import GPU_DEVICE
 from src.pipeline.base import FeatureEngineeringPipeline
 from src.utils.config import config
+from src.utils.traingulations import TriangulationTransformer
 from loguru import logger
+
 
 class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
 
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
-                 metadata = None):
+                 metadata=None):
         super().__init__(dataset_name, encryptor, embeddings_model, metadata)
 
         if config.cloud_config.names:
             logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")
 
-    
     def _get_features(self, X, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Get features from embeddings for training or testing.
+        logger.info(
+            f"### USING SAE FEATURES TRIANGULATION WITH {config.experiment_config.triangulation_mode} TRIANGULATION MODE"
+            f" {'AND CALIBRATION VECTOR' if config.experiment_config.use_calibration_vector else ''} ###")
 
-        This function processes embeddings through multiple cloud models, performs various
-        data augmentations for training if necessary, and generates processed observations
-        and corresponding labels as output. Predictions for the baseline model can also be
-        retrieved if applicable.
-
-        Parameters:
-        embeddings : ndarray
-            A numpy array containing the embeddings to be processed.
-        y : ndarray
-            A numpy array containing the corresponding labels for the embeddings.
-        is_test : bool
-            A flag that determines if the data is being processed in testing mode.
-
-        Returns:
-        tuple
-            A tuple containing the following elements:
-            - A numpy array of processed observations, combining features and optionally
-              embeddings from triangulation.
-            - A numpy array of expanded labels corresponding to the processed observations.
-            - A numpy array containing predictions for the baseline model if applicable.
-
-        Raises:
-        None
-        """
-        logger.info(f"### USING SAE FEATURES TRIANGULATION WITH {config.experiment_config.triangulation_mode} TRIANGULATION MODE"
-                    f" {'AND CALIBRATION VECTOR' if config.experiment_config.use_calibration_vector else ''} ###")
-
-
-        # Add the new triangulation samples' embedding as well
+        # 1. Prepare Triangulation Samples (Anchors)
         triangulation_samples = self._get_triangulation_samples(embeddings, y,
-         how_to_choose=config.experiment_config.triangulation_choosing,
-         n_samples=config.experiment_config.n_triangulation_samples
-        )
-        #Define the Calibration Vector (C) ###
-        # We create a vector of ones with the same shape as a single embedding input (latent dim)
-        # This acts as our "Perfect Compass" before distortion.
-        calibration_vector = np.ones((1, embeddings.shape[1]))
-        # -----------------------------------------------
+                                                                how_to_choose=config.experiment_config.triangulation_choosing,
+                                                                n_samples=config.experiment_config.n_triangulation_samples
+                                                                )
 
-        predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
-        observations, new_y =  [], []
+        # 2. Prepare Calibration Vector
+        # Using a fixed seed ensures the "noise pattern" is identical for Train and Test sets
+        rng = np.random.default_rng(seed=42)
+        calibration_vector = rng.normal(loc=0.5, scale=0.1, size=(1, embeddings.shape[1]))
+        calibration_vector = np.clip(calibration_vector, 0, 1)
+
+        predictions_for_baseline = np.array(list())
+        observations, new_y = [], []
         cloud = self.cloud_model_manager.__enter__()
 
         with tqdm(total=len(embeddings), leave=True, position=0, desc="Encrypting, Embedding, Predicting") as pbar:
-            with tf.device(GPU_DEVICE):  # Run the models on the GPU
+            with tf.device(GPU_DEVICE):
                 logger.debug(f"Running ON GPU device: {GPU_DEVICE}")
 
                 for x, x_emb, label in zip(X, embeddings, y):
                     pbar.update(1)
 
-                    # Triangulation features vector = X', Y_1', Y_2',...
-                    x_tag = self.encryptor.encode(x_emb.reshape(1, -1))
-                    x_tag = np.clip(x_tag, 0.0, 1.0) # Prevent float point bigger than 1 which cause the CLIp / DINO to crash
-                    # 1. Encrypt them using the new key
-                    y_tag = self.encryptor.encode(triangulation_samples)
-                    y_tag = np.clip(y_tag, 0.0, 1.0)
-                    # 2. Embed the encryption
-                    y_tag_emb = self.triangulation_embedding.forward(y_tag)
+                    # --- ENCRYPTION & SCALING ---
+                    # FIX 2: Apply Scaling to X and Y (same as C) to preserve relative geometry
 
-                    # Embedding for triangulation using CLIP, those are the new features
+                    # Encrypt Sample
+                    x_tag = self.encryptor.encode(x_emb.reshape(1, -1))
+                    x_tag = x_tag / config.experiment_config.scaling_factor
+                    x_tag = np.clip(x_tag, 0.0, 1.0)
+
+                    # Encrypt Anchors
+                    y_tag = self.encryptor.encode(triangulation_samples)
+                    y_tag = y_tag / config.experiment_config.scaling_factor
+                    y_tag = np.clip(y_tag, 0.0, 1.0)
+
+                    # --- EMBEDDING ---
+                    y_tag_emb = self.triangulation_embedding.forward(y_tag)
                     x_tag_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
 
-
-
-                    if config.experiment_config.use_embedding:
-                        observation = np.hstack([x, x_tag_emb.flatten(), y_tag_emb.flatten()])
+                    # --- FIX 3: LOGIC FOR DIFF / COS / CONCAT ---
+                    if config.experiment_config.triangulation_mode == "diff":
+                        triangulation_features = TriangulationTransformer.compute_differential(
+                            target_embedding=x_tag_emb,
+                            anchor_embeddings=y_tag_emb
+                        )
+                    elif config.experiment_config.triangulation_mode == "cos":
+                        triangulation_features = TriangulationTransformer.compute_cosine_distances(
+                            target_embedding=x_tag_emb,
+                            anchor_embeddings=y_tag_emb
+                        )
                     else:
-                        observation = np.hstack([x_tag_emb.flatten(), y_tag_emb.flatten()])
+                        # Default: Concat
+                        triangulation_features = TriangulationTransformer.compute_concatenation(
+                            target_embedding=x_tag_emb,
+                            anchor_embeddings=y_tag_emb
+                        )
+                    # ------------------------------------------------
 
-                    # ### Encrypt & Embed the Calibration Vector ###
-                    # We encrypt C using the CURRENT key (same as x_tag and y_tag)
-                    # The IIM will see how this 'all-ones' vector got twisted.
+                    # Construct Observation
+                    if config.experiment_config.use_embedding:
+                        # Stack raw 'x' (the sample) + the triangulation features
+                        observation = np.hstack([x, triangulation_features])
+                    else:
+                        observation = np.hstack([triangulation_features])
+
+                    # --- CALIBRATION VECTOR ---
                     if config.experiment_config.use_calibration_vector:
                         c_tag = self.encryptor.encode(calibration_vector)
-                        # Force values to stay within valid image range [0, 1]
+                        c_tag = c_tag / config.experiment_config.scaling_factor
                         c_tag = np.clip(c_tag, 0.0, 1.0)
+
                         c_tag_emb = self.triangulation_embedding.forward(c_tag)
                         observation = np.hstack([observation, c_tag_emb.flatten()])
 
-                    # Add the cloud predictions as features if needed:
+                    # --- CLOUD PREDICTIONS ---
                     if config.cloud_config.names:
                         predictions = []
                         for cloud_model in config.cloud_config.names:
+                            # Note: We use x_tag (scaled/clipped) which is safe for the cloud model
                             predictions.append(cloud.predict(model_name=cloud_model, batch=x_tag))
 
-                        # Flatten prediction to be stacked correctly
                         predictions = [p.flatten() for p in predictions]
 
                         if config.cloud_config.horizontal_append:
@@ -118,21 +115,15 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
                         else:
                             for p in predictions:
                                 observations.append(np.hstack([observation, p]))
-                                # Duplicate the labels as we duplicate each sample
                                 new_y.append(label)
-
                         del predictions
 
                     else:
-                        # No cloud models need to be used, just use the features up until now
                         observations.append(np.hstack(observation))
-                        # Duplicate the labels
                         new_y.append(label)
 
                     if config.encoder_config.rotating_key:
-                        # Switch key for the next example
                         self.encryptor.switch_key()
-
 
                 del x_tag, x_tag_emb, y_tag, y_tag_emb
 

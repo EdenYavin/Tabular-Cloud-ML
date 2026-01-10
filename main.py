@@ -151,9 +151,17 @@ def main():
     parser.add_argument(
         "--use-calibration-vector",
         action="store_true",
-        dest="use_calibration_vector",
+        dest="experiment_use_calibration_vector",
         default=False,
         help="Flag to indicate if the calibration vector should be used in the IIM training",
+    )
+
+    parser.add_argument(
+        "--scaling-factor",
+        type=float,
+        dest="experiment_scaling_factor",
+        default=5,
+        help="Scaling factor to scale the encrypted images embedding (for example 1.08 pixel will turn to 0.42)",
     )
 
     args = parser.parse_args()

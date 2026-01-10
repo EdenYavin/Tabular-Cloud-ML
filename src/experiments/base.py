@@ -132,6 +132,7 @@ class ExperimentHandler(ABC):
                 True if (config.experiment_config.use_raw or config.experiment_config.use_embedding) else False],
             "iim_name": [iim_name],
             "cloud_models": [cloud_models_names],
+            "using_calib": [config.experiment_config.use_calibration_vector],
             "triangulation_embedding": [config.encoder_config.embedding],
             "triangulation_method": [triangulation_method],
             "triangulation_mode": [config.experiment_config.triangulation_mode],

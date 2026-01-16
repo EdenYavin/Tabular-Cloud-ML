@@ -64,6 +64,7 @@ class Config(BaseModel):
         )
         scaling_factor: float = Field(
             description="Scaling factor to scale the encrypted images embedding (for example 1.08 pixel will turn to 0.42)",
+            default=5.0
         )
 
 

@@ -62,6 +62,10 @@ class Config(BaseModel):
             description="Flag to indicate if the calibration vector should be used in the IIM training",
             default=False
         )
+        calibration_distributions: list[str] = Field(
+            description="List of calibration vector distribution types. Options: uniform, gaussian, sparse, bimodal, edges",
+            default=["gaussian"]
+        )
         scaling_factor: float = Field(
             description="Scaling factor to scale the encrypted images embedding (for example 1.08 pixel will turn to 0.42)",
             default=5.0

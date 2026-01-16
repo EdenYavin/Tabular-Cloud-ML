@@ -63,7 +63,14 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pat
     triang_num = config.experiment_config.n_triangulation_samples
     embedding_model = config.encoder_config.embedding
     triang_features = config.experiment_config.triangulation_mode
-    use_calib_vector = "calib" if config.experiment_config.use_calibration_vector else ""
+
+    # Include calibration distribution types in path
+    if config.experiment_config.use_calibration_vector:
+        calib_dists = "_".join(sorted(config.experiment_config.calibration_distributions))
+        use_calib_vector = f"calib_{calib_dists}"
+    else:
+        use_calib_vector = ""
+
     path = (pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / embedding_model
             / use_raw_features / str(n_pred_vectors) / triang_type / triang_features / use_calib_vector / str(triang_num))
     os.makedirs(path, exist_ok = True)
@@ -322,3 +329,79 @@ def load_prompt(path: str) -> str:
 
 def batching(list_: list, size: int) -> Generator[list, None, None]:
     yield from (list_[i : i + size] for i in range(0, len(list_), size))
+
+
+def generate_calibration_vectors(embedding_dim: int, distributions: list[str], seed: int = 42) -> list[np.ndarray]:
+    """
+    Generate multiple calibration vectors with different statistical distributions.
+
+    Each distribution captures different aspects of the encryption key's behavior,
+    creating a richer "key fingerprint" for the IIM to learn from.
+
+    Args:
+        embedding_dim: Dimension of the embedding (e.g., 768 for DINO, 512 for CLIP)
+        distributions: List of distribution types to generate. Options:
+            - "uniform": Uniform random [0, 1]
+            - "gaussian": Gaussian centered at 0.5, clipped to [0, 1]
+            - "sparse": Sparse vector with 25% non-zero entries
+            - "bimodal": Two peaks at 0.2 and 0.8
+            - "edges": Values concentrated at edges (0 and 1)
+        seed: Random seed for reproducibility (same across train/test)
+
+    Returns:
+        List of calibration vectors, each of shape (1, embedding_dim)
+
+    Example:
+        >>> vectors = generate_calibration_vectors(768, ["uniform", "gaussian", "sparse"])
+        >>> len(vectors)
+        3
+        >>> vectors[0].shape
+        (1, 768)
+    """
+    rng = np.random.default_rng(seed=seed)
+    calibration_vectors = []
+
+    for dist_type in distributions:
+        dist_type = dist_type.lower().strip()
+
+        if dist_type == "uniform":
+            # Uniform distribution [0, 1]
+            # Good for: Testing consistent response across the entire range
+            v = rng.uniform(0, 1, size=(1, embedding_dim))
+
+        elif dist_type == "gaussian" or dist_type == "normal":
+            # Gaussian centered at 0.5, std=0.2, clipped to [0, 1]
+            # Good for: Natural variation around a central tendency
+            v = rng.normal(loc=0.5, scale=0.2, size=(1, embedding_dim))
+            v = np.clip(v, 0, 1)
+
+        elif dist_type == "sparse":
+            # Sparse pattern: 75% zeros, 25% random values [0.5, 1.0]
+            # Good for: Testing if sparse patterns reveal key structure
+            v = np.zeros((1, embedding_dim))
+            n_nonzero = embedding_dim // 4
+            indices = rng.choice(embedding_dim, size=n_nonzero, replace=False)
+            v[0, indices] = rng.uniform(0.5, 1.0, size=n_nonzero)
+
+        elif dist_type == "bimodal":
+            # Two peaks: 50% at ~0.2, 50% at ~0.8
+            # Good for: Testing response to contrasting signal patterns
+            v = np.zeros((1, embedding_dim))
+            half = embedding_dim // 2
+            v[0, :half] = rng.normal(0.2, 0.05, size=half)
+            v[0, half:] = rng.normal(0.8, 0.05, size=embedding_dim - half)
+            v = np.clip(v, 0, 1)
+
+        elif dist_type == "edges":
+            # Binary: 50% at 0, 50% at 1
+            # Good for: Testing extreme value responses
+            v = rng.choice([0.0, 1.0], size=(1, embedding_dim))
+
+        else:
+            logger.warning(f"Unknown calibration distribution '{dist_type}', using uniform")
+            v = rng.uniform(0, 1, size=(1, embedding_dim))
+
+        calibration_vectors.append(v)
+
+    logger.info(f"Generated {len(calibration_vectors)} calibration vectors with distributions: {distributions}")
+    return calibration_vectors

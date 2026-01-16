@@ -164,6 +164,16 @@ def main():
         help="Scaling factor to scale the encrypted images embedding (for example 1.08 pixel will turn to 0.42)",
     )
 
+    parser.add_argument(
+        "--calibration-distributions",
+        type=str,
+        nargs="+",
+        default=["gaussian"],
+        dest="experiment_calibration_distributions",
+        help="Calibration vector distribution types. Options: uniform, gaussian, sparse, bimodal, edges. "
+             "Use multiple to create a richer key fingerprint (e.g., --calibration-distributions gaussian sparse bimodal)",
+    )
+
     args = parser.parse_args()
 
     # Check if the list contains a single string with spaces and split it if necessary
@@ -180,6 +190,12 @@ def main():
         # FIX: Assign back to iim_name, NOT experiment_triangulation_choosing
         args.iim_name = models[0].split()
         logger.debug(f"DEBUG: Fixed IIM models args to: {args.iim_name}")
+
+    # Handle calibration distributions if passed as single space-separated string
+    calib_dists = args.experiment_calibration_distributions
+    if calib_dists and len(calib_dists) == 1 and len(calib_dists[0].split()) > 1:
+        args.experiment_calibration_distributions = calib_dists[0].split()
+        logger.debug(f"DEBUG: Fixed calibration distributions to: {args.experiment_calibration_distributions}")
 
     update_config_from_args(config, args)
 

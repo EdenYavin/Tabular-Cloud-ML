@@ -27,6 +27,7 @@ class IIM_MODELS(str, enum.Enum):
     TRANSFORMER = "transformer"
     ENTROPY = "entropy_aware"
     GATED = "gated"
+    FILM_CONDITIONED = "film_conditioned"
 
 class CLOUD_MODELS(str, enum.Enum):
     ENSEMBLE_OF_TABULAR_MODELS = "ensemble"

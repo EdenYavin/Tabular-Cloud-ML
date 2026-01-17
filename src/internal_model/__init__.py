@@ -2,7 +2,7 @@ from typing import Union
 from xgboost import XGBClassifier
 
 from src.internal_model.base import NeuralNetworkInternalModel, TabularInternalModel
-from src.internal_model.model import DenseInternalModel, BiggerDense, LSTMIIM, TransformerIIM, EntropyAwareIIM, GatedCloudIIM, FiLMConditionedIIM
+from src.internal_model.model import DenseInternalModel, BiggerDense, LSTMIIM, TransformerIIM, GatedFiLMConditionedIIM, GatedCloudIIM, FiLMConditionedIIM
 from src.utils.constansts import IIM_MODELS
 
 class InternalInferenceModelFactory:
@@ -24,8 +24,8 @@ class InternalInferenceModelFactory:
         elif iim == IIM_MODELS.BIGGER_NEURAL_NET:
             return BiggerDense(**kwargs)
 
-        elif iim == IIM_MODELS.ENTROPY:
-            return EntropyAwareIIM(**kwargs)
+        elif iim == IIM_MODELS.GATED_FILM_CONDITIONED:
+            return GatedFiLMConditionedIIM(**kwargs)
 
         elif iim == IIM_MODELS.GATED:
             return GatedCloudIIM(**kwargs)

@@ -90,92 +90,105 @@ class GatedCloudIIM(NeuralNetworkInternalModel):
         return model
 
 
-class EntropyAwareIIM(NeuralNetworkInternalModel):
+class GatedFiLMConditionedIIM(NeuralNetworkInternalModel):
     """
-    Robust Entropy IIM that supports MULTIPLE cloud models.
-    It calculates uncertainty for each cloud model separately and fuses them.
+    State-of-the-Art IIM: Uses FiLM to process local features, then uses
+    those 'clean' features to GATE the cloud vector.
+    If cloud vector is noise (like in 'magic'), the Gate closes (approaches 0).
     """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.name = "entropy_aware_iim"
+        self.name = "gated_film_iim"
         self.num_classes = kwargs.get("num_classes")
         self.input_shape_total = kwargs.get("input_shape")
 
-        # --- FIX: Support Multiple Cloud Models ---
+        # Config
         self.num_cloud_models = len(config.cloud_config.names) if config.cloud_config.names else 0
-        # Assuming all cloud models output 1000 classes (ImageNet standard)
         self.single_cloud_dim = 1000
         self.cloud_vector_size = self.single_cloud_dim * self.num_cloud_models
 
+        # Calibration embedding
+        embedding_name = config.encoder_config.embedding.lower() if hasattr(config.encoder_config,
+                                                                            'embedding') else 'dino'
+        single_emb_dim = 768 if "dino" in embedding_name else 512
+        n_calib_vectors = len(config.experiment_config.calibration_distributions) if hasattr(config.experiment_config,
+                                                                                             'calibration_distributions') else 1
+        self.calib_embedding_dim = single_emb_dim * n_calib_vectors
+
+        self.film_hidden_dim = 512
         self.model = self.get_model()
 
     def get_model(self):
         inputs = Input(shape=(self.input_shape_total,))
 
-        # 1. Dynamic Slicing
-        triangulation_dim = self.input_shape_total - self.cloud_vector_size
+        # === 1. Slicing ===
+        cloud_end = self.input_shape_total
+        cloud_start = cloud_end - self.cloud_vector_size
+        calib_end = cloud_start
+        calib_start = calib_end - self.calib_embedding_dim
+        main_end = calib_start
 
-        # Safety Check
-        if triangulation_dim < 0:
-            raise ValueError(
-                f"Input shape {self.input_shape_total} is too small for {self.num_cloud_models} cloud models.")
-
-        triangulation_part = Lambda(lambda x: x[:, :triangulation_dim])(inputs)
+        main_features = Lambda(lambda x: x[:, :main_end], name="slice_main")(inputs)
+        calib_embedding = Lambda(lambda x: x[:, calib_start:calib_end], name="slice_calib")(inputs)
 
         if self.cloud_vector_size > 0:
-            cloud_part = Lambda(lambda x: x[:, triangulation_dim:])(inputs)
+            cloud_vector = Lambda(lambda x: x[:, cloud_start:], name="slice_cloud")(inputs)
         else:
-            cloud_part = None
+            cloud_vector = None
 
-        # 2. Process Triangulation
-        x_tri = Dense(256, activation='leaky_relu')(triangulation_part)
-        x_tri = BatchNormalization()(x_tri)
-        x_tri = Dropout(0.2)(x_tri)
+        # === 2. FiLM Generation (Processing the Key) ===
+        # Normalize calibration input
+        calib_norm = BatchNormalization(name="calib_norm")(calib_embedding)
 
-        features_to_fuse = [x_tri]
+        # Generator
+        film_gen = Dense(256, activation='leaky_relu', kernel_regularizer=regularizers.L2(0.001))(calib_norm)
+        film_gen = BatchNormalization()(film_gen)
+        film_gen = Dropout(0.2)(film_gen)
 
-        # 3. Process Cloud (Robust to Multiple Models)
-        if cloud_part is not None:
-            # Helper to calculate entropy correctly per model
-            def compute_multi_model_uncertainty(flat_cloud_vector):
-                # Reshape to (Batch, Num_Models, 1000)
-                # We need to process each model's probability distribution separately
-                reshaped = tf.reshape(flat_cloud_vector, (-1, self.num_cloud_models, self.single_cloud_dim))
+        # Generate FiLM parameters
+        gamma = Dense(self.film_hidden_dim, kernel_initializer='ones', name="gamma")(film_gen)
+        beta = Dense(self.film_hidden_dim, kernel_initializer='zeros', name="beta")(film_gen)
 
-                # Clip for numerical stability
-                p = tf.clip_by_value(reshaped, 1e-7, 1.0)
+        # === 3. Local Feature Extraction (The "Expert") ===
+        x = Dense(self.film_hidden_dim, activation='linear')(main_features)
+        x = BatchNormalization()(x)
 
-                # Calculate Entropy per model: Sum over the last axis (classes)
-                # Shape: (Batch, Num_Models)
-                entropies = -tf.reduce_sum(p * tf.math.log(p), axis=2)
+        # Apply FiLM
+        x = Multiply()([x, gamma])
+        x = Add()([x, beta])
+        x = tf.keras.layers.Activation('leaky_relu')(x)
 
-                # Calculate Max Prob per model
-                # Shape: (Batch, Num_Models)
-                max_probs = tf.reduce_max(p, axis=2)
+        local_expert = Dropout(0.2)(x)  # These are the robust local features
 
-                # We flatten these meta-features so we get [Entropy_Model1, Entropy_Model2, Max_Model1...]
-                return concatenate([Flatten()(entropies), Flatten()(max_probs)])
+        # === 4. Intelligent Gating ===
+        if cloud_vector is not None:
+            # Compress cloud vector
+            c = Dense(self.film_hidden_dim, activation='leaky_relu', name="cloud_proj")(cloud_vector)
+            c = BatchNormalization()(c)
 
-            # Extract Uncertainty
-            uncertainty_feats = Lambda(compute_multi_model_uncertainty)(cloud_part)
+            # THE FIX: Generate Gate based on LOCAL EXPERT + CALIBRATION
+            # "Given what I know about the key (calib) and the data (local), is the cloud useful?"
+            gate_input = concatenate([local_expert, film_gen])
+            gate = Dense(self.film_hidden_dim, activation='sigmoid', name="trust_gate")(gate_input)
 
-            features_to_fuse.append(cloud_part)
-            features_to_fuse.append(uncertainty_feats)
+            # Apply Gate
+            gated_cloud = Multiply(name="gated_cloud")([c, gate])
 
-        # 4. Fusion
-        if len(features_to_fuse) > 1:
-            combined = concatenate(features_to_fuse)
+            # Fuse
+            fused = concatenate([local_expert, gated_cloud])
         else:
-            combined = features_to_fuse[0]
+            fused = local_expert
 
-        # 5. Head
-        x = Dense(128, activation='leaky_relu')(combined)
+        # === 5. Head ===
+        x = Dense(256, activation='leaky_relu')(fused)
         x = Dropout(self.dropout_rate)(x)
         outputs = Dense(self.num_classes, activation='softmax')(x)
 
         model = Model(inputs=inputs, outputs=outputs)
-        model.compile(optimizer='adam',
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001, clipnorm=1.0)
+
+        model.compile(optimizer=optimizer,
                       loss='categorical_crossentropy',
                       metrics=['accuracy', AUC(multi_label=False, name='auc')])
 

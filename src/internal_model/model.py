@@ -99,7 +99,7 @@ class GatedFiLMConditionedIIM(NeuralNetworkInternalModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.name = "gated_film_iim"
+        self.name = "gated_film"
         self.num_classes = kwargs.get("num_classes")
         self.input_shape_total = kwargs.get("input_shape")
 

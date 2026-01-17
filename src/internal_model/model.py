@@ -402,17 +402,24 @@ class FiLMConditionedIIM(NeuralNetworkInternalModel):
         film_generator = BatchNormalization()(film_generator)
         film_generator = Dense(self.film_hidden_dim, activation='relu', name="film_generator_2")(film_generator)
 
-        # Generate gamma (scale) and beta (shift) for each FiLM layer
+        # Generate gamma (scale) and beta (shift) for triangulation pathway
         # Initialize gamma close to 1 and beta close to 0 for stable training start
-        gamma_1 = Dense(self.film_hidden_dim, activation=None,
-                       kernel_initializer='ones', name="gamma_1")(film_generator)
-        beta_1 = Dense(self.film_hidden_dim, activation=None,
-                      kernel_initializer='zeros', name="beta_1")(film_generator)
+        gamma_tri_1 = Dense(self.film_hidden_dim, activation=None,
+                       kernel_initializer='ones', name="gamma_tri_1")(film_generator)
+        beta_tri_1 = Dense(self.film_hidden_dim, activation=None,
+                      kernel_initializer='zeros', name="beta_tri_1")(film_generator)
 
-        gamma_2 = Dense(128, activation=None,
-                       kernel_initializer='ones', name="gamma_2")(film_generator)
-        beta_2 = Dense(128, activation=None,
-                      kernel_initializer='zeros', name="beta_2")(film_generator)
+        gamma_tri_2 = Dense(128, activation=None,
+                       kernel_initializer='ones', name="gamma_tri_2")(film_generator)
+        beta_tri_2 = Dense(128, activation=None,
+                      kernel_initializer='zeros', name="beta_tri_2")(film_generator)
+
+        # Generate gamma and beta for cloud pathway (if cloud vector is present)
+        if self.cloud_vector_size > 0:
+            gamma_cloud = Dense(128, activation=None,
+                           kernel_initializer='ones', name="gamma_cloud")(film_generator)
+            beta_cloud = Dense(128, activation=None,
+                          kernel_initializer='zeros', name="beta_cloud")(film_generator)
 
         # === STEP 4: Process main features with FiLM modulation ===
 
@@ -422,8 +429,8 @@ class FiLMConditionedIIM(NeuralNetworkInternalModel):
 
         # FiLM modulation: x = gamma * x + beta
         # This allows the calibration to dynamically adjust feature processing
-        x = Multiply(name="film_scale_1")([x, gamma_1])
-        x = Add(name="film_shift_1")([x, beta_1])
+        x = Multiply(name="film_scale_tri_1")([x, gamma_tri_1])
+        x = Add(name="film_shift_tri_1")([x, beta_tri_1])
         x = Dropout(0.2)(x)
 
         # Layer 2: Dense + BatchNorm + FiLM
@@ -431,13 +438,23 @@ class FiLMConditionedIIM(NeuralNetworkInternalModel):
         x = BatchNormalization()(x)
 
         # FiLM modulation
-        x = Multiply(name="film_scale_2")([x, gamma_2])
-        x = Add(name="film_shift_2")([x, beta_2])
+        x = Multiply(name="film_scale_tri_2")([x, gamma_tri_2])
+        x = Add(name="film_shift_tri_2")([x, beta_tri_2])
         x = Dropout(self.dropout_rate)(x)
 
-        # === STEP 5: Fuse with cloud vector (if present) ===
+        # === STEP 5: Process cloud vector with FiLM modulation (if present) ===
         if cloud_vector is not None:
-            x = concatenate([x, cloud_vector], name="fuse_cloud")
+            # Project cloud from 1000d → 128d
+            x_cloud = Dense(128, activation='leaky_relu', name="cloud_dense")(cloud_vector)
+            x_cloud = BatchNormalization()(x_cloud)
+
+            # Apply FiLM modulation to cloud features
+            x_cloud = Multiply(name="film_scale_cloud")([x_cloud, gamma_cloud])
+            x_cloud = Add(name="film_shift_cloud")([x_cloud, beta_cloud])
+            x_cloud = Dropout(0.2)(x_cloud)
+
+            # Fuse FiLM-modulated triangulation with FiLM-modulated cloud
+            x = concatenate([x, x_cloud], name="fuse_cloud")
 
         # === STEP 6: Classification head ===
         x = Dense(64, activation='leaky_relu', name="head_1")(x)

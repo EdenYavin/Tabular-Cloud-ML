@@ -1,6 +1,6 @@
 import pickle
 
-from keras.src.callbacks import LearningRateScheduler, EarlyStopping
+from keras.src.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 import numpy as np
@@ -48,7 +48,13 @@ class NeuralNetworkInternalModel(BaseEstimator, ClassifierMixin):
         tf.debugging.set_log_device_placement(True)
         with tf.device('/GPU:0'):
             logger.info(f'Using GPU: {list(filter(lambda d: "GPU:0" in d.name, tf.config.list_physical_devices()))}')
-            lr_scheduler = LearningRateScheduler(lambda epoch: 0.0001 * (0.9 ** epoch))
+            lr_scheduler = ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=0.5,
+                patience=5,
+                min_lr=1e-6,
+                verbose=1
+            )
             early_stopping = EarlyStopping(patience=3, monitor='val_loss', restore_best_weights=True, start_from_epoch=5)
             self.history = self.model.fit(X, y,
                            validation_data=validation_data, epochs=self.epochs,

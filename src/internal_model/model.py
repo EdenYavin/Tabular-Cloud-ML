@@ -329,17 +329,10 @@ class TransformerIIM(NeuralNetworkInternalModel):
 
         return model
 
+
 class FiLMConditionedIIM(NeuralNetworkInternalModel):
     """
-    FiLM-Conditioned IIM that uses calibration embedding to modulate
-    feature processing rather than treating it as concatenated input.
-
-    Key insight: The calibration embedding represents "key information"
-    and should CONTROL how triangulation/cloud features are interpreted,
-    not be treated as additional data.
-
-    FiLM (Feature-wise Linear Modulation): x_out = gamma * x + beta
-    where gamma and beta are generated from the calibration embedding.
+    Robust FiLM-Conditioned IIM with stabilized training dynamics.
     """
 
     def __init__(self, **kwargs):
@@ -348,128 +341,101 @@ class FiLMConditionedIIM(NeuralNetworkInternalModel):
         self.num_classes = kwargs.get("num_classes")
         self.input_shape_total = kwargs.get("input_shape")
 
-        # Configuration from config
+        # Configuration
         self.num_cloud_models = len(config.cloud_config.names) if config.cloud_config.names else 0
         self.single_cloud_dim = 1000
         self.cloud_vector_size = self.single_cloud_dim * self.num_cloud_models
 
-        # Calibration embedding dimension (DINO=768, CLIP=512) * number of distributions
-        embedding_name = config.encoder_config.embedding.lower() if hasattr(config.encoder_config, 'embedding') else 'dino'
+        # Calibration embedding dimension
+        embedding_name = config.encoder_config.embedding.lower() if hasattr(config.encoder_config,
+                                                                            'embedding') else 'dino'
         single_emb_dim = 768 if "dino" in embedding_name else 512
-        n_calib_vectors = len(config.experiment_config.calibration_distributions) if hasattr(config.experiment_config, 'calibration_distributions') else 1
+        n_calib_vectors = len(config.experiment_config.calibration_distributions) if hasattr(config.experiment_config,
+                                                                                             'calibration_distributions') else 1
         self.calib_embedding_dim = single_emb_dim * n_calib_vectors
 
-        # Hidden dimension for FiLM modulation
-        self.film_hidden_dim = 256
-
+        # Increased hidden dim for better capacity
+        self.film_hidden_dim = 512
         self.model = self.get_model()
 
     def get_model(self):
         inputs = Input(shape=(self.input_shape_total,))
 
-        # === STEP 1: Calculate dimensions for input parsing ===
-        # Input structure: [main_features | calibration_embedding | cloud_vector (optional)]
-        # Note: calibration embedding MUST be present for FiLM to work
-
+        # === STEP 1: Slicing ===
+        # Input: [Main Features | Calibration | Cloud]
         cloud_end = self.input_shape_total
         cloud_start = cloud_end - self.cloud_vector_size
-
         calib_end = cloud_start
         calib_start = calib_end - self.calib_embedding_dim
+        main_features_end = calib_start
 
-        main_features_end = calib_start  # triangulation (+ optional raw features)
-
-        logger.info(f"FiLMConditionedIIM Structure: "
-                    f"Total={self.input_shape_total} | "
-                    f"Main Features=[0:{main_features_end}] | "
-                    f"Calibration=[{calib_start}:{calib_end}] ({self.calib_embedding_dim}d) | "
-                    f"Cloud=[{cloud_start}:{cloud_end}] ({self.cloud_vector_size}d)")
-
-        # === STEP 2: Slice the input tensor ===
-        main_features = Lambda(lambda x: x[:, :main_features_end], name="main_features")(inputs)
-        calib_embedding = Lambda(lambda x: x[:, calib_start:calib_end], name="calib_embedding")(inputs)
+        main_features = Lambda(lambda x: x[:, :main_features_end], name="slice_main")(inputs)
+        calib_embedding = Lambda(lambda x: x[:, calib_start:calib_end], name="slice_calib")(inputs)
 
         if self.cloud_vector_size > 0:
-            cloud_vector = Lambda(lambda x: x[:, cloud_start:], name="cloud_vector")(inputs)
+            cloud_vector = Lambda(lambda x: x[:, cloud_start:], name="slice_cloud")(inputs)
         else:
             cloud_vector = None
 
-        # === STEP 3: Generate FiLM parameters from calibration embedding ===
-        # The calibration embedding encodes information about the current encryption key
-        # We use it to generate scale (gamma) and shift (beta) parameters
+        # === STEP 2: Stabilized FiLM Generator ===
+        # Normalize calibration input first - Crucial for stability with rotating keys
+        calib_norm = BatchNormalization(name="calib_norm")(calib_embedding)
 
-        film_generator = Dense(128, activation='relu', name="film_generator_1")(calib_embedding)
-        film_generator = BatchNormalization()(film_generator)
-        film_generator = Dense(self.film_hidden_dim, activation='relu', name="film_generator_2")(film_generator)
+        # Deeper Generator Network
+        film_gen = Dense(256, activation='leaky_relu', kernel_regularizer=regularizers.L2(0.001))(calib_norm)
+        film_gen = BatchNormalization()(film_gen)
+        film_gen = Dropout(0.2)(film_gen)
+        film_gen = Dense(256, activation='leaky_relu', kernel_regularizer=regularizers.L2(0.001))(film_gen)
 
-        # Generate gamma (scale) and beta (shift) for triangulation pathway
-        # Initialize gamma close to 1 and beta close to 0 for stable training start
-        gamma_tri_1 = Dense(self.film_hidden_dim, activation=None,
-                       kernel_initializer='ones', name="gamma_tri_1")(film_generator)
-        beta_tri_1 = Dense(self.film_hidden_dim, activation=None,
-                      kernel_initializer='zeros', name="beta_tri_1")(film_generator)
+        # Generate Parameters (Gamma=Scale, Beta=Shift)
+        # Initialize Gamma to 1.0 and Beta to 0.0 to start as Identity function
+        gamma = Dense(self.film_hidden_dim, kernel_initializer='ones', bias_initializer='zeros', name="gamma")(film_gen)
+        beta = Dense(self.film_hidden_dim, kernel_initializer='zeros', bias_initializer='zeros', name="beta")(film_gen)
 
-        gamma_tri_2 = Dense(128, activation=None,
-                       kernel_initializer='ones', name="gamma_tri_2")(film_generator)
-        beta_tri_2 = Dense(128, activation=None,
-                      kernel_initializer='zeros', name="beta_tri_2")(film_generator)
-
-        # Generate gamma and beta for cloud pathway (if cloud vector is present)
-        if self.cloud_vector_size > 0:
-            gamma_cloud = Dense(128, activation=None,
-                           kernel_initializer='ones', name="gamma_cloud")(film_generator)
-            beta_cloud = Dense(128, activation=None,
-                          kernel_initializer='zeros', name="beta_cloud")(film_generator)
-
-        # === STEP 4: Process main features with FiLM modulation ===
-
-        # Layer 1: Dense + BatchNorm + FiLM
-        x = Dense(self.film_hidden_dim, activation='leaky_relu', name="main_dense_1")(main_features)
+        # === STEP 3: Modulated Feature Extraction ===
+        # Project main features to hidden dim
+        x = Dense(self.film_hidden_dim, activation='linear', name="feat_projection")(main_features)
         x = BatchNormalization()(x)
 
-        # FiLM modulation: x = gamma * x + beta
-        # This allows the calibration to dynamically adjust feature processing
-        x = Multiply(name="film_scale_tri_1")([x, gamma_tri_1])
-        x = Add(name="film_shift_tri_1")([x, beta_tri_1])
-        x = Dropout(0.2)(x)
+        # --- FiLM Application ---
+        # x = gamma * x + beta
+        x_modulated = Multiply(name="film_scale")([x, gamma])
+        x_modulated = Add(name="film_shift")([x_modulated, beta])
+        x_modulated = tf.keras.layers.Activation('leaky_relu')(x_modulated)
 
-        # Layer 2: Dense + BatchNorm + FiLM
-        x = Dense(128, activation='leaky_relu', name="main_dense_2")(x)
+        # Residual Connection (Optional but recommended: allows gradient flow if FiLM is bad initially)
+        # We project input to match dimension if needed, or just use the modulated output
+        x = Dropout(0.2)(x_modulated)
+
+        # Second Dense Block
+        x = Dense(256, activation='leaky_relu', kernel_regularizer=regularizers.L2(0.001))(x)
         x = BatchNormalization()(x)
-
-        # FiLM modulation
-        x = Multiply(name="film_scale_tri_2")([x, gamma_tri_2])
-        x = Add(name="film_shift_tri_2")([x, beta_tri_2])
         x = Dropout(self.dropout_rate)(x)
 
-        # === STEP 5: Process cloud vector with FiLM modulation (if present) ===
+        # === STEP 4: Cloud Fusion (Late Fusion) ===
         if cloud_vector is not None:
-            # Project cloud from 1000d → 128d
-            x_cloud = Dense(128, activation='leaky_relu', name="cloud_dense")(cloud_vector)
-            x_cloud = BatchNormalization()(x_cloud)
+            # Compress cloud vector before fusion
+            c = Dense(256, activation='leaky_relu', name="cloud_compress")(cloud_vector)
+            c = BatchNormalization()(c)
+            c = Dropout(0.2)(c)
 
-            # Apply FiLM modulation to cloud features
-            x_cloud = Multiply(name="film_scale_cloud")([x_cloud, gamma_cloud])
-            x_cloud = Add(name="film_shift_cloud")([x_cloud, beta_cloud])
-            x_cloud = Dropout(0.2)(x_cloud)
+            # Concatenate
+            x = concatenate([x, c])
 
-            # Fuse FiLM-modulated triangulation with FiLM-modulated cloud
-            x = concatenate([x, x_cloud], name="fuse_cloud")
+        # === STEP 5: Head ===
+        x = Dense(128, activation='leaky_relu')(x)
+        outputs = Dense(self.num_classes, activation='softmax')(x)
 
-        # === STEP 6: Classification head ===
-        x = Dense(64, activation='leaky_relu', name="head_1")(x)
-        x = Dropout(self.dropout_rate)(x)
-        outputs = Dense(self.num_classes, activation='softmax', name="output")(x)
-
+        # CRITICAL FIX: Add clipnorm=1.0 to prevent exploding gradients
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001, clipnorm=1.0)
         model = Model(inputs=inputs, outputs=outputs)
         model.compile(
-            optimizer='adam',
+            optimizer=optimizer,
             loss='categorical_crossentropy',
             metrics=['accuracy', AUC(multi_label=False, name='auc')]
         )
 
         return model
-
 
 class DenseInternalModel(NeuralNetworkInternalModel):
     def __init__(self, **kwargs):

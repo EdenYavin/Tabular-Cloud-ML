@@ -25,7 +25,7 @@ class IIM_MODELS(str, enum.Enum):
     XGBOOST = "xgboost"
     LSTM = "lstm"
     TRANSFORMER = "transformer"
-    GATED_FILM_CONDITIONED = "gated_film_iim"
+    GATED_FILM_CONDITIONED = "gated_film"
     GATED = "gated"
     FILM_CONDITIONED = "film_conditioned"
 

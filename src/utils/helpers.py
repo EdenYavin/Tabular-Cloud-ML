@@ -13,8 +13,6 @@ from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OU
 from src.utils.config import config
 
 
-
-
 def plot_history(history, filename=None, title=None):
     """Plot and optionally save training curves"""
     plt.figure(figsize=(12, 6))
@@ -45,9 +43,9 @@ def plot_history(history, filename=None, title=None):
     plt.show()
 
 
-def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pathlib.Path:
+def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True) -> pathlib.Path:
     rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
-    use_cloud_features = "cloud" if (config.cloud_config.names  and use_cloud) else "no_cloud"
+    use_cloud_features = "cloud" if (config.cloud_config.names and use_cloud) else "no_cloud"
     cloud_models = "_".join(config.cloud_config.names) if (config.cloud_config.names and use_cloud) else ""
 
     use_raw_features = ""
@@ -66,14 +64,18 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud = True) -> pat
 
     # Include calibration distribution types in path
     if config.experiment_config.use_calibration_vector:
-        calib_dists = "_".join(sorted(config.experiment_config.calibration_distributions))
+        # Use getattr to be safe in case config isn't fully updated
+        dists = getattr(config.experiment_config, 'calibration_distributions', ['gaussian'])
+        calib_dists = "_".join(sorted(dists))
         use_calib_vector = f"calib_{calib_dists}"
     else:
         use_calib_vector = ""
 
-    path = (pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / embedding_model
-            / use_raw_features / str(n_pred_vectors) / triang_type / triang_features / use_calib_vector / str(triang_num))
-    os.makedirs(path, exist_ok = True)
+    path = (pathlib.Path(
+        OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / embedding_model
+            / use_raw_features / str(n_pred_vectors) / triang_type / triang_features / use_calib_vector / str(
+                triang_num))
+    os.makedirs(path, exist_ok=True)
     return path
 
 
@@ -82,17 +84,26 @@ def get_experiment_name() -> str:
     use_cloud = "cloud_vec" if config.cloud_config.names else "no_cloud_vec"
     use_rotate_key = "rotate_key" if config.encoder_config.rotating_key else "no_rotate_key"
     use_raw_features = "_raw" if config.experiment_config.use_raw else ""
-    return f"{use_rotate_key}_{use_embed}_{use_cloud}{use_raw_features}"
+
+    # NEW: Include calibration info in experiment name for logging
+    calib_str = ""
+    if config.experiment_config.use_calibration_vector:
+        dists = getattr(config.experiment_config, 'calibration_distributions', ['gaussian'])
+        calib_str = f"_calib_{'_'.join(sorted(dists))}"
+
+    return f"{use_rotate_key}_{use_embed}_{use_cloud}{use_raw_features}{calib_str}"
+
 
 def get_num_classes(y: np.ndarray) -> int:
     return len(np.unique(y))
 
+
 def batch(list_: list, size: int) -> Generator[list, None, None]:
     list_ = np.vstack(list_)
-    yield from (list_[i : i + size] for i in range(0, len(list_), size))
+    yield from (list_[i: i + size] for i in range(0, len(list_), size))
+
 
 def pad_image(image, max_shape):
-
     # Check if any dimension of the image matches the max_shape
     if any(s == max_shape for s in image.shape):
         # If the image is already of the desired shape, no need to pad it
@@ -140,6 +151,7 @@ def create_image_from_number(number, image_size=(224, 224), font_size=80):
 
     return img
 
+
 def create_image_from_numbers(numbers, image_size=(224, 224), font_size=80, numbers_per_row=4):
     img = Image.new('RGB', image_size, color='white')  # White background
     draw = ImageDraw.Draw(img)
@@ -163,6 +175,7 @@ def create_image_from_numbers(numbers, image_size=(224, 224), font_size=80, numb
         y_offset += text_height
 
     return img
+
 
 def expand_matrix_to_img_size(matrix, target_shape):
     """
@@ -224,7 +237,7 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
     if categorical_cols:
         logger.info("#### PREPROCESSING: ##### Encoding categorical columns")
         X_categorical = pd.get_dummies(X[categorical_cols], drop_first=True)
-        X_categorical = X_categorical.astype(int) # Tensorflow can't process boolean
+        X_categorical = X_categorical.astype(int)  # Tensorflow can't process boolean
         # label_encoder = LabelEncoder()
         # X_categorical = pd.DataFrame()
         # for col in categorical_cols:
@@ -249,8 +262,8 @@ def preprocess(X: pd.DataFrame, cloud_dataset=False):
     else:
         X_processed = X.copy()  # If there are no categorical or numeric columns, keep the original dataframe
 
-
     return X_processed
+
 
 def one_hot_labels(num_classes: int, labels: np.ndarray) -> np.ndarray:
     if np.any(labels >= num_classes) or np.any(labels < 0):
@@ -303,10 +316,12 @@ def load_data(dataset_name: str, split_ratio: float):
     with open(path, "rb") as f:
         return pickle.load(f)
 
+
 def save_data(dataset_name: str, split_ratio: float, data):
     path = os.path.join(DATASETS_PATH, dataset_name, f"dataset_{split_ratio}.pkl")
     with open(path, "wb") as f:
         pickle.dump(data, f)
+
 
 def load_cache_file(dataset_name: str, split_ratio: float):
     path = os.path.join(DATA_CACHE_PATH, f"{dataset_name}_{split_ratio}.pkl")
@@ -323,40 +338,19 @@ def save_cache_file(dataset_name: str, split_ratio: float, data):
     with open(path, "wb") as f:
         pickle.dump(data, f)
 
+
 def load_prompt(path: str) -> str:
     with open(path, 'r') as f:
         return f.read()
 
+
 def batching(list_: list, size: int) -> Generator[list, None, None]:
-    yield from (list_[i : i + size] for i in range(0, len(list_), size))
+    yield from (list_[i: i + size] for i in range(0, len(list_), size))
 
 
 def generate_calibration_vectors(embedding_dim: int, distributions: list[str], seed: int = 42) -> list[np.ndarray]:
     """
     Generate multiple calibration vectors with different statistical distributions.
-
-    Each distribution captures different aspects of the encryption key's behavior,
-    creating a richer "key fingerprint" for the IIM to learn from.
-
-    Args:
-        embedding_dim: Dimension of the embedding (e.g., 768 for DINO, 512 for CLIP)
-        distributions: List of distribution types to generate. Options:
-            - "uniform": Uniform random [0, 1]
-            - "gaussian": Gaussian centered at 0.5, clipped to [0, 1]
-            - "sparse": Sparse vector with 25% non-zero entries
-            - "bimodal": Two peaks at 0.2 and 0.8
-            - "edges": Values concentrated at edges (0 and 1)
-        seed: Random seed for reproducibility (same across train/test)
-
-    Returns:
-        List of calibration vectors, each of shape (1, embedding_dim)
-
-    Example:
-        >>> vectors = generate_calibration_vectors(768, ["uniform", "gaussian", "sparse"])
-        >>> len(vectors)
-        3
-        >>> vectors[0].shape
-        (1, 768)
     """
     rng = np.random.default_rng(seed=seed)
     calibration_vectors = []
@@ -365,27 +359,19 @@ def generate_calibration_vectors(embedding_dim: int, distributions: list[str], s
         dist_type = dist_type.lower().strip()
 
         if dist_type == "uniform":
-            # Uniform distribution [0, 1]
-            # Good for: Testing consistent response across the entire range
             v = rng.uniform(0, 1, size=(1, embedding_dim))
 
         elif dist_type == "gaussian" or dist_type == "normal":
-            # Gaussian centered at 0.5, std=0.2, clipped to [0, 1]
-            # Good for: Natural variation around a central tendency
             v = rng.normal(loc=0.5, scale=0.2, size=(1, embedding_dim))
             v = np.clip(v, 0, 1)
 
         elif dist_type == "sparse":
-            # Sparse pattern: 75% zeros, 25% random values [0.5, 1.0]
-            # Good for: Testing if sparse patterns reveal key structure
             v = np.zeros((1, embedding_dim))
             n_nonzero = embedding_dim // 4
             indices = rng.choice(embedding_dim, size=n_nonzero, replace=False)
             v[0, indices] = rng.uniform(0.5, 1.0, size=n_nonzero)
 
         elif dist_type == "bimodal":
-            # Two peaks: 50% at ~0.2, 50% at ~0.8
-            # Good for: Testing response to contrasting signal patterns
             v = np.zeros((1, embedding_dim))
             half = embedding_dim // 2
             v[0, :half] = rng.normal(0.2, 0.05, size=half)
@@ -393,8 +379,6 @@ def generate_calibration_vectors(embedding_dim: int, distributions: list[str], s
             v = np.clip(v, 0, 1)
 
         elif dist_type == "edges":
-            # Binary: 50% at 0, 50% at 1
-            # Good for: Testing extreme value responses
             v = rng.choice([0.0, 1.0], size=(1, embedding_dim))
 
         else:

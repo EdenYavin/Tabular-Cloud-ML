@@ -40,12 +40,21 @@ else
     USE_CALIB=""
 fi
 
+# New Logic for Calibration Distributions
+if [ -n "$CALIB_DISTRIBUTIONS" ];
+then
+    CALIB_DISTS_FLAG="--calibration-distributions $CALIB_DISTRIBUTIONS"
+else
+    CALIB_DISTS_FLAG=""
+fi
+
 # Echo Configuration
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "Dataset: $DATASET_NAME"
 echo "Triangulations: $TRIANGULATIONS_NUMBER | Method: $CHOOSE"
 echo "Mode: $TRIANGULATION_MODE | Embedding: $TRIANGULATION_EMBEDDING"
 echo "Use Calibration Vector: $CALIB_VECTOR"
+echo "Calibration Distributions: $CALIB_DISTRIBUTIONS"
 echo "N_P (Pred Vectors): $N_P | K-Folds: $K"
 
 module load anaconda
@@ -67,6 +76,7 @@ python main.py \
     $USE_CALIB \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
+    $CALIB_DISTS_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --triangulation-choosing "$CHOOSE" \
@@ -94,6 +104,7 @@ python main.py \
     $USE_CALIB \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
+    $CALIB_DISTS_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --iim-name $MODELS \

@@ -36,12 +36,24 @@ else
     USE_CALIB=""
 fi
 
+# New Logic for Calibration Distributions
+if [ -n "$CALIB_DISTRIBUTIONS" ];
+then
+    # We don't quote $CALIB_DISTRIBUTIONS here inside the string so spaces are preserved correctly
+    # when passed to the flag, but we will quote the whole flag variable in the python call if needed.
+    # However, for sbatch simple expansion is usually safer:
+    CALIB_DISTS_FLAG="--calibration-distributions $CALIB_DISTRIBUTIONS"
+else
+    CALIB_DISTS_FLAG=""
+fi
+
 # Echo Configuration
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "Dataset: $DATASET_NAME"
 echo "Triangulations: $TRIANGULATIONS_NUMBER | Method: $CHOOSE"
 echo "Mode: $TRIANGULATION_MODE | Embedding: $TRIANGULATION_EMBEDDING"
 echo "Use Calibration Vector: $CALIB_VECTOR"
+echo "Calibration Distributions: $CALIB_DISTRIBUTIONS"
 echo "N_P (Pred Vectors): $N_P | K-Folds: $K"
 echo "Using Cloud Model: $CLOUD_MODEL"
 
@@ -63,6 +75,7 @@ python main.py \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
     $USE_CALIB \
+    $CALIB_DISTS_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \
@@ -90,6 +103,7 @@ python main.py \
     $USE_CALIB \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
+    $CALIB_DISTS_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \

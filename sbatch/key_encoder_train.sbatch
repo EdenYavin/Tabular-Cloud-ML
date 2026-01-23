@@ -52,7 +52,11 @@ module load anaconda
 source activate tabml
 export TF_XLA_FLAGS=--tf_xla_auto_jit=0
 
+# Set PYTHONPATH to include project root
+export PYTHONPATH="${SLURM_SUBMIT_DIR}:${PYTHONPATH}"
+
 echo "Conda environment: $CONDA_DEFAULT_ENV"
+echo "PYTHONPATH: $PYTHONPATH"
 which python
 echo ""
 
@@ -63,8 +67,11 @@ echo ""
 echo "Starting Key Encoder Training..."
 echo "--------"
 
+# Change to project root directory
+cd "${SLURM_SUBMIT_DIR}"
+
 if [ -n "$OUTPUT_DIR" ]; then
-    python src/meta_learning/train_key_encoder.py \
+    python -m src.meta_learning.train_key_encoder \
         --num-keys $NUM_KEYS \
         --num-calibration-pairs $NUM_CAL_PAIRS \
         --embedding-dim $EMBEDDING_DIM \
@@ -74,7 +81,7 @@ if [ -n "$OUTPUT_DIR" ]; then
         --learning-rate $LEARNING_RATE \
         --output-dir $OUTPUT_DIR
 else
-    python src/meta_learning/train_key_encoder.py \
+    python -m src.meta_learning.train_key_encoder \
         --num-keys $NUM_KEYS \
         --num-calibration-pairs $NUM_CAL_PAIRS \
         --embedding-dim $EMBEDDING_DIM \

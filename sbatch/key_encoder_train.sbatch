@@ -70,26 +70,22 @@ echo "--------"
 # Change to project root directory
 cd "${SLURM_SUBMIT_DIR}"
 
+# Build command with key encoder training experiment
+CMD="python main.py --experiment-to-run key_encoder_training"
+CMD="$CMD --num-keys $NUM_KEYS"
+CMD="$CMD --num-calibration-pairs $NUM_CAL_PAIRS"
+CMD="$CMD --embedding-dim $EMBEDDING_DIM"
+CMD="$CMD --output-embedding-dim $OUTPUT_EMB_DIM"
+CMD="$CMD --epochs $EPOCHS"
+CMD="$CMD --batch-size $BATCH_SIZE"
+CMD="$CMD --learning-rate $LEARNING_RATE"
+
 if [ -n "$OUTPUT_DIR" ]; then
-    python -m src.meta_learning.train_key_encoder \
-        --num-keys $NUM_KEYS \
-        --num-calibration-pairs $NUM_CAL_PAIRS \
-        --embedding-dim $EMBEDDING_DIM \
-        --output-embedding-dim $OUTPUT_EMB_DIM \
-        --epochs $EPOCHS \
-        --batch-size $BATCH_SIZE \
-        --learning-rate $LEARNING_RATE \
-        --output-dir $OUTPUT_DIR
-else
-    python -m src.meta_learning.train_key_encoder \
-        --num-keys $NUM_KEYS \
-        --num-calibration-pairs $NUM_CAL_PAIRS \
-        --embedding-dim $EMBEDDING_DIM \
-        --output-embedding-dim $OUTPUT_EMB_DIM \
-        --epochs $EPOCHS \
-        --batch-size $BATCH_SIZE \
-        --learning-rate $LEARNING_RATE
+    CMD="$CMD --output-dir $OUTPUT_DIR"
 fi
+
+echo "Running: $CMD"
+$CMD
 
 # Check exit code
 if [ $? -ne 0 ]; then

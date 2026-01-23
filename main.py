@@ -5,6 +5,7 @@ import src.utils.constansts as consts
 from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandler, ModelTrainingExperimentHandler
 from src.experiments.model_training_loop import ModelTrainingLoopExperimentHandler
 from src.experiments.k_fold_handler import KModelTrainingExperimentHandler
+from src.experiments.key_encoder_training_handler import KeyEncoderTrainingHandler
 from src.utils.config import config, update_config_from_args
 from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS, REPORT_PATH, OUTPUT_DIR_PATH
 
@@ -174,6 +175,71 @@ def main():
              "Use multiple to create a richer key fingerprint (e.g., --calibration-distributions gaussian sparse bimodal)",
     )
 
+    # Key Encoder Training Arguments
+    parser.add_argument(
+        "--num-keys",
+        type=int,
+        default=500,
+        dest="num_keys",
+        help="Number of unique encryption keys to generate for key encoder training",
+    )
+
+    parser.add_argument(
+        "--num-calibration-pairs",
+        type=int,
+        default=50,
+        dest="num_calibration_pairs",
+        help="Number of calibration pairs per key for key encoder training",
+    )
+
+    parser.add_argument(
+        "--embedding-dim",
+        type=int,
+        default=64,
+        dest="embedding_dim",
+        help="Dimension of data to encrypt for key encoder training",
+    )
+
+    parser.add_argument(
+        "--output-embedding-dim",
+        type=int,
+        default=256,
+        dest="output_embedding_dim",
+        help="Dimension of functional embeddings for key encoder training",
+    )
+
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=50,
+        dest="num_epochs",
+        help="Number of training epochs for key encoder",
+    )
+
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=32,
+        dest="batch_size",
+        help="Batch size for key encoder training",
+    )
+
+    parser.add_argument(
+        "--learning-rate",
+        type=float,
+        default=1e-3,
+        dest="learning_rate",
+        help="Learning rate for key encoder training",
+    )
+
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=None,
+        dest="output_dir",
+        help="Output directory for key encoder training results",
+    )
+
     args = parser.parse_args()
 
     # Check if the list contains a single string with spaces and split it if necessary
@@ -198,6 +264,16 @@ def main():
         logger.debug(f"DEBUG: Fixed calibration distributions to: {args.experiment_calibration_distributions}")
 
     update_config_from_args(config, args)
+
+    # Attach key encoder arguments to config for handler access
+    config.num_keys = args.num_keys
+    config.num_calibration_pairs = args.num_calibration_pairs
+    config.embedding_dim = args.embedding_dim
+    config.output_embedding_dim = args.output_embedding_dim
+    config.num_epochs = args.num_epochs
+    config.batch_size = args.batch_size
+    config.learning_rate = args.learning_rate
+    config.output_dir = args.output_dir
 
     # 1. First, decide if TF should see the GPU at all.
     # If the current encoder is NOT a GPU model, hide the GPU from TensorFlow immediately.
@@ -236,6 +312,10 @@ def main():
 
     elif config.experiment_config.to_run == consts.EXPERIMENTS.TRAINING_LOOP:
         experiment_handler = ModelTrainingLoopExperimentHandler
+
+    elif config.experiment_config.to_run == consts.EXPERIMENTS.KEY_ENCODER_TRAINING:
+        experiment_handler = KeyEncoderTrainingHandler
+
     else:
         experiment_handler = ModelTrainingExperimentHandler
         if config.experiment_config.k_folds > 1:

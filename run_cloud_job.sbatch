@@ -47,6 +47,13 @@ else
     CALIB_DISTS_FLAG=""
 fi
 
+# Use trained key encoder for feature extraction
+if [ -n "$USE_KEY_ENCODER" ] && [ "$USE_KEY_ENCODER" = "1" ]; then
+    KEY_ENCODER_FLAG="--use-key-encoder"
+else
+    KEY_ENCODER_FLAG=""
+fi
+
 # Echo Configuration
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "Dataset: $DATASET_NAME"
@@ -56,6 +63,7 @@ echo "Use Calibration Vector: $CALIB_VECTOR"
 echo "Calibration Distributions: $CALIB_DISTRIBUTIONS"
 echo "N_P (Pred Vectors): $N_P | K-Folds: $K"
 echo "Using Cloud Model: $CLOUD_MODEL"
+echo "Use Key Encoder: $USE_KEY_ENCODER"
 
 module load anaconda
 source activate tabml
@@ -76,6 +84,7 @@ python main.py \
     $TRIANG_EMB_FLAG \
     $USE_CALIB \
     $CALIB_DISTS_FLAG \
+    $KEY_ENCODER_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \
@@ -104,6 +113,7 @@ python main.py \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
     $CALIB_DISTS_FLAG \
+    $KEY_ENCODER_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \

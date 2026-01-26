@@ -240,6 +240,14 @@ def main():
         help="Output directory for key encoder training results",
     )
 
+    # Use trained key encoder for feature extraction
+    parser.add_argument(
+        "--use-key-encoder",
+        action="store_true",
+        dest="use_key_encoder",
+        help="Use trained key encoder model for key fingerprinting during feature extraction",
+    )
+
     args = parser.parse_args()
 
     # Check if the list contains a single string with spaces and split it if necessary

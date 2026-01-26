@@ -98,6 +98,11 @@ MODELS_DIR = "models"
 MODELS_PATH = os.path.join(STORE_PATH, MODELS_DIR)
 os.makedirs(MODELS_PATH, exist_ok=True)
 
+# Key Encoder Model (trained model for key fingerprinting)
+KEY_ENCODER_DIR = "meta_learning"
+KEY_ENCODER_MODEL_NAME = "key_encoder.keras"
+KEY_ENCODER_MODEL_PATH = os.path.join(OUTPUT_DIR_PATH, KEY_ENCODER_DIR, "key_encoder_poc", KEY_ENCODER_MODEL_NAME)
+
 DATASETS_DIR = "data"
 DATASETS_PATH = os.path.join(PROJECT_DIR, DATASETS_DIR)
 

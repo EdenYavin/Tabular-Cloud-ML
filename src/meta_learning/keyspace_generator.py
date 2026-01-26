@@ -94,7 +94,9 @@ class KeyspaceDataGenerator:
                         output_shape=(1, self.embedding_dim)
                     )
 
-            enc_output = encryptor.model(cal_vec).numpy()
+            # Add batch dimension if needed
+            cal_vec_batched = np.expand_dims(cal_vec, axis=0) if cal_vec.ndim == 2 else cal_vec
+            enc_output = encryptor.model(cal_vec_batched).numpy()
             encrypted_A.append(enc_output)
 
         context_A_pairs = list(zip(calibration_A, encrypted_A))

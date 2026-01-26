@@ -113,6 +113,9 @@ def train_key_encoder_poc(
 
     encoder.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate))
 
+    # Build the model with the correct input shape
+    encoder.build(input_shape=(None, X_A_train.shape[1], X_A_train.shape[2]))
+
     logger.info("Model architecture:")
     encoder.set_transformer.summary()
 

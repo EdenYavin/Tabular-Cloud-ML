@@ -265,16 +265,6 @@ def main():
 
     update_config_from_args(config, args)
 
-    # Attach key encoder arguments to config for handler access
-    config.num_keys = args.num_keys
-    config.num_calibration_pairs = args.num_calibration_pairs
-    config.embedding_dim = args.embedding_dim
-    config.output_embedding_dim = args.output_embedding_dim
-    config.num_epochs = args.num_epochs
-    config.batch_size = args.batch_size
-    config.learning_rate = args.learning_rate
-    config.output_dir = args.output_dir
-
     # 1. First, decide if TF should see the GPU at all.
     # If the current encoder is NOT a GPU model, hide the GPU from TensorFlow immediately.
     # This prevents TF from touching the GPU, leaving it entirely free for DINO (PyTorch).
@@ -322,8 +312,21 @@ def main():
             report_path = Path(OUTPUT_DIR_PATH) / "k_report.csv"
             experiment_handler = KModelTrainingExperimentHandler
 
+    # Instantiate handler with appropriate arguments
+    handler_kwargs = {"report_path": report_path}
+    if config.experiment_config.to_run == consts.EXPERIMENTS.KEY_ENCODER_TRAINING:
+        handler_kwargs.update({
+            "num_keys": args.num_keys,
+            "num_calibration_pairs": args.num_calibration_pairs,
+            "embedding_dim": args.embedding_dim,
+            "output_embedding_dim": args.output_embedding_dim,
+            "num_epochs": args.num_epochs,
+            "batch_size": args.batch_size,
+            "learning_rate": args.learning_rate,
+            "output_dir": args.output_dir,
+        })
 
-    with experiment_handler(report_path=report_path) as experiment:
+    with experiment_handler(**handler_kwargs) as experiment:
         experiment.run_experiment()
 
 

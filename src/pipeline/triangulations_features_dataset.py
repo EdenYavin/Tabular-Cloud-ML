@@ -37,7 +37,8 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
     def _get_features(self, X, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         logger.info(
             f"### USING SAE FEATURES TRIANGULATION WITH {config.experiment_config.triangulation_mode} TRIANGULATION MODE"
-            f" {'AND CALIBRATION VECTOR' if config.experiment_config.use_calibration_vector else ''} ###")
+            f" {'AND CALIBRATION VECTOR' if config.experiment_config.use_calibration_vector else ''}"
+            f" {'WITH KEY ENCODER' if config.experiment_config.use_key_encoder else ''} ###")
 
         # 1. Prepare Triangulation Samples (Anchors)
         triangulation_samples = self._get_triangulation_samples(embeddings, y,

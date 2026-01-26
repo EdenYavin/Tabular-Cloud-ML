@@ -1,9 +1,10 @@
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
+from pathlib import Path
 
 from src.encryptor.base import BaseEncryptor
-from src.utils.constansts import GPU_DEVICE
+from src.utils.constansts import GPU_DEVICE, KEY_ENCODER_MODEL_PATH
 from src.pipeline.base import FeatureEngineeringPipeline
 from src.utils.config import config
 from src.utils.traingulations import TriangulationTransformer
@@ -16,6 +17,19 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
                  metadata=None):
         super().__init__(dataset_name, encryptor, embeddings_model, metadata)
+
+        # Load key encoder model if enabled
+        self.key_encoder_model = None
+        use_key_encoder = getattr(config, 'experiment_use_key_encoder', False)
+        if use_key_encoder:
+            try:
+                if Path(KEY_ENCODER_MODEL_PATH).exists():
+                    self.key_encoder_model = tf.keras.models.load_model(KEY_ENCODER_MODEL_PATH)
+                    logger.info(f"Loaded key encoder model from {KEY_ENCODER_MODEL_PATH}")
+                else:
+                    logger.warning(f"Key encoder model not found at {KEY_ENCODER_MODEL_PATH}, skipping")
+            except Exception as e:
+                logger.error(f"Failed to load key encoder model: {e}")
 
         if config.cloud_config.names:
             logger.info(f"Cloud models flag is ON, using: {config.cloud_config.names} Models")
@@ -101,8 +115,15 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
                             c_tag = c_tag / config.experiment_config.scaling_factor
                             c_tag = np.clip(c_tag, 0.0, 1.0)
 
-                            c_tag_emb = self.triangulation_embedding.forward(c_tag)
-                            calib_embeddings.append(c_tag_emb.flatten())
+                            # Use key encoder if available, otherwise use triangulation embedding
+                            if self.key_encoder_model is not None:
+                                # Key encoder expects batch dimension
+                                c_tag_batched = np.expand_dims(c_tag, axis=0) if c_tag.ndim == 2 else c_tag
+                                c_tag_emb = self.key_encoder_model(c_tag_batched, training=False).numpy()
+                                calib_embeddings.append(c_tag_emb.flatten())
+                            else:
+                                c_tag_emb = self.triangulation_embedding.forward(c_tag)
+                                calib_embeddings.append(c_tag_emb.flatten())
 
                         # Concatenate all calibration embeddings into a single fingerprint
                         calibration_fingerprint = np.hstack(calib_embeddings)

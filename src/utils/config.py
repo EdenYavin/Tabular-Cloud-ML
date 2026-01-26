@@ -70,6 +70,10 @@ class Config(BaseModel):
             description="Scaling factor to scale the encrypted images embedding (for example 1.08 pixel will turn to 0.42)",
             default=5.0
         )
+        use_key_encoder: bool = Field(
+            description="Flag to indicate if the key encoder should be used for the IIM",
+            default=False
+        )
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,

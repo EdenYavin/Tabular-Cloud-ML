@@ -64,10 +64,13 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True) -> pathl
 
     # Include calibration distribution types in path
     if config.experiment_config.use_calibration_vector:
-        # Use getattr to be safe in case config isn't fully updated
-        dists = getattr(config.experiment_config, 'calibration_distributions', ['gaussian'])
-        calib_dists = "_".join(sorted(dists))
-        use_calib_vector = f"calib_{calib_dists}"
+        if config.experiment_config.use_key_encoder:
+            use_calib_vector = "key_encoder"
+        else:
+            # Use getattr to be safe in case config isn't fully updated
+            dists = getattr(config.experiment_config, 'calibration_distributions', ['gaussian'])
+            calib_dists = "_".join(sorted(dists))
+            use_calib_vector = f"calib_{calib_dists}"
     else:
         use_calib_vector = ""
 

@@ -244,7 +244,7 @@ def main():
     parser.add_argument(
         "--use-key-encoder",
         action="store_true",
-        dest="use_key_encoder",
+        dest="experiment_use_key_encoder",
         help="Use trained key encoder model for key fingerprinting during feature extraction",
     )
 

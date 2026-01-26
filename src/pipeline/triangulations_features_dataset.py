@@ -20,8 +20,7 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
 
         # Load key encoder model if enabled
         self.key_encoder_model = None
-        use_key_encoder = getattr(config, 'experiment_use_key_encoder', False)
-        if use_key_encoder:
+        if config.experiment_config.use_key_encoder:
             try:
                 if Path(KEY_ENCODER_MODEL_PATH).exists():
                     self.key_encoder_model = tf.keras.models.load_model(KEY_ENCODER_MODEL_PATH)

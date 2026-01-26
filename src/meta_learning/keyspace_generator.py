@@ -79,11 +79,20 @@ class KeyspaceDataGenerator:
         for cal_vec in calibration_A:
             # Build generator with specific seed for this key
             if encryptor.model is None:
-                encryptor.model = encryptor.build_generator(
-                    input_shape=(1, self.embedding_dim),
-                    output_shape=(1, self.embedding_dim),
-                    seed=key_seed
-                )
+                # build_generator signature varies by encryptor type
+                # Some encryptors (DCEncryptor) support seed, others (DenseEncryptor) don't
+                try:
+                    encryptor.model = encryptor.build_generator(
+                        input_shape=(1, self.embedding_dim),
+                        output_shape=(1, self.embedding_dim),
+                        seed=key_seed
+                    )
+                except TypeError:
+                    # Fallback for encryptors that don't support seed parameter
+                    encryptor.model = encryptor.build_generator(
+                        input_shape=(1, self.embedding_dim),
+                        output_shape=(1, self.embedding_dim)
+                    )
 
             enc_output = encryptor.model(cal_vec).numpy()
             encrypted_A.append(enc_output)

@@ -16,6 +16,7 @@ from src.utils.config import config
 from src.experiments.base import ExperimentHandler
 from src.utils.helpers import get_experiment_name, get_dataset_path
 from src.utils.constansts import DATASET_FILE_NAME, BASELINE_DATASET_FILE_NAME, REPORT_PATH, EXPERIMENTS
+from utils.constansts import IIM_MODELS
 
 
 class DatasetCreationHandler(ExperimentHandler):
@@ -55,7 +56,7 @@ class DatasetCreationHandler(ExperimentHandler):
                     logger.debug(f"Experiment name is {self.experiment_name}, Dataset is {dataset_name}. "
                                  f"#### Number of datasets versions: {n_pred_vectors} ####")
 
-                    if config.experiment_config.to_run == EXPERIMENTS.DEEPSET_DATASET:
+                    if config.iim_config.name == IIM_MODELS.DEEPSET:
                         dataset_creator = DeepSetFeatureEngineering(
                             dataset_name=dataset_name,
                             encryptor=encryptor,

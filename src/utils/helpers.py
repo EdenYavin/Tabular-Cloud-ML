@@ -11,7 +11,7 @@ import tensorflow as tf
 from loguru import logger
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OUTPUT_DIR_PATH, EMBEDDING_TYPES
 from src.utils.config import config
-from utils.constansts import EXPERIMENTS
+from utils.constansts import IIM_MODELS
 
 
 def plot_history(history, filename=None, title=None):
@@ -75,7 +75,7 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True) -> pathl
     else:
         use_calib_vector = ""
 
-    if config.experiment_config.to_run == EXPERIMENTS.DEEPSET_DATASET:
+    if config.iim_config.name == IIM_MODELS.DEEPSET:
         path = (pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models /
                 embedding_model / use_raw_features / str(n_pred_vectors) / triang_type  / triang_num / "deepset")
     else:

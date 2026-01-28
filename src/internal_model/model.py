@@ -15,7 +15,7 @@ import tensorflow as tf
 
 from src.internal_model.base import NeuralNetworkInternalModel
 from src.utils.config import config
-from src.utils.constansts import IIM_MODELS
+from src.utils.constansts import IIM_MODELS, EMBEDDING_TYPES
 
 models = {
     IIM_MODELS.XGBOOST.value: XGBClassifier,
@@ -41,7 +41,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # --- Dimensions ---
         # Assuming DINO/CLIP embedding dim.
         # You might need to pass this explicitly via args if it changes.
-        self.embedding_dim = 768 if "dino" in config.experiment_config.encoder_embedding else 512
+        self.embedding_dim = 768 if config.encoder_config.embedding == EMBEDDING_TYPES.DINO else 512
 
         # Number of anchors (triangulation samples)
         self.n_anchors = config.experiment_config.n_triangulation_samples

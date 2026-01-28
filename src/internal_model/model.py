@@ -2,8 +2,8 @@ from loguru import logger
 from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
-from keras.src.layers import TimeDistributed, RepeatVector, Sequential
-from keras.src.models import Model
+from keras.src.layers import TimeDistributed, RepeatVector
+from keras.src.models import Model, Sequential
 from keras.src.layers import (
     Dense, Dropout, Input, BatchNormalization, concatenate, LSTM, Flatten,
     MultiHeadAttention, LayerNormalization, GlobalAveragePooling1D, Reshape, Lambda, Multiply, Add

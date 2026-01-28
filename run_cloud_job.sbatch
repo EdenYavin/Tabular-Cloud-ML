@@ -56,7 +56,7 @@ fi
 
 # Use trained key encoder for feature extraction
 if [ -n "$DEEPSET" ] && [ "$DEEPSET" = "1" ]; then
-    DEEPSET_FLAG="--use-deepset"
+    DEEPSET_FLAG="--deepset"
 else
     DEEPSET_FLAG=""
 fi

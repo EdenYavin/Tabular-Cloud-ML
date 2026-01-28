@@ -16,7 +16,6 @@ from src.utils.config import config
 from src.experiments.base import ExperimentHandler
 from src.utils.helpers import get_experiment_name, get_dataset_path
 from src.utils.constansts import DATASET_FILE_NAME, BASELINE_DATASET_FILE_NAME, REPORT_PATH, EXPERIMENTS
-from utils.constansts import IIM_MODELS
 
 
 class DatasetCreationHandler(ExperimentHandler):

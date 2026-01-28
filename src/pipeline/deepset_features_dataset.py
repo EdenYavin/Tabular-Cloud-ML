@@ -44,12 +44,12 @@ class DeepSetFeatureEngineering(FeatureEngineeringPipeline):
         )
 
         # 2. Compute Plaintext Anchor Embeddings (Targets for Reconstruction)
-        # We compute this ONCE as they are fixed.
-        # Shape: (N_anchors, embedding_dim)
-        p_anchors_emb = self.triangulation_embedding.forward(triangulation_samples)
+        # The "Plaintext Anchor" is just the raw/encoded tabular vector itself.
+        # We skip the image embedding step for the targets.
+        p_anchors_emb = triangulation_samples
 
         # Flatten them to append to the end of every sample
-        # Shape: (N_anchors * embedding_dim, )
+        # Shape: (N_anchors * original_feature_dim, )
         flat_plaintext_anchors = p_anchors_emb.flatten()
 
         predictions_for_baseline = np.array(list())

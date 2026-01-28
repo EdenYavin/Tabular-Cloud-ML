@@ -4,7 +4,7 @@ import pickle
 from loguru import logger
 from tqdm import tqdm
 
-from pipeline.deepset_features_dataset import DeepSetFeatureEngineering
+from src.pipeline.deepset_features_dataset import DeepSetFeatureEngineering
 from src.pipeline.triangulations_features_dataset import TriangulationFeatureEngineering
 from src.pipeline.raw_features_engineering import RawFeaturesEngineering
 from src.cloud import CLOUD_MODELS, DEFAULT_CLOUD_OUTPUT_SHAPE

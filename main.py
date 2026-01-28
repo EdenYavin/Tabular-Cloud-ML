@@ -305,6 +305,9 @@ def main():
     if config.experiment_config.to_run == consts.EXPERIMENTS.INCREMENT_EVALUATION:
         experiment_handler = IncrementEvalExperimentHandler
 
+    elif config.experiment_config.to_run == consts.EXPERIMENTS.DEEPSET_DATASET:
+        experiment_handler = DatasetCreationHandler
+
     elif config.experiment_config.to_run == consts.EXPERIMENTS.DATASET_CREATION:
         experiment_handler = DatasetCreationHandler
 

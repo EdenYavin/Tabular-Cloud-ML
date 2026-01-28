@@ -2,6 +2,7 @@ from loguru import logger
 from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
+from keras.src.layers import TimeDistributed, RepeatVector, Sequential
 from keras.src.models import Model
 from keras.src.layers import (
     Dense, Dropout, Input, BatchNormalization, concatenate, LSTM, Flatten,
@@ -20,6 +21,168 @@ models = {
     IIM_MODELS.XGBOOST.value: XGBClassifier,
 }
 
+
+# In src/internal_model/iim.py
+
+class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
+    """
+    Implements the Deep Sets + Reconstruction architecture.
+    1. Deep Sets: Encrypted Anchors -> Phi -> Sum -> Rho -> Context (c)
+    2. Reconstruction (T): (Encrypted Anchor, c) -> Reconstructed Plaintext Anchor
+    3. SIN: (c, Cloud Pred, Encrypted Sample) -> Class Label
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "deepset"
+        self.num_classes = kwargs.get("num_classes")
+        self.input_shape_total = kwargs.get("input_shape")
+
+        # --- Dimensions ---
+        # Assuming DINO/CLIP embedding dim.
+        # You might need to pass this explicitly via args if it changes.
+        self.embedding_dim = 768 if "dino" in config.experiment_config.encoder_embedding else 512
+
+        # Number of anchors (triangulation samples)
+        self.n_anchors = config.experiment_config.n_triangulation_samples
+
+        # Cloud vector size
+        self.num_cloud_models = len(config.cloud_config.names) if config.cloud_config.names else 0
+        self.cloud_vector_size = 1000 * self.num_cloud_models
+
+        # Calculate sizes based on the input vector structure:
+        # [ Encrypted Sample (1*dim) | Encrypted Anchors (N*dim) | Cloud (M*1000) | Plaintext Anchors (N*dim) ]
+
+        self.sample_size = self.embedding_dim
+        self.encrypted_anchors_size = self.n_anchors * self.embedding_dim
+        self.plaintext_anchors_size = self.n_anchors * self.embedding_dim  # Same size as encrypted
+
+        # Lambda weight for reconstruction loss
+        self.lambda_anchor = 1.0
+
+        self.model = self.get_model()
+
+    def get_model(self):
+        # Total input shape includes the appended plaintext anchors
+        inputs = Input(shape=(self.input_shape_total,), name="total_input")
+
+        # === 1. Slicing the Input ===
+        # We need to carefully slice the flat vector back into components
+
+        # Pointers
+        cursor = 0
+
+        # A. Encrypted Sample (q_x)
+        q_x_flat = Lambda(lambda x: x[:, cursor: cursor + self.sample_size], name="slice_qx")(inputs)
+        cursor += self.sample_size
+
+        # B. Encrypted Anchors ( {q_i} )
+        # Shape: (Batch, N_anchors * dim)
+        q_anchors_flat = Lambda(lambda x: x[:, cursor: cursor + self.encrypted_anchors_size], name="slice_qi")(inputs)
+        cursor += self.encrypted_anchors_size
+
+        # C. Cloud Vector (if exists)
+        if self.cloud_vector_size > 0:
+            cloud_vector = Lambda(lambda x: x[:, cursor: cursor + self.cloud_vector_size], name="slice_cloud")(inputs)
+            cursor += self.cloud_vector_size
+        else:
+            cloud_vector = None
+
+        # D. Plaintext Anchors (Targets p_i)
+        # We use these for LOSS calculation, not for inference input
+        p_anchors_flat = Lambda(lambda x: x[:, cursor: cursor + self.plaintext_anchors_size], name="slice_pi")(inputs)
+
+        # === 2. Reshaping ===
+        # Reshape anchors to (Batch, N, dim) for processing
+        q_anchors = Reshape((self.n_anchors, self.embedding_dim), name="reshape_qi")(q_anchors_flat)
+        p_anchors = Reshape((self.n_anchors, self.embedding_dim), name="reshape_pi")(p_anchors_flat)
+
+        # === 3. Deep Sets (E) ===
+        # Phi Network (Applied to each anchor independently)
+        # We use TimeDistributed to apply Dense layer to each anchor in the set
+        phi = Sequential([
+            Dense(256, activation='relu'),
+            BatchNormalization(),
+            Dense(128, activation='relu')
+        ], name="phi_network")
+
+        # Apply phi to each q_i
+        # Shape: (Batch, N, 128)
+        phi_out = TimeDistributed(phi)(q_anchors)
+
+        # Sum Pooling (Order Invariant)
+        # Shape: (Batch, 128)
+        sum_pooled = Lambda(lambda x: tf.reduce_sum(x, axis=1), name="sum_pooling")(phi_out)
+
+        # Rho Network (Process sum to get context c)
+        rho = Sequential([
+            Dense(128, activation='relu'),
+            BatchNormalization(),
+            Dense(64, activation='relu')  # Context dimension
+        ], name="rho_network")
+
+        context_c = rho(sum_pooled)  # Context vector c [cite: 69]
+
+        # === 4. Reconstruction Network (T) ===
+        # Input: Pair (q_i, c) -> Output: p_i
+        # We need to tile 'c' to match the number of anchors so we can process them in parallel
+
+        # Repeat c for each anchor: (Batch, N, 64)
+        c_repeated = RepeatVector(self.n_anchors)(context_c)
+
+        # Concatenate q_i and c: (Batch, N, dim + 64)
+        decoder_input = concatenate([q_anchors, c_repeated], axis=-1)
+
+        # Decoder Network T
+        decoder_T = Sequential([
+            Dense(256, activation='relu'),
+            Dense(256, activation='relu'),
+            Dense(self.embedding_dim, activation='linear')  # Output must match embedding dim
+        ], name="T_network")
+
+        # Predicted Plaintext Anchors
+        # Shape: (Batch, N, dim)
+        p_anchors_pred = TimeDistributed(decoder_T)(decoder_input)
+
+        # === 5. SIN / Classification Head ===
+        # Inputs: Context c, Cloud Vector, Encrypted Sample q_x
+        # (Optional: You could also run T(q_x, c) to "clean" the sample, but standard concatenation is often enough)
+
+        features_to_fuse = [context_c, q_x_flat]
+
+        if cloud_vector is not None:
+            # Compress cloud vector
+            cloud_proj = Dense(128, activation='relu')(cloud_vector)
+            features_to_fuse.append(cloud_proj)
+
+        fused = concatenate(features_to_fuse)
+
+        x = Dense(256, activation='leaky_relu')(fused)
+        x = Dropout(0.3)(x)
+        x = Dense(128, activation='leaky_relu')(x)
+        outputs = Dense(self.num_classes, activation='softmax', name="class_output")(x)
+
+        # === 6. Model & Custom Loss ===
+        model = Model(inputs=inputs, outputs=outputs)
+
+        # [cite_start]Add the Reconstruction Loss (L_anchor) [cite: 83]
+        # MSE between Predicted Anchors (p_anchors_pred) and True Anchors (p_anchors)
+        reconstruction_loss = tf.reduce_mean(tf.square(p_anchors - p_anchors_pred))
+
+        # Add to model loss (weighted)
+        model.add_loss(self.lambda_anchor * reconstruction_loss)
+
+        # Compile
+        model.compile(
+            optimizer='adam',
+            loss='categorical_crossentropy',
+            metrics=['accuracy', AUC(multi_label=False, name='auc')]
+        )
+
+        # Metric to track reconstruction quality
+        model.add_metric(reconstruction_loss, name="anchor_recon_loss")
+
+        return model
 
 class GatedCloudIIM(NeuralNetworkInternalModel):
     """

@@ -1,9 +1,10 @@
 import gc
 import os
 import pickle
-
+from loguru import logger
 from tqdm import tqdm
 
+from pipeline.deepset_features_dataset import DeepSetFeatureEngineering
 from src.pipeline.triangulations_features_dataset import TriangulationFeatureEngineering
 from src.pipeline.raw_features_engineering import RawFeaturesEngineering
 from src.cloud import CLOUD_MODELS, DEFAULT_CLOUD_OUTPUT_SHAPE
@@ -12,10 +13,9 @@ from src.embeddings import EmbeddingsFactory
 from src.utils.db import RawSplitDBFactory
 from src.dataset import DatasetFactory, RawDataset
 from src.utils.config import config
-from loguru import logger
 from src.experiments.base import ExperimentHandler
 from src.utils.helpers import get_experiment_name, get_dataset_path
-from src.utils.constansts import DATASET_FILE_NAME, BASELINE_DATASET_FILE_NAME, REPORT_PATH
+from src.utils.constansts import DATASET_FILE_NAME, BASELINE_DATASET_FILE_NAME, REPORT_PATH, EXPERIMENTS
 
 
 class DatasetCreationHandler(ExperimentHandler):
@@ -55,8 +55,15 @@ class DatasetCreationHandler(ExperimentHandler):
                     logger.debug(f"Experiment name is {self.experiment_name}, Dataset is {dataset_name}. "
                                  f"#### Number of datasets versions: {n_pred_vectors} ####")
 
+                    if config.experiment_config.to_run == EXPERIMENTS.DEEPSET_DATASET:
+                        dataset_creator = DeepSetFeatureEngineering(
+                            dataset_name=dataset_name,
+                            encryptor=encryptor,
+                            embeddings_model=embedding_model,
+                            metadata=raw_dataset.metadata
+                        )
 
-                    if config.experiment_config.n_triangulation_samples > 0 and not config.experiment_config.use_raw:
+                    elif config.experiment_config.n_triangulation_samples > 0 and not config.experiment_config.use_raw:
                         # Create dataset with triangulations
                         dataset_creator = TriangulationFeatureEngineering(
                             dataset_name=dataset_name,

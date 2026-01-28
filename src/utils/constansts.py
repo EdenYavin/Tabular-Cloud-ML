@@ -28,6 +28,7 @@ class IIM_MODELS(str, enum.Enum):
     GATED_FILM_CONDITIONED = "gated_film"
     GATED = "gated"
     FILM_CONDITIONED = "film_conditioned"
+    DEEPSET = "deepset"
 
 class CLOUD_MODELS(str, enum.Enum):
     ENSEMBLE_OF_TABULAR_MODELS = "ensemble"
@@ -63,6 +64,7 @@ class EXPERIMENTS(str, enum.Enum):
     PREDICTIONS_LEARNING = "predictions_learning"
     INCREMENT_EVALUATION = "increment_eval"
     KEY_ENCODER_TRAINING = "key_encoder_training"
+    DEEPSET_DATASET = "deepset_dataset"
 
 WINDOWS_OS_STR = "nt"
 IS_WINDOWS_OS = (os.name == WINDOWS_OS_STR)

@@ -48,6 +48,14 @@ else
     CALIB_DISTS_FLAG=""
 fi
 
+# Use trained key encoder for feature extraction
+if [ -n "$DEEPSET" ] && [ "$DEEPSET" = "1" ]; then
+    DEEPSET_FLAG="--use-deepset"
+else
+    DEEPSET_FLAG=""
+fi
+
+
 # Echo Configuration
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "Dataset: $DATASET_NAME"
@@ -56,6 +64,7 @@ echo "Mode: $TRIANGULATION_MODE | Embedding: $TRIANGULATION_EMBEDDING"
 echo "Use Calibration Vector: $CALIB_VECTOR"
 echo "Calibration Distributions: $CALIB_DISTRIBUTIONS"
 echo "N_P (Pred Vectors): $N_P | K-Folds: $K"
+echo "Use Deepset": $DEEPSET
 
 module load anaconda
 source activate tabml
@@ -77,6 +86,7 @@ python main.py \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
     $CALIB_DISTS_FLAG \
+    $DEEPSET_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --triangulation-choosing "$CHOOSE" \

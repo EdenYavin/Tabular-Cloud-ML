@@ -54,6 +54,13 @@ else
     KEY_ENCODER_FLAG=""
 fi
 
+# Use trained key encoder for feature extraction
+if [ -n "$DEEPSET" ] && [ "$DEEPSET" = "1" ]; then
+    DEEPSET_FLAG="--use-deepset"
+else
+    DEEPSET_FLAG=""
+fi
+
 # Echo Configuration
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "Dataset: $DATASET_NAME"
@@ -64,7 +71,7 @@ echo "Calibration Distributions: $CALIB_DISTRIBUTIONS"
 echo "N_P (Pred Vectors): $N_P | K-Folds: $K"
 echo "Using Cloud Model: $CLOUD_MODEL"
 echo "Use Key Encoder: $USE_KEY_ENCODER"
-
+echo "Use Deepset": $DEEPSET
 module load anaconda
 source activate tabml
 export TF_XLA_FLAGS=--tf_xla_auto_jit=0
@@ -85,6 +92,7 @@ python main.py \
     $USE_CALIB \
     $CALIB_DISTS_FLAG \
     $KEY_ENCODER_FLAG \
+    $DEEPSET_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \

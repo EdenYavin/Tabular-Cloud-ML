@@ -75,7 +75,7 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True) -> pathl
     else:
         use_calib_vector = ""
 
-    if config.iim_config.name == IIM_MODELS.DEEPSET:
+    if config.experiment_config.use_deepset:
         path = (pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models /
                 embedding_model / use_raw_features / str(n_pred_vectors) / triang_type  / triang_num / "deepset")
     else:

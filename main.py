@@ -248,6 +248,13 @@ def main():
         help="Use trained key encoder model for key fingerprinting during feature extraction",
     )
 
+    parser.add_argument(
+        "--deepset",
+        action="store_true",
+        dest="experiment_use_deepset",
+        help="Use trained key encoder model for key fingerprinting during feature extraction",
+    )
+
     args = parser.parse_args()
 
     # Check if the list contains a single string with spaces and split it if necessary

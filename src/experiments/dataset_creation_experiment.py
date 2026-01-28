@@ -56,7 +56,7 @@ class DatasetCreationHandler(ExperimentHandler):
                     logger.debug(f"Experiment name is {self.experiment_name}, Dataset is {dataset_name}. "
                                  f"#### Number of datasets versions: {n_pred_vectors} ####")
 
-                    if config.iim_config.name == IIM_MODELS.DEEPSET:
+                    if config.experiment_config.use_deepset:
                         dataset_creator = DeepSetFeatureEngineering(
                             dataset_name=dataset_name,
                             encryptor=encryptor,

@@ -74,6 +74,10 @@ class Config(BaseModel):
             description="Flag to indicate if the key encoder should be used for the IIM",
             default=False
         )
+        use_deepset: bool = Field(
+            description="Flag to indicate if the deepset should be used for the IIM",
+            default=False
+        )
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,

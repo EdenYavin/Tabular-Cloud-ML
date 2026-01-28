@@ -11,7 +11,6 @@ import tensorflow as tf
 from loguru import logger
 from src.utils.constansts import MODELS_PATH, DATASETS_PATH, DATA_CACHE_PATH, OUTPUT_DIR_PATH, EMBEDDING_TYPES
 from src.utils.config import config
-from utils.constansts import IIM_MODELS
 
 
 def plot_history(history, filename=None, title=None):

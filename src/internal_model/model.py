@@ -39,7 +39,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # --- Dimensions ---
         # 1. Embedding Dim (for Encrypted parts)
         # Using 768 (DINO) or 512 (CLIP) based on config
-        self.embedding_dim = 768 if "dino" in config.experiment_config.encoder_embedding else 512
+        self.embedding_dim = 768 if "dino" in config.encoder_config.embedding else 512
 
         # 2. Number of anchors
         self.n_anchors = config.experiment_config.n_triangulation_samples

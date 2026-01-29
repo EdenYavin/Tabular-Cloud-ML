@@ -115,6 +115,7 @@ python main.py \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
     $CALIB_DISTS_FLAG \
+    $DEEPSET_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --iim-name $MODELS \

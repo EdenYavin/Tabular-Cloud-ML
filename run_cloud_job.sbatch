@@ -122,6 +122,7 @@ python main.py \
     $TRIANG_EMB_FLAG \
     $CALIB_DISTS_FLAG \
     $KEY_ENCODER_FLAG \
+    $DEEPSET_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \

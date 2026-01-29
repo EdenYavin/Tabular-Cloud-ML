@@ -22,44 +22,54 @@ models = {
 }
 
 
-# In src/internal_model/iim.py
-
 class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
     """
     Implements the Deep Sets + Reconstruction architecture.
     1. Deep Sets: Encrypted Anchors -> Phi -> Sum -> Rho -> Context (c)
-    2. Reconstruction (T): (Encrypted Anchor, c) -> Reconstructed Plaintext Anchor
+    2. Reconstruction (T): (Encrypted Anchor, c) -> Reconstructed Plaintext Anchor (RAW)
     3. SIN: (c, Cloud Pred, Encrypted Sample) -> Class Label
     """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.name = "deepset"
+        self.name = "deep_sets_reconstruction_iim"
         self.num_classes = kwargs.get("num_classes")
         self.input_shape_total = kwargs.get("input_shape")
 
         # --- Dimensions ---
-        # Assuming DINO/CLIP embedding dim.
-        # You might need to pass this explicitly via args if it changes.
-        self.embedding_dim = 768 if config.encoder_config.embedding == EMBEDDING_TYPES.DINO else 512
+        # 1. Embedding Dim (for Encrypted parts)
+        # Using 768 (DINO) or 512 (CLIP) based on config
+        self.embedding_dim = 768 if "dino" in config.experiment_config.encoder_embedding else 512
 
-        # Number of anchors (triangulation samples)
+        # 2. Number of anchors
         self.n_anchors = config.experiment_config.n_triangulation_samples
 
-        # Cloud vector size
+        # 3. Cloud vector size
         self.num_cloud_models = len(config.cloud_config.names) if config.cloud_config.names else 0
+        # Assuming 1000 per cloud model (standard ImageNet)
         self.cloud_vector_size = 1000 * self.num_cloud_models
 
-        # Calculate sizes based on the input vector structure:
-        # [ Encrypted Sample (1*dim) | Encrypted Anchors (N*dim) | Cloud (M*1000) | Plaintext Anchors (N*dim) ]
+        # --- Calculate Vector Partitions ---
+        # Structure: [ Encrypted Sample (1*emb) | Encrypted Anchors (N*emb) | Cloud | Plaintext Anchors (N*target) ]
 
         self.sample_size = self.embedding_dim
         self.encrypted_anchors_size = self.n_anchors * self.embedding_dim
-        self.plaintext_anchors_size = self.n_anchors * self.embedding_dim  # Same size as encrypted
 
-        # Lambda weight for reconstruction loss
+        # Calculate the size remaining for the Plaintext Anchors
+        # This allows us to handle ANY raw feature dimension (e.g., 64, 20, 100) automatically
+        known_parts_size = self.sample_size + self.encrypted_anchors_size + self.cloud_vector_size
+        self.plaintext_anchors_size = self.input_shape_total - known_parts_size
+
+        if self.plaintext_anchors_size <= 0:
+            raise ValueError(f"Input shape {self.input_shape_total} is too small. "
+                             f"Expected at least {known_parts_size} for encrypted parts + cloud.")
+
+        # Derive the dimension of a SINGLE plaintext anchor (the reconstruction target)
+        # e.g., 320 / 5 = 64
+        self.target_dim = self.plaintext_anchors_size // self.n_anchors
+        logger.info(f"DeepSetsIIM: Detected Target (Raw) Anchor Dim: {self.target_dim}")
+
         self.lambda_anchor = 1.0
-
         self.model = self.get_model()
 
     def get_model(self):
@@ -67,9 +77,6 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         inputs = Input(shape=(self.input_shape_total,), name="total_input")
 
         # === 1. Slicing the Input ===
-        # We need to carefully slice the flat vector back into components
-
-        # Pointers
         cursor = 0
 
         # A. Encrypted Sample (q_x)
@@ -77,7 +84,6 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         cursor += self.sample_size
 
         # B. Encrypted Anchors ( {q_i} )
-        # Shape: (Batch, N_anchors * dim)
         q_anchors_flat = Lambda(lambda x: x[:, cursor: cursor + self.encrypted_anchors_size], name="slice_qi")(inputs)
         cursor += self.encrypted_anchors_size
 
@@ -89,29 +95,27 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
             cloud_vector = None
 
         # D. Plaintext Anchors (Targets p_i)
-        # We use these for LOSS calculation, not for inference input
+        # Use the dynamically calculated size
         p_anchors_flat = Lambda(lambda x: x[:, cursor: cursor + self.plaintext_anchors_size], name="slice_pi")(inputs)
 
         # === 2. Reshaping ===
-        # Reshape anchors to (Batch, N, dim) for processing
+        # Reshape ENCRYPTED anchors to (Batch, N, embedding_dim) (e.g. 5x768)
         q_anchors = Reshape((self.n_anchors, self.embedding_dim), name="reshape_qi")(q_anchors_flat)
-        p_anchors = Reshape((self.n_anchors, self.embedding_dim), name="reshape_pi")(p_anchors_flat)
+
+        # Reshape PLAINTEXT (Target) anchors to (Batch, N, target_dim) (e.g. 5x64)
+        p_anchors = Reshape((self.n_anchors, self.target_dim), name="reshape_pi")(p_anchors_flat)
 
         # === 3. Deep Sets (E) ===
-        # Phi Network (Applied to each anchor independently)
-        # We use TimeDistributed to apply Dense layer to each anchor in the set
+        # Phi Network (Applied to each encrypted anchor)
         phi = Sequential([
             Dense(256, activation='relu'),
             BatchNormalization(),
             Dense(128, activation='relu')
         ], name="phi_network")
 
-        # Apply phi to each q_i
-        # Shape: (Batch, N, 128)
         phi_out = TimeDistributed(phi)(q_anchors)
 
         # Sum Pooling (Order Invariant)
-        # Shape: (Batch, 128)
         sum_pooled = Lambda(lambda x: tf.reduce_sum(x, axis=1), name="sum_pooling")(phi_out)
 
         # Rho Network (Process sum to get context c)
@@ -121,32 +125,29 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
             Dense(64, activation='relu')  # Context dimension
         ], name="rho_network")
 
-        context_c = rho(sum_pooled)  # Context vector c [cite: 69]
+        context_c = rho(sum_pooled)  # Context vector c
 
         # === 4. Reconstruction Network (T) ===
-        # Input: Pair (q_i, c) -> Output: p_i
-        # We need to tile 'c' to match the number of anchors so we can process them in parallel
+        # Input: Pair (q_i, c) -> Output: p_i (Raw)
 
-        # Repeat c for each anchor: (Batch, N, 64)
+        # Repeat c for each anchor
         c_repeated = RepeatVector(self.n_anchors)(context_c)
 
-        # Concatenate q_i and c: (Batch, N, dim + 64)
+        # Concatenate q_i and c
         decoder_input = concatenate([q_anchors, c_repeated], axis=-1)
 
         # Decoder Network T
+        # FIX: Final layer output is self.target_dim (e.g. 64), not embedding_dim
         decoder_T = Sequential([
             Dense(256, activation='relu'),
-            Dense(256, activation='relu'),
-            Dense(self.embedding_dim, activation='linear')  # Output must match embedding dim
+            Dense(128, activation='relu'),
+            Dense(self.target_dim, activation='linear')
         ], name="T_network")
 
-        # Predicted Plaintext Anchors
-        # Shape: (Batch, N, dim)
         p_anchors_pred = TimeDistributed(decoder_T)(decoder_input)
 
         # === 5. SIN / Classification Head ===
         # Inputs: Context c, Cloud Vector, Encrypted Sample q_x
-        # (Optional: You could also run T(q_x, c) to "clean" the sample, but standard concatenation is often enough)
 
         features_to_fuse = [context_c, q_x_flat]
 
@@ -165,21 +166,16 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # === 6. Model & Custom Loss ===
         model = Model(inputs=inputs, outputs=outputs)
 
-        # [cite_start]Add the Reconstruction Loss (L_anchor) [cite: 83]
-        # MSE between Predicted Anchors (p_anchors_pred) and True Anchors (p_anchors)
+        # Reconstruction Loss (L_anchor)
         reconstruction_loss = tf.reduce_mean(tf.square(p_anchors - p_anchors_pred))
-
-        # Add to model loss (weighted)
         model.add_loss(self.lambda_anchor * reconstruction_loss)
 
-        # Compile
         model.compile(
             optimizer='adam',
             loss='categorical_crossentropy',
             metrics=['accuracy', AUC(multi_label=False, name='auc')]
         )
 
-        # Metric to track reconstruction quality
         model.add_metric(reconstruction_loss, name="anchor_recon_loss")
 
         return model

@@ -92,6 +92,8 @@ def get_experiment_name() -> str:
     use_rotate_key = "rotate_key" if config.encoder_config.rotating_key else "no_rotate_key"
     use_raw_features = "_raw" if config.experiment_config.use_raw else ""
 
+    if config.experiment_config.use_deepset:
+        return f"deepset_{use_cloud}"
     # NEW: Include calibration info in experiment name for logging
     calib_str = ""
     if config.experiment_config.use_calibration_vector:

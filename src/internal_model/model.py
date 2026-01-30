@@ -22,7 +22,7 @@ models = {
 }
 
 
-class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
+class NewDeepSetsReconstructionIIM(NeuralNetworkInternalModel):
     """
     Implements the Deep Sets + Reconstruction architecture.
     UPDATED: Uses FiLM (Feature-wise Linear Modulation) to FORCE context usage.
@@ -187,7 +187,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         return model
 
 
-class oldDeepSetsReconstructionIIM(NeuralNetworkInternalModel):
+class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
     """
     Implements the Deep Sets + Reconstruction architecture.
     UPDATED: Significantly larger capacity for Phi, Rho, and T networks to improve context learning.

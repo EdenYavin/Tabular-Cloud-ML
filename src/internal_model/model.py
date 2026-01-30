@@ -25,6 +25,7 @@ models = {
 class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
     """
     Implements the Deep Sets + Reconstruction architecture.
+    UPDATED: Significantly larger capacity for Phi, Rho, and T networks to improve context learning.
     """
 
     def __init__(self, **kwargs):
@@ -64,14 +65,12 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # A. Encrypted Sample
         start_qx = cursor
         end_qx = cursor + self.sample_size
-        # FIX: Capture s=start_qx, e=end_qx as defaults
         q_x_flat = Lambda(lambda x, s=start_qx, e=end_qx: x[:, s:e], name="slice_qx")(inputs)
         cursor += self.sample_size
 
         # B. Encrypted Anchors
         start_qi = cursor
         end_qi = cursor + self.encrypted_anchors_size
-        # FIX: Capture s=start_qi, e=end_qi as defaults
         q_anchors_flat = Lambda(lambda x, s=start_qi, e=end_qi: x[:, s:e], name="slice_qi")(inputs)
         cursor += self.encrypted_anchors_size
 
@@ -87,39 +86,70 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # D. Plaintext Anchors
         start_pi = cursor
         end_pi = cursor + self.plaintext_anchors_size
-        # FIX: Capture s=start_pi, e=end_pi as defaults
         p_anchors_flat = Lambda(lambda x, s=start_pi, e=end_pi: x[:, s:e], name="slice_pi")(inputs)
 
         # === 2. Reshaping ===
         q_anchors = Reshape((self.n_anchors, self.embedding_dim), name="reshape_qi")(q_anchors_flat)
         p_anchors = Reshape((self.n_anchors, self.target_dim), name="reshape_pi")(p_anchors_flat)
 
-        # === 3. Deep Sets (E) ===
+        # === 3. Deep Sets (E) - Increased Capacity ===
+        # Phi Network: Process each anchor to higher dimension features
         phi = Sequential([
-            Dense(256, activation='relu'),
+            Dense(512, activation='linear'),  # Increased from 256
             BatchNormalization(),
-            Dense(128, activation='relu')
+            tf.keras.layers.LeakyReLU(alpha=0.1),
+
+            Dense(256, activation='linear'),  # Added layer
+            BatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1),
+
+            Dense(128, activation='linear'),
+            BatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1)
         ], name="phi_network")
 
         phi_out = TimeDistributed(phi)(q_anchors)
+
+        # Sum Pooling
         sum_pooled = Lambda(lambda x: tf.reduce_sum(x, axis=1), name="sum_pooling")(phi_out)
 
+        # Rho Network: Process sum to context
         rho = Sequential([
-            Dense(128, activation='relu'),
+            Dense(256, activation='linear'),  # Increased from 128
             BatchNormalization(),
-            Dense(64, activation='relu')
+            tf.keras.layers.LeakyReLU(alpha=0.1),
+
+            Dense(128, activation='linear'),
+            BatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1)
+            # Output dim is 128 (Context size increased)
         ], name="rho_network")
 
         context_c = rho(sum_pooled)
 
-        # === 4. Reconstruction Network (T) ===
+        # === 4. Reconstruction Network (T) - Significantly Larger ===
+        # Goal: Reconstruct p_i from (q_i, c)
+
+        # Repeat c for each anchor
         c_repeated = RepeatVector(self.n_anchors)(context_c)
         decoder_input = concatenate([q_anchors, c_repeated], axis=-1)
 
+        # Decoder Network T
+        # Much deeper to solve the inverse encryption problem
         decoder_T = Sequential([
-            Dense(256, activation='relu'),
-            Dense(128, activation='relu'),
-            Dense(self.target_dim, activation='linear')
+            Dense(1024, activation='linear'),  # Very wide first layer
+            BatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1),
+
+            Dense(512, activation='linear'),
+            BatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1),
+
+            Dense(256, activation='linear'),
+            BatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1),
+
+            Dense(self.target_dim, activation='linear')  # Output raw features
         ], name="T_network")
 
         p_anchors_pred = TimeDistributed(decoder_T)(decoder_input)
@@ -128,18 +158,22 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         features_to_fuse = [context_c, q_x_flat]
 
         if cloud_vector is not None:
-            cloud_proj = Dense(128, activation='relu')(cloud_vector)
-            cloud_proj = Dense(64, activation='relu')(cloud_proj)
+            # Increased cloud projection capacity
+            cloud_proj = Dense(256, activation='linear')(cloud_vector)  # Increased from 128
+            cloud_proj = BatchNormalization()(cloud_proj)
+            cloud_proj = tf.keras.layers.LeakyReLU(alpha=0.1)(cloud_proj)
             features_to_fuse.append(cloud_proj)
 
         fused = concatenate(features_to_fuse)
 
-        x = Dense(256, activation='leaky_relu')(fused)
-        x = Dropout(self.dropout_rate)(x)
+        x = Dense(512, activation='leaky_relu')(fused)  # Increased from 256
+        x = Dropout(0.4)(x)  # Slightly higher dropout for larger model
+        x = Dense(256, activation='leaky_relu')(x)
+        x = Dropout(0.3)(x)
         x = Dense(128, activation='leaky_relu')(x)
         outputs = Dense(self.num_classes, activation='softmax', name="class_output")(x)
 
-        # === 6. Model & Custom Loss ===
+        # === 6. Model & Loss ===
         model = Model(inputs=inputs, outputs=outputs)
 
         reconstruction_loss = tf.reduce_mean(tf.square(p_anchors - p_anchors_pred))
@@ -154,6 +188,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         model.add_metric(reconstruction_loss, name="anchor_recon_loss")
 
         return model
+
 
 class GatedCloudIIM(NeuralNetworkInternalModel):
     """

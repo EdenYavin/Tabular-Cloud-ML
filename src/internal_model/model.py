@@ -129,12 +129,13 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
 
         if cloud_vector is not None:
             cloud_proj = Dense(128, activation='relu')(cloud_vector)
+            cloud_proj = Dense(64, activation='relu')(cloud_proj)
             features_to_fuse.append(cloud_proj)
 
         fused = concatenate(features_to_fuse)
 
         x = Dense(256, activation='leaky_relu')(fused)
-        x = Dropout(0.3)(x)
+        x = Dropout(self.dropout_rate)(x)
         x = Dense(128, activation='leaky_relu')(x)
         outputs = Dense(self.num_classes, activation='softmax', name="class_output")(x)
 

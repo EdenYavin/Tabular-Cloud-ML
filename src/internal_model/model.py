@@ -2,7 +2,7 @@ from loguru import logger
 from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
-from keras.src.layers import TimeDistributed, RepeatVector
+from keras.src.layers import TimeDistributed, RepeatVector, Activation
 from keras.src.models import Model, Sequential
 from keras.src.layers import (
     Dense, Dropout, Input, BatchNormalization, concatenate, LSTM, Flatten,
@@ -15,7 +15,7 @@ import tensorflow as tf
 
 from src.internal_model.base import NeuralNetworkInternalModel
 from src.utils.config import config
-from src.utils.constansts import IIM_MODELS, EMBEDDING_TYPES
+from src.utils.constansts import IIM_MODELS
 
 models = {
     IIM_MODELS.XGBOOST.value: XGBClassifier,
@@ -23,6 +23,171 @@ models = {
 
 
 class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
+    """
+    Implements the Deep Sets + Reconstruction architecture.
+    UPDATED: Uses FiLM (Feature-wise Linear Modulation) to FORCE context usage.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "deepset_film"
+        self.num_classes = kwargs.get("num_classes")
+        self.input_shape_total = kwargs.get("input_shape")
+
+        # --- Dimensions ---
+        self.embedding_dim = 768 if "dino" in config.encoder_config.embedding else 512
+        self.n_anchors = config.experiment_config.n_triangulation_samples
+        self.num_cloud_models = len(config.cloud_config.names) if config.cloud_config.names else 0
+        self.cloud_vector_size = 1000 * self.num_cloud_models
+
+        # --- Calculate Vector Partitions ---
+        self.sample_size = self.embedding_dim
+        self.encrypted_anchors_size = self.n_anchors * self.embedding_dim
+
+        known_parts_size = self.sample_size + self.encrypted_anchors_size + self.cloud_vector_size
+        self.plaintext_anchors_size = self.input_shape_total - known_parts_size
+
+        if self.plaintext_anchors_size <= 0:
+            raise ValueError(f"Input shape {self.input_shape_total} is too small.")
+
+        self.target_dim = self.plaintext_anchors_size // self.n_anchors
+        logger.info(f"DeepSetsIIM: Detected Target (Raw) Anchor Dim: {self.target_dim}")
+
+        # High lambda to enforce reconstruction
+        self.lambda_anchor = 50.0
+        self.model = self.get_model()
+
+    def get_model(self):
+        inputs = Input(shape=(self.input_shape_total,), name="total_input")
+
+        # === 1. Slicing ===
+        cursor = 0
+
+        # A. Encrypted Sample
+        start_qx = cursor;
+        end_qx = cursor + self.sample_size
+        q_x_flat = Lambda(lambda x, s=start_qx, e=end_qx: x[:, s:e], name="slice_qx")(inputs)
+        cursor += self.sample_size
+
+        # B. Encrypted Anchors
+        start_qi = cursor;
+        end_qi = cursor + self.encrypted_anchors_size
+        q_anchors_flat = Lambda(lambda x, s=start_qi, e=end_qi: x[:, s:e], name="slice_qi")(inputs)
+        cursor += self.encrypted_anchors_size
+
+        # C. Cloud Vector
+        if self.cloud_vector_size > 0:
+            start_cloud = cursor;
+            end_cloud = cursor + self.cloud_vector_size
+            cloud_vector = Lambda(lambda x, s=start_cloud, e=end_cloud: x[:, s:e], name="slice_cloud")(inputs)
+            cursor += self.cloud_vector_size
+        else:
+            cloud_vector = None
+
+        # D. Plaintext Anchors
+        start_pi = cursor;
+        end_pi = cursor + self.plaintext_anchors_size
+        p_anchors_flat = Lambda(lambda x, s=start_pi, e=end_pi: x[:, s:e], name="slice_pi")(inputs)
+
+        # Reshaping
+        q_anchors = Reshape((self.n_anchors, self.embedding_dim), name="reshape_qi")(q_anchors_flat)
+        p_anchors = Reshape((self.n_anchors, self.target_dim), name="reshape_pi")(p_anchors_flat)
+
+        # === 2. Deep Sets (Context Learning) ===
+        # Phi: Extract features from each anchor
+        phi = Sequential([
+            Dense(512, activation='linear'),
+            BatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1),
+            Dense(256, activation='linear'),
+            BatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1)
+        ], name="phi_network")
+
+        phi_out = TimeDistributed(phi)(q_anchors)  # Shape: (Batch, N, 256)
+
+        # Aggregation: Use GlobalAveragePooling instead of Sum (more stable)
+        # Input (B, N, 256) -> Output (B, 256)
+        pooled = GlobalAveragePooling1D(name="avg_pooling")(phi_out)
+
+        # Rho: Refine context
+        rho = Sequential([
+            Dense(256, activation='linear'),
+            BatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1),
+            Dense(256, activation='linear'),  # Context Dimension
+            BatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1)
+        ], name="rho_network")
+
+        context_c = rho(pooled)  # (Batch, 256)
+
+        # === 3. Reconstruction Network (T) with FiLM ===
+        # We need to reconstruct p_i from q_i, conditioned on c.
+        # We use FiLM to inject c into the processing of q_i.
+
+        # A. Generate FiLM Parameters from Context c
+        # We need Gamma (Scale) and Beta (Shift) for the decoder layers
+        # Hidden dim of decoder will be 512, so we need 512 parameters per gamma/beta
+
+        gamma = Dense(512, kernel_initializer='ones', name="film_gamma")(context_c)
+        beta = Dense(512, kernel_initializer='zeros', name="film_beta")(context_c)
+
+        # Reshape to broadcast across all N anchors: (Batch, 1, 512)
+        gamma = Reshape((1, 512))(gamma)
+        beta = Reshape((1, 512))(beta)
+
+        # B. Process the Encrypted Anchors (q_i)
+        # Map to same dimension as FiLM params (512)
+        x_recon = TimeDistributed(Dense(512, activation='linear'))(q_anchors)
+        x_recon = TimeDistributed(BatchNormalization())(x_recon)
+
+        # C. Apply FiLM: Feature * Gamma + Beta
+        # Gamma/Beta broadcast automatically from (B, 1, 512) to (B, N, 512)
+        x_recon = Multiply(name="film_scale")([x_recon, gamma])
+        x_recon = Add(name="film_shift")([x_recon, beta])
+        x_recon = Activation('leaky_relu')(x_recon)
+
+        # D. Final Reconstruction Head
+        x_recon = TimeDistributed(Dense(256, activation='leaky_relu'))(x_recon)
+        p_anchors_pred = TimeDistributed(Dense(self.target_dim, activation='linear'))(x_recon)
+
+        # === 4. Classification Head ===
+        # Input: Context c, Encrypted Sample q_x, Cloud Vector
+
+        # We process q_x similarly? No, let's keep it simple for now.
+        features_to_fuse = [context_c, q_x_flat]
+
+        if cloud_vector is not None:
+            cloud_proj = Dense(256, activation='leaky_relu')(cloud_vector)
+            features_to_fuse.append(cloud_proj)
+
+        fused = concatenate(features_to_fuse)
+
+        x = Dense(512, activation='leaky_relu')(fused)
+        x = Dropout(0.4)(x)
+        x = Dense(256, activation='leaky_relu')(x)
+        outputs = Dense(self.num_classes, activation='softmax', name="class_output")(x)
+
+        # === 5. Model & Loss ===
+        model = Model(inputs=inputs, outputs=outputs)
+
+        # Metric: Mean Squared Error
+        reconstruction_loss = tf.reduce_mean(tf.square(p_anchors - p_anchors_pred))
+        model.add_loss(self.lambda_anchor * reconstruction_loss)
+
+        model.compile(
+            optimizer='adam',
+            loss='categorical_crossentropy',
+            metrics=['accuracy', AUC(multi_label=False, name='auc')]
+        )
+
+        model.add_metric(reconstruction_loss, name="anchor_recon_loss")
+
+        return model
+
+
+class oldDeepSetsReconstructionIIM(NeuralNetworkInternalModel):
     """
     Implements the Deep Sets + Reconstruction architecture.
     UPDATED: Significantly larger capacity for Phi, Rho, and T networks to improve context learning.

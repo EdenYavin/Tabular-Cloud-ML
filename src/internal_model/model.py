@@ -53,7 +53,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         self.target_dim = self.plaintext_anchors_size // self.n_anchors
         logger.info(f"DeepSetsIIM: Detected Target (Raw) Anchor Dim: {self.target_dim}")
 
-        self.lambda_anchor = 1.0
+        self.lambda_anchor = 50
         self.model = self.get_model()
 
     def get_model(self):

@@ -19,10 +19,12 @@ from src.utils.constansts import IIM_MODELS
 
 
 class EpochTrackerCallback(tf.keras.callbacks.Callback):
-    """Callback to increment epoch counter at the start of each epoch."""
+    """Callback to set training phase at the start of each epoch."""
     def on_epoch_begin(self, epoch, logs=None):
-        self.model.current_epoch.assign(epoch)
-        phase = "Reconstruction (Encoder+Decoder)" if epoch % 2 == 0 else "Classification"
+        train_reconstruction = (epoch % 2 == 0)
+        self.model.train_reconstruction_phase.assign(train_reconstruction)
+
+        phase = "Reconstruction (Encoder+Decoder)" if train_reconstruction else "Classification"
         logger.info(f"Epoch {epoch}: Training {phase}")
 
 models = {
@@ -184,8 +186,8 @@ class DeepSetsGANModel(Model):
         self.dims = dims
         self.input_shape_total = input_shape_total
 
-        # Epoch tracking for alternating training
-        self.current_epoch = tf.Variable(0, trainable=False, dtype=tf.int32)
+        # Phase tracking for alternating training (True = reconstruction, False = classification)
+        self.train_reconstruction_phase = tf.Variable(True, trainable=False, dtype=tf.bool)
 
         # Loss trackers
         self.loss_tracker = tf.keras.metrics.Mean(name="loss")
@@ -248,67 +250,53 @@ class DeepSetsGANModel(Model):
         # 1. Slice Inputs
         q_x, q_anchors, cloud, p_anchors_target = self._slice_inputs(x)
 
-        # Determine which phase to train based on epoch parity
-        # Even epochs (0, 2, 4, ...): Train Reconstruction (encoder + decoder)
-        # Odd epochs (1, 3, 5, ...): Train Classifier
-        train_reconstruction = tf.equal(tf.math.floormod(self.current_epoch, 2), 0)
+        # Get all trainable variables upfront (needed for tf.cond)
+        recon_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
+        class_vars = self.classifier.trainable_variables
 
-        # Initialize losses
-        recon_loss = tf.constant(0.0)
-        total_recon_loss = tf.constant(0.0)
-        class_loss = tf.constant(0.0)
-
-        # Compute context (always needed)
-        c = self.encoder(q_anchors, training=train_reconstruction)
-
-        if train_reconstruction:
-            # --- PHASE 1: Reconstruction (Even Epochs) ---
-            with tf.GradientTape() as tape_recon:
-                c_recon = self.encoder(q_anchors, training=True)
-                c_repeated = tf.repeat(tf.expand_dims(c_recon, 1), self.dims['n_anchors'], axis=1)
-                q_anchors_flat = tf.reshape(q_anchors, (-1, self.dims['emb_dim']))
-                c_repeated_flat = tf.reshape(c_repeated, (-1, self.dims['context_dim']))
-                p_anchors_pred_flat = self.decoder([q_anchors_flat, c_repeated_flat], training=True)
-                p_anchors_pred = tf.reshape(p_anchors_pred_flat, (-1, self.dims['n_anchors'], self.dims['target_dim']))
-
-                recon_loss = tf.reduce_mean(tf.square(p_anchors_target - p_anchors_pred))
-                total_recon_loss = recon_loss * self.lambda_recon
-
-            trainable_vars_recon = self.encoder.trainable_variables + self.decoder.trainable_variables
-            grads_recon = tape_recon.gradient(total_recon_loss, trainable_vars_recon)
-            self.optimizer_recon.apply_gradients(zip(grads_recon, trainable_vars_recon))
-
-            # Compute predictions for metrics (without training classifier)
-            q_x_vec = tf.reshape(q_x, (-1, self.dims['emb_dim']))
-            classifier_inputs = [q_x_vec, c]
-            if cloud is not None:
-                classifier_inputs.append(cloud)
-            y_pred = self.classifier(classifier_inputs, training=False)
-            class_loss = self.class_loss_fn(y, y_pred, sample_weight=sample_weight)
-        else:
-            # --- PHASE 2: Classification (Odd Epochs) ---
-            with tf.GradientTape() as tape_class:
-                c_fixed = self.encoder(q_anchors, training=False)  # Encoder frozen
-                q_x_vec = tf.reshape(q_x, (-1, self.dims['emb_dim']))
-                classifier_inputs = [q_x_vec, c_fixed]
-                if cloud is not None:
-                    classifier_inputs.append(cloud)
-
-                y_pred = self.classifier(classifier_inputs, training=True)
-                class_loss = self.class_loss_fn(y, y_pred, sample_weight=sample_weight)
-
-            trainable_vars_class = self.classifier.trainable_variables
-            grads_class = tape_class.gradient(class_loss, trainable_vars_class)
-            self.optimizer_class.apply_gradients(zip(grads_class, trainable_vars_class))
-
-            # Compute reconstruction loss for metrics (without training recon)
+        # --- Compute both forward passes and gradients ---
+        with tf.GradientTape(persistent=True) as tape:
+            # Reconstruction forward pass
+            c = self.encoder(q_anchors, training=True)
             c_repeated = tf.repeat(tf.expand_dims(c, 1), self.dims['n_anchors'], axis=1)
             q_anchors_flat = tf.reshape(q_anchors, (-1, self.dims['emb_dim']))
             c_repeated_flat = tf.reshape(c_repeated, (-1, self.dims['context_dim']))
-            p_anchors_pred_flat = self.decoder([q_anchors_flat, c_repeated_flat], training=False)
+            p_anchors_pred_flat = self.decoder([q_anchors_flat, c_repeated_flat], training=True)
             p_anchors_pred = tf.reshape(p_anchors_pred_flat, (-1, self.dims['n_anchors'], self.dims['target_dim']))
+
             recon_loss = tf.reduce_mean(tf.square(p_anchors_target - p_anchors_pred))
             total_recon_loss = recon_loss * self.lambda_recon
+
+            # Classification forward pass (use stop_gradient on context)
+            c_for_class = tf.stop_gradient(c)
+            q_x_vec = tf.reshape(q_x, (-1, self.dims['emb_dim']))
+            classifier_inputs = [q_x_vec, c_for_class]
+            if cloud is not None:
+                classifier_inputs.append(cloud)
+
+            y_pred = self.classifier(classifier_inputs, training=True)
+            class_loss = self.class_loss_fn(y, y_pred, sample_weight=sample_weight)
+
+        # Compute gradients for both phases
+        grads_recon = tape.gradient(total_recon_loss, recon_vars)
+        grads_class = tape.gradient(class_loss, class_vars)
+        del tape  # Release persistent tape
+
+        # Conditionally apply gradients based on current phase
+        def apply_recon_grads():
+            self.optimizer_recon.apply_gradients(zip(grads_recon, recon_vars))
+            return tf.constant(0.0)
+
+        def apply_class_grads():
+            self.optimizer_class.apply_gradients(zip(grads_class, class_vars))
+            return tf.constant(0.0)
+
+        # tf.cond to apply the correct gradients based on phase
+        tf.cond(
+            self.train_reconstruction_phase,
+            apply_recon_grads,
+            apply_class_grads
+        )
 
         # Update Metrics
         self.loss_tracker.update_state(class_loss + total_recon_loss)

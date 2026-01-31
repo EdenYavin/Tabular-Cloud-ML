@@ -55,11 +55,13 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # We use a custom model class that overrides train_step
         self.model = self.build_gan_model()
 
-        # --- FIX: COMPILE THE MODEL IMMEDIATELY ---
-        # We must pass an optimizer INSTANCE (not string) for the custom train_step
+        # --- FIX: Compile with Loss OBJECT and Metrics ---
         self.model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-            loss='categorical_crossentropy'
+            # Pass the object, not the string, so it is callable in train_step
+            loss=tf.keras.losses.CategoricalCrossentropy(),
+            # Pass metrics so evaluate() works
+            metrics=['accuracy', AUC(multi_label=False, name='auc')]
         )
 
     def build_gan_model(self):
@@ -72,7 +74,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
             ])),
             GlobalAveragePooling1D(),
             Dense(256), BatchNormalization(), tf.keras.layers.LeakyReLU(alpha=0.1),
-            Dense(128), BatchNormalization(), tf.keras.layers.LeakyReLU(alpha=0.1)  # Context c (Size 128)
+            Dense(128), BatchNormalization(), tf.keras.layers.LeakyReLU(alpha=0.1)  # Context c
         ], name="encoder_deepsets")
 
         # 2. Decoder (T): Concatenate(q_i, c) -> p_i
@@ -101,7 +103,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
 
         features = [input_qx, input_c]
         if input_cloud is not None:
-            # Optional: project cloud to smaller dim
+            # Optional: project cloud
             cloud_proj = Dense(256, activation='leaky_relu')(input_cloud)
             features.append(cloud_proj)
 
@@ -118,7 +120,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
 
         classifier = Model(inputs=inputs_classifier, outputs=class_output, name="classifier_head")
 
-        # 4. Wrap in GAN Model
+        # 4. Wrap everything in the GAN Model
         return DeepSetsGANModel(
             encoder=encoder,
             decoder=decoder,
@@ -155,9 +157,10 @@ class DeepSetsGANModel(Model):
         self.auc_tracker = AUC(multi_label=False, name="auc")
 
     def compile(self, optimizer, loss, **kwargs):
-        super().compile(**kwargs)
+        # Pass to super so standard evaluate() works
+        super().compile(optimizer=optimizer, loss=loss, **kwargs)
         self.optimizer = optimizer
-        self.class_loss_fn = loss
+        self.class_loss_fn = loss  # Now holds the Object passed from init
         self.lambda_recon = 50.0
 
     def call(self, inputs, training=False):
@@ -168,6 +171,7 @@ class DeepSetsGANModel(Model):
         c = self.encoder(q_anchors, training=training)
 
         # 3. Classify
+        # Reshape q_x to (B, Dim)
         q_x_vec = tf.reshape(q_x, (-1, self.dims['emb_dim']))
 
         classifier_inputs = [q_x_vec, c]
@@ -214,10 +218,10 @@ class DeepSetsGANModel(Model):
             # Generate Context
             c = self.encoder(q_anchors, training=True)
 
-            # Prepare Decoder Inputs
+            # Prepare Decoder Inputs (Repeat Context for each Anchor)
             c_repeated = tf.repeat(tf.expand_dims(c, 1), self.dims['n_anchors'], axis=1)
 
-            # Flatten for functional model
+            # Flatten for functional model call
             q_anchors_flat = tf.reshape(q_anchors, (-1, self.dims['emb_dim']))
             c_repeated_flat = tf.reshape(c_repeated, (-1, self.dims['context_dim']))
 
@@ -274,6 +278,7 @@ class DeepSetsGANModel(Model):
     @property
     def metrics(self):
         return [self.loss_tracker, self.recon_loss_tracker, self.class_loss_tracker, self.acc_tracker, self.auc_tracker]
+
 
 class oldDeepSetsReconstructionIIM(NeuralNetworkInternalModel):
     """

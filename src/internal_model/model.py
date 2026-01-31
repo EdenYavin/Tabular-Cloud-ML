@@ -1377,4 +1377,241 @@ class StackingMixedInternalModel(StackingInternalModel):
         return self.final_model.predict(meta_features)
 
 
+class TNetworkOnlyIIM(tf.keras.Model):
+    """
+    T Network-Only model for reconstruction experiments.
+
+    This model contains only the Encoder and Decoder (T Network) without
+    the classification head. Used to verify the T network can converge
+    and properly reconstruct encrypted embeddings.
+
+    Input vector structure: [p_x | p_i | q_i | cloud | q_x_target]
+    - p_x: Raw tabular sample (raw_dim,)
+    - p_i: Raw tabular anchors (n_anchors * raw_dim,)
+    - q_i: Encrypted anchor embeddings (n_anchors * emb_dim,)
+    - cloud: Cloud model predictions (optional)
+    - q_x_target: Target encrypted embedding to reconstruct (emb_dim,)
+
+    Output: Reconstructed q_x prediction (emb_dim,)
+    """
+
+    def __init__(
+        self,
+        n_anchors: int,
+        raw_dim: int,
+        emb_dim: int,
+        cloud_vector_size: int = 0,
+        context_dim: int = 128,
+        name: str = "t_network_only",
+        **kwargs
+    ):
+        super().__init__(name=name, **kwargs)
+
+        self.n_anchors = n_anchors
+        self.raw_dim = raw_dim
+        self.emb_dim = emb_dim
+        self.cloud_vector_size = cloud_vector_size
+        self.context_dim = context_dim
+
+        # Calculate input slice indices
+        # Structure: [p_x | p_i | q_i | cloud | q_x_target]
+        self.p_x_end = raw_dim
+        self.p_i_end = raw_dim + (n_anchors * raw_dim)
+        self.q_i_end = self.p_i_end + (n_anchors * emb_dim)
+        self.cloud_end = self.q_i_end + cloud_vector_size
+        self.q_x_target_end = self.cloud_end + emb_dim
+
+        # Encoder: processes (p_i, q_i, p_x) to produce context
+        self._build_encoder()
+
+        # Decoder (T Network): reconstructs q_x from context
+        self._build_decoder()
+
+        # Loss trackers
+        self.loss_tracker = tf.keras.metrics.Mean(name="loss")
+        self.mae_tracker = tf.keras.metrics.Mean(name="mae")
+        self.cosine_tracker = tf.keras.metrics.Mean(name="cosine_sim")
+
+    def _build_encoder(self):
+        """Build the Deep Sets encoder for anchor pairs + sample."""
+        anchor_pair_dim = self.raw_dim + self.emb_dim
+
+        # Per-anchor transformation (φ)
+        self.phi_dense1 = Dense(512, name='phi_dense1')
+        self.phi_bn1 = BatchNormalization(name='phi_bn1')
+        self.phi_act1 = tf.keras.layers.LeakyReLU(alpha=0.1, name='phi_act1')
+
+        self.phi_dense2 = Dense(256, name='phi_dense2')
+        self.phi_bn2 = BatchNormalization(name='phi_bn2')
+        self.phi_act2 = tf.keras.layers.LeakyReLU(alpha=0.1, name='phi_act2')
+
+        self.phi_dense3 = Dense(128, name='phi_dense3')
+
+        # Process p_x (raw sample)
+        self.p_x_dense1 = Dense(256, activation='relu', name='p_x_dense1')
+        self.p_x_dense2 = Dense(128, activation='relu', name='p_x_dense2')
+
+        # Combine all features (ρ network)
+        self.rho_dense1 = Dense(256, name='rho_dense1')
+        self.rho_bn1 = BatchNormalization(name='rho_bn1')
+        self.rho_act1 = tf.keras.layers.LeakyReLU(alpha=0.1, name='rho_act1')
+
+        self.rho_dense2 = Dense(self.context_dim, name='rho_dense2')
+        self.rho_bn2 = BatchNormalization(name='rho_bn2')
+        self.rho_act2 = tf.keras.layers.LeakyReLU(alpha=0.1, name='rho_act2')
+
+    def _build_decoder(self):
+        """Build the T network decoder for q_x reconstruction."""
+        self.decoder_dense1 = Dense(256, name='decoder_dense1')
+        self.decoder_bn1 = BatchNormalization(name='decoder_bn1')
+        self.decoder_act1 = tf.keras.layers.LeakyReLU(alpha=0.1, name='decoder_act1')
+
+        self.decoder_dense2 = Dense(512, name='decoder_dense2')
+        self.decoder_bn2 = BatchNormalization(name='decoder_bn2')
+        self.decoder_act2 = tf.keras.layers.LeakyReLU(alpha=0.1, name='decoder_act2')
+
+        self.decoder_output = Dense(self.emb_dim, activation='linear', name='decoder_output')
+
+    def call(self, inputs, training=None):
+        """
+        Forward pass.
+
+        Args:
+            inputs: Tensor of shape (batch, p_x + p_i + q_i + cloud + q_x_target)
+            training: Whether in training mode
+
+        Returns:
+            q_x_pred: Reconstructed embedding (batch, emb_dim)
+        """
+        # Slice input components
+        p_x = inputs[:, :self.p_x_end]
+        p_i = inputs[:, self.p_x_end:self.p_i_end]
+        q_i = inputs[:, self.p_i_end:self.q_i_end]
+        # cloud and q_x_target not used in forward pass
+
+        # Reshape p_i and q_i for anchor processing
+        p_i_reshaped = tf.reshape(p_i, (-1, self.n_anchors, self.raw_dim))
+        q_i_reshaped = tf.reshape(q_i, (-1, self.n_anchors, self.emb_dim))
+
+        # Concatenate anchor pairs: (p_i, q_i) -> (batch, n_anchors, raw_dim + emb_dim)
+        anchor_pairs = tf.concat([p_i_reshaped, q_i_reshaped], axis=-1)
+
+        # Process anchors through φ network (TimeDistributed equivalent)
+        x = self.phi_dense1(anchor_pairs)
+        x = self.phi_bn1(x, training=training)
+        x = self.phi_act1(x)
+
+        x = self.phi_dense2(x)
+        x = self.phi_bn2(x, training=training)
+        x = self.phi_act2(x)
+
+        x = self.phi_dense3(x)
+
+        # Pool across anchors (permutation invariant)
+        c_anchors = tf.reduce_mean(x, axis=1)  # (batch, 128)
+
+        # Process p_x sample
+        p_x_features = self.p_x_dense1(p_x)
+        p_x_features = self.p_x_dense2(p_x_features)  # (batch, 128)
+
+        # Combine all features to create context (ρ network)
+        combined = tf.concat([c_anchors, p_x_features], axis=-1)  # (batch, 256)
+        context = self.rho_dense1(combined)
+        context = self.rho_bn1(context, training=training)
+        context = self.rho_act1(context)
+        context = self.rho_dense2(context)
+        context = self.rho_bn2(context, training=training)
+        context = self.rho_act2(context)  # (batch, context_dim)
+
+        # Decode context to reconstruct q_x
+        x = self.decoder_dense1(context)
+        x = self.decoder_bn1(x, training=training)
+        x = self.decoder_act1(x)
+
+        x = self.decoder_dense2(x)
+        x = self.decoder_bn2(x, training=training)
+        x = self.decoder_act2(x)
+
+        q_x_pred = self.decoder_output(x)  # (batch, emb_dim)
+
+        return q_x_pred
+
+    def train_step(self, data):
+        """Custom training step with MSE loss on q_x reconstruction."""
+        x, _ = data  # y is ignored, we use q_x_target from x
+
+        # Extract target (q_x_target is embedded in x)
+        q_x_target = x[:, self.cloud_end:self.q_x_target_end]
+
+        with tf.GradientTape() as tape:
+            q_x_pred = self(x, training=True)
+            loss = tf.reduce_mean(tf.square(q_x_target - q_x_pred))
+
+        # Compute gradients and update
+        gradients = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+        # Compute metrics
+        mae = tf.reduce_mean(tf.abs(q_x_target - q_x_pred))
+
+        # Cosine similarity
+        q_x_target_norm = tf.nn.l2_normalize(q_x_target, axis=1)
+        q_x_pred_norm = tf.nn.l2_normalize(q_x_pred, axis=1)
+        cosine_sim = tf.reduce_mean(tf.reduce_sum(q_x_target_norm * q_x_pred_norm, axis=1))
+
+        # Update metrics
+        self.loss_tracker.update_state(loss)
+        self.mae_tracker.update_state(mae)
+        self.cosine_tracker.update_state(cosine_sim)
+
+        return {
+            "loss": self.loss_tracker.result(),
+            "mae": self.mae_tracker.result(),
+            "cosine_sim": self.cosine_tracker.result(),
+        }
+
+    def test_step(self, data):
+        """Custom test step."""
+        x, _ = data
+
+        q_x_target = x[:, self.cloud_end:self.q_x_target_end]
+        q_x_pred = self(x, training=False)
+
+        loss = tf.reduce_mean(tf.square(q_x_target - q_x_pred))
+        mae = tf.reduce_mean(tf.abs(q_x_target - q_x_pred))
+
+        q_x_target_norm = tf.nn.l2_normalize(q_x_target, axis=1)
+        q_x_pred_norm = tf.nn.l2_normalize(q_x_pred, axis=1)
+        cosine_sim = tf.reduce_mean(tf.reduce_sum(q_x_target_norm * q_x_pred_norm, axis=1))
+
+        self.loss_tracker.update_state(loss)
+        self.mae_tracker.update_state(mae)
+        self.cosine_tracker.update_state(cosine_sim)
+
+        return {
+            "loss": self.loss_tracker.result(),
+            "mae": self.mae_tracker.result(),
+            "cosine_sim": self.cosine_tracker.result(),
+        }
+
+    @property
+    def metrics(self):
+        return [self.loss_tracker, self.mae_tracker, self.cosine_tracker]
+
+    def get_config(self):
+        return {
+            "n_anchors": self.n_anchors,
+            "raw_dim": self.raw_dim,
+            "emb_dim": self.emb_dim,
+            "cloud_vector_size": self.cloud_vector_size,
+            "context_dim": self.context_dim,
+        }
+
+    def extract_target(self, inputs):
+        """Extract q_x_target from input tensor for loss computation."""
+        if isinstance(inputs, np.ndarray):
+            return inputs[:, self.cloud_end:self.q_x_target_end]
+        return inputs[:, self.cloud_end:self.q_x_target_end]
+
+
 

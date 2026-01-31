@@ -14,14 +14,19 @@ class DeepSetFeatureEngineering(FeatureEngineeringPipeline):
     """
     Produces dataset specifically for Deep Sets + Reconstruction IIM.
 
-    Output Vector Structure (NEW - DeepSets on Anchor Pairs):
-    [ Plaintext X Emb (p_x) | Plaintext Anchors Emb ({p_i}) | Encrypted Anchors Emb ({q_i}) | Cloud Predictions | Encrypted X Emb (q_x_target) ]
+    Output Vector Structure:
+    [ p_x | p_i | q_i | cloud | q_x_target ]
+
+    Where:
+    - p_x: RAW tabular sample data (before encryption) - shape: (raw_dim,)
+    - p_i: RAW tabular anchor data (before encryption) - shape: (n_anchors * raw_dim,)
+    - q_i: Encrypted anchors → DINO/CLIP embedding - shape: (n_anchors * emb_dim,)
+    - cloud: Cloud model predictions (optional) - shape: (1000 * num_cloud_models,)
+    - q_x_target: Encrypted sample → DINO/CLIP embedding (reconstruction target) - shape: (emb_dim,)
 
     Architecture:
     - Encoder (T) input: Anchor pairs (p_i, q_i) for each anchor i, plus p_x
     - Decoder target: Reconstruct q_x (encrypted X embedding)
-
-    All embeddings are DINO/CLIP embeddings (embedding_dim = 768 or 512).
     """
 
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
@@ -43,10 +48,11 @@ class DeepSetFeatureEngineering(FeatureEngineeringPipeline):
             n_samples=config.experiment_config.n_triangulation_samples
         )
 
-        # 2. Compute Plaintext Anchor Embeddings (p_i) BEFORE encryption
-        # Shape: (N_anchors, embedding_dim)
-        p_i_emb = self.triangulation_embedding.forward(triangulation_samples)
-        flat_plaintext_anchor_emb = p_i_emb.flatten()
+        # ================================================================
+        # p_i = RAW tabular anchor data (BEFORE encryption, no embedding)
+        # This is the plaintext representation
+        # ================================================================
+        flat_plaintext_anchors = triangulation_samples.flatten()  # Shape: (n_anchors * raw_dim,)
 
         predictions_for_baseline = np.array(list())
         observations, new_y = [], []
@@ -57,54 +63,51 @@ class DeepSetFeatureEngineering(FeatureEngineeringPipeline):
         with tqdm(total=len(embeddings), leave=True, position=0, desc="DeepSets Pipeline") as pbar:
             with tf.device(GPU_DEVICE):
 
-                for x, x_emb, label in zip(X, embeddings, y):
+                for idx, (x, x_emb, label) in enumerate(zip(X, embeddings, y)):
                     pbar.update(1)
 
-                    # --- PLAINTEXT EMBEDDING (BEFORE ENCRYPTION) ---
-                    # 1. Compute Plaintext X Embedding (p_x)
-                    # Shape: (1, embedding_dim)
-                    p_x_emb = self.triangulation_embedding.forward(x_emb.reshape(1, -1))
-                    flat_plaintext_sample_emb = p_x_emb.flatten()
+                    # ================================================================
+                    # p_x = RAW tabular sample data (BEFORE encryption, no embedding)
+                    # ================================================================
+                    flat_plaintext_sample = x_emb.flatten()  # Shape: (raw_dim,)
 
-                    # --- ENCRYPTION & SCALING ---
-                    # 2. Encrypt Sample (for q_x target)
+                    # --- ENCRYPTION WITH CURRENT KEY ---
+                    # 1. Encrypt Sample with current key
                     x_tag = self.encryptor.encode(x_emb.reshape(1, -1))
                     x_tag = x_tag / config.experiment_config.scaling_factor
                     x_tag = np.clip(x_tag, 0.0, 1.0)
 
-                    # 3. Encrypt Anchors (q_i) using the SAME key
+                    # 2. Encrypt Anchors with current key
                     y_tag = self.encryptor.encode(triangulation_samples)
                     y_tag = y_tag / config.experiment_config.scaling_factor
                     y_tag = np.clip(y_tag, 0.0, 1.0)
 
-                    # --- EMBEDDING OF ENCRYPTED DATA ---
-                    # 4. Embed Encrypted Anchors (q_i)
-                    # Shape: (N_anchors, embedding_dim)
+                    # ================================================================
+                    # q_i = Encrypted anchors → DINO/CLIP embedding
+                    # q_x = Encrypted sample → DINO/CLIP embedding (RECONSTRUCTION TARGET)
+                    # ================================================================
                     q_i_emb = self.triangulation_embedding.forward(y_tag)
-                    flat_encrypted_anchor_emb = q_i_emb.flatten()
+                    flat_encrypted_anchor_emb = q_i_emb.flatten()  # Shape: (n_anchors * emb_dim,)
 
-                    # 5. Embed Encrypted Sample (q_x) - THIS IS THE TARGET
-                    # Shape: (1, embedding_dim)
-                    q_x_emb = self.triangulation_embedding.forward(np.vstack(x_tag))
-                    flat_encrypted_sample_emb = q_x_emb.flatten()
+                    q_x_emb = self.triangulation_embedding.forward(x_tag)
+                    flat_encrypted_sample_emb = q_x_emb.flatten()  # Shape: (emb_dim,)
 
                     # --- CONSTRUCT OBSERVATION ---
-                    # NEW Structure: [ p_x | p_i | q_i | cloud | q_x_target ]
+                    # Structure: [ p_x | p_i | q_i | cloud | q_x_target ]
+                    # p_x, p_i = RAW tabular data (before encryption)
+                    # q_i, q_x = encrypted → embedded vectors
                     observation_parts = [
-                        flat_plaintext_sample_emb,      # p_x: plaintext X embedding
-                        flat_plaintext_anchor_emb,       # p_i: plaintext anchor embeddings
-                        flat_encrypted_anchor_emb,       # q_i: encrypted anchor embeddings
+                        flat_plaintext_sample,           # p_x: raw sample (raw_dim)
+                        flat_plaintext_anchors,          # p_i: raw anchors (n_anchors * raw_dim)
+                        flat_encrypted_anchor_emb,       # q_i: encrypted anchor embeddings (n_anchors * emb_dim)
                     ]
 
                     # --- CLOUD PREDICTIONS ---
                     if config.cloud_config.names:
                         predictions = []
                         for cloud_model in config.cloud_config.names:
-                            # Predict on encrypted sample image
                             pred = cloud.predict(model_name=cloud_model, batch=x_tag)
                             predictions.append(pred.flatten())
-
-                        # Add cloud predictions to parts
                         observation_parts.append(np.hstack(predictions))
 
                     # --- APPEND q_x TARGET ---

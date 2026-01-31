@@ -38,9 +38,15 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
 
     NEW Architecture (DeepSets on Anchor Pairs):
     - Encoder (T) input: Anchor pairs (p_i, q_i) for each anchor, plus p_x
+      - p_i = RAW tabular data (before encryption)
+      - q_i = Encrypted → DINO/CLIP embedding
     - Decoder target: Reconstruct q_x (encrypted X embedding)
 
     Input Vector: [ p_x | p_i | q_i | cloud | q_x_target ]
+    - p_x: raw_dim (raw tabular sample)
+    - p_i: n_anchors * raw_dim (raw tabular anchors)
+    - q_i: n_anchors * emb_dim (encrypted anchor embeddings)
+    - q_x_target: emb_dim (encrypted sample embedding - reconstruction target)
     """
 
     def __init__(self, **kwargs):
@@ -55,19 +61,34 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         self.num_cloud_models = len(config.cloud_config.names) if config.cloud_config.names else 0
         self.cloud_vector_size = 1000 * self.num_cloud_models
 
-        # --- NEW Sizing (based on new vector structure) ---
+        # --- Calculate raw_dim from input shape ---
         # Input: [ p_x | p_i | q_i | cloud | q_x_target ]
-        self.p_x_size = self.embedding_dim                        # Plaintext X embedding
-        self.p_i_size = self.n_anchors * self.embedding_dim       # Plaintext anchor embeddings
+        # Known sizes: q_i = n_anchors * emb_dim, cloud, q_x_target = emb_dim
+        # Unknown: p_x = raw_dim, p_i = n_anchors * raw_dim
+        # Total: raw_dim + n_anchors*raw_dim + n_anchors*emb_dim + cloud + emb_dim = input_shape
+        # raw_dim * (1 + n_anchors) = input_shape - n_anchors*emb_dim - cloud - emb_dim
+
+        q_i_size = self.n_anchors * self.embedding_dim
+        q_x_target_size = self.embedding_dim
+        known_size = q_i_size + self.cloud_vector_size + q_x_target_size
+
+        remaining = self.input_shape_total - known_size
+        # remaining = raw_dim * (1 + n_anchors)
+        self.raw_dim = remaining // (1 + self.n_anchors)
+
+        # --- Final Sizing ---
+        self.p_x_size = self.raw_dim                              # Raw sample features
+        self.p_i_size = self.n_anchors * self.raw_dim             # Raw anchor features
         self.q_i_size = self.n_anchors * self.embedding_dim       # Encrypted anchor embeddings
         self.q_x_target_size = self.embedding_dim                 # Reconstruction target
 
         # Verify input shape matches expected structure
         expected_size = self.p_x_size + self.p_i_size + self.q_i_size + self.cloud_vector_size + self.q_x_target_size
+        logger.info(f"DeepSetsIIM: raw_dim={self.raw_dim}, emb_dim={self.embedding_dim}, n_anchors={self.n_anchors}")
+        logger.info(f"DeepSetsIIM: p_x={self.p_x_size}, p_i={self.p_i_size}, q_i={self.q_i_size}, "
+                   f"cloud={self.cloud_vector_size}, q_x_target={self.q_x_target_size}")
         if self.input_shape_total != expected_size:
-            logger.warning(f"Input shape {self.input_shape_total} != expected {expected_size}. "
-                          f"Components: p_x={self.p_x_size}, p_i={self.p_i_size}, q_i={self.q_i_size}, "
-                          f"cloud={self.cloud_vector_size}, q_x_target={self.q_x_target_size}")
+            logger.warning(f"Input shape {self.input_shape_total} != expected {expected_size}")
 
         self.context_dim = 128  # Output dimension of encoder
 
@@ -111,12 +132,15 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
 
     def build_gan_model(self):
         # === 1. NEW Encoder (Deep Sets on Anchor Pairs): (p_i, q_i), p_x -> context ===
-        # Input: anchor pairs (p_i, q_i) concatenated → shape (batch, n_anchors, 2 * embedding_dim)
-        # Plus p_x for combining with pooled context
+        # Input: anchor pairs where p_i is RAW (raw_dim) and q_i is EMBEDDED (emb_dim)
+        # Concatenated → shape (batch, n_anchors, raw_dim + emb_dim)
+        # Plus p_x (raw tabular sample) for combining with pooled context
+
+        anchor_pair_dim = self.raw_dim + self.embedding_dim  # p_i (raw) + q_i (emb) per anchor
 
         # φ network: processes each anchor pair
-        encoder_input_pairs = Input(shape=(self.n_anchors, 2 * self.embedding_dim), name="anchor_pairs")
-        encoder_input_px = Input(shape=(self.embedding_dim,), name="p_x")
+        encoder_input_pairs = Input(shape=(self.n_anchors, anchor_pair_dim), name="anchor_pairs")
+        encoder_input_px = Input(shape=(self.raw_dim,), name="p_x")  # p_x is raw tabular
 
         # Per-anchor transformation (φ)
         x = TimeDistributed(Dense(512))(encoder_input_pairs)
@@ -130,7 +154,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # Pool across anchors (permutation invariant)
         c_anchors = GlobalAveragePooling1D()(x)  # Shape: (batch, 128)
 
-        # Combine with p_x (plaintext sample embedding)
+        # Combine with p_x (raw tabular sample)
         combined = concatenate([c_anchors, encoder_input_px])
         context = Dense(256)(combined)
         context = BatchNormalization()(context)
@@ -142,7 +166,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         encoder = Model(inputs=[encoder_input_pairs, encoder_input_px], outputs=context, name="encoder_deepsets")
 
         # === 2. NEW Decoder (T): context -> q_x ===
-        # Reconstructs encrypted X embedding from context
+        # Reconstructs encrypted X EMBEDDING from context
         decoder_input_context = Input(shape=(self.context_dim,))
 
         x = Dense(256)(decoder_input_context)
@@ -153,12 +177,12 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         x = BatchNormalization()(x)
         x = tf.keras.layers.LeakyReLU(alpha=0.1)(x)
 
-        dec_output = Dense(self.embedding_dim, activation='linear')(x)  # Output: q_x prediction
+        dec_output = Dense(self.embedding_dim, activation='linear')(x)  # Output: q_x prediction (emb_dim)
 
         decoder = Model(inputs=decoder_input_context, outputs=dec_output, name="decoder_T")
 
         # === 3. Classifier (SIN): Concatenate(context, cloud) -> Label ===
-        # Note: Uses context (which includes p_x info) + cloud predictions
+        # Uses context (which includes p_x info) + cloud predictions
         input_c = Input(shape=(self.context_dim,))
         input_cloud = Input(shape=(self.cloud_vector_size,)) if self.cloud_vector_size > 0 else None
 
@@ -197,6 +221,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
                 'cloud': self.cloud_vector_size,
                 'q_x_target': self.q_x_target_size,
                 'n_anchors': self.n_anchors,
+                'raw_dim': self.raw_dim,
                 'emb_dim': self.embedding_dim,
                 'context_dim': self.context_dim
             }
@@ -259,19 +284,23 @@ class DeepSetsGANModel(Model):
         Parse NEW input vector structure:
         [ p_x | p_i | q_i | cloud | q_x_target ]
 
+        Where:
+        - p_x, p_i are RAW tabular data (raw_dim)
+        - q_i, q_x_target are EMBEDDED vectors (emb_dim)
+
         Returns: p_x, anchor_pairs (p_i concat q_i), cloud, q_x_target
         """
         cursor = 0
 
-        # Plaintext X embedding
+        # p_x: Raw tabular sample (raw_dim)
         p_x = inputs[:, cursor:cursor + self.dims['p_x']]
         cursor += self.dims['p_x']
 
-        # Plaintext anchor embeddings
+        # p_i: Raw tabular anchors (n_anchors * raw_dim)
         p_i_flat = inputs[:, cursor:cursor + self.dims['p_i']]
         cursor += self.dims['p_i']
 
-        # Encrypted anchor embeddings
+        # q_i: Encrypted anchor embeddings (n_anchors * emb_dim)
         q_i_flat = inputs[:, cursor:cursor + self.dims['q_i']]
         cursor += self.dims['q_i']
 
@@ -282,16 +311,18 @@ class DeepSetsGANModel(Model):
         else:
             cloud = None
 
-        # Target: encrypted X embedding
+        # q_x_target: Encrypted X embedding (emb_dim) - reconstruction target
         q_x_target = inputs[:, cursor:cursor + self.dims['q_x_target']]
 
-        # Reshape anchors
+        # Reshape anchors with DIFFERENT dimensions
         n_anchors = self.dims['n_anchors']
+        raw_dim = self.dims['raw_dim']
         emb_dim = self.dims['emb_dim']
-        p_i = tf.reshape(p_i_flat, (-1, n_anchors, emb_dim))
-        q_i = tf.reshape(q_i_flat, (-1, n_anchors, emb_dim))
 
-        # Concatenate anchor pairs: (p_i, q_i) → (batch, n_anchors, 2*emb_dim)
+        p_i = tf.reshape(p_i_flat, (-1, n_anchors, raw_dim))   # (batch, n_anchors, raw_dim)
+        q_i = tf.reshape(q_i_flat, (-1, n_anchors, emb_dim))   # (batch, n_anchors, emb_dim)
+
+        # Concatenate anchor pairs: (p_i, q_i) → (batch, n_anchors, raw_dim + emb_dim)
         anchor_pairs = tf.concat([p_i, q_i], axis=-1)
 
         return p_x, anchor_pairs, cloud, q_x_target

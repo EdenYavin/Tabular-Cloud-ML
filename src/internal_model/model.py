@@ -55,6 +55,13 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # We use a custom model class that overrides train_step
         self.model = self.build_gan_model()
 
+        # --- FIX: COMPILE THE MODEL IMMEDIATELY ---
+        # We must pass an optimizer INSTANCE (not string) for the custom train_step
+        self.model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+            loss='categorical_crossentropy'
+        )
+
     def build_gan_model(self):
         # 1. Encoder (Deep Sets): {q_i} -> c
         encoder = Sequential([
@@ -63,20 +70,18 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
                 Dense(512), BatchNormalization(), tf.keras.layers.LeakyReLU(alpha=0.1),
                 Dense(256), BatchNormalization(), tf.keras.layers.LeakyReLU(alpha=0.1)
             ])),
-            GlobalAveragePooling1D(),  # Average Pooling is generally more stable than Sum
+            GlobalAveragePooling1D(),
             Dense(256), BatchNormalization(), tf.keras.layers.LeakyReLU(alpha=0.1),
             Dense(128), BatchNormalization(), tf.keras.layers.LeakyReLU(alpha=0.1)  # Context c (Size 128)
         ], name="encoder_deepsets")
 
         # 2. Decoder (T): Concatenate(q_i, c) -> p_i
-        # We build this as a functional model to handle the tiling/concatenation
-        decoder_input_anchor = Input(shape=(self.embedding_dim,))  # Single anchor
-        decoder_input_context = Input(shape=(128,))  # Context
+        # Functional API for concatenation
+        decoder_input_anchor = Input(shape=(self.embedding_dim,))
+        decoder_input_context = Input(shape=(128,))
 
-        # Concatenate
         dec_concat = concatenate([decoder_input_anchor, decoder_input_context])
 
-        # Decoder Body
         x = Dense(512)(dec_concat)
         x = BatchNormalization()(x)
         x = tf.keras.layers.LeakyReLU(alpha=0.1)(x)
@@ -90,9 +95,6 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         decoder = Model(inputs=[decoder_input_anchor, decoder_input_context], outputs=dec_output, name="decoder_T")
 
         # 3. Classifier (SIN): Concatenate(q_x, c, cloud) -> Label
-        # Note: We are NOT decrypting the sample explicitly here, just feeding the context.
-        # This matches the "Old/Regular" architecture.
-
         input_qx = Input(shape=(self.embedding_dim,))
         input_c = Input(shape=(128,))
         input_cloud = Input(shape=(self.cloud_vector_size,)) if self.cloud_vector_size > 0 else None
@@ -116,7 +118,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
 
         classifier = Model(inputs=inputs_classifier, outputs=class_output, name="classifier_head")
 
-        # 4. Wrap everything in the GAN Model
+        # 4. Wrap in GAN Model
         return DeepSetsGANModel(
             encoder=encoder,
             decoder=decoder,
@@ -166,7 +168,6 @@ class DeepSetsGANModel(Model):
         c = self.encoder(q_anchors, training=training)
 
         # 3. Classify
-        # Reshape q_x to (B, Dim)
         q_x_vec = tf.reshape(q_x, (-1, self.dims['emb_dim']))
 
         classifier_inputs = [q_x_vec, c]
@@ -211,14 +212,12 @@ class DeepSetsGANModel(Model):
         # ============================================================
         with tf.GradientTape() as tape_recon:
             # Generate Context
-            c = self.encoder(q_anchors, training=True)  # (B, 128)
+            c = self.encoder(q_anchors, training=True)
 
-            # Prepare Decoder Inputs (Repeat Context for each Anchor)
-            # q_anchors: (B, N, Emb)
-            # c: (B, Context) -> (B, N, Context)
+            # Prepare Decoder Inputs
             c_repeated = tf.repeat(tf.expand_dims(c, 1), self.dims['n_anchors'], axis=1)
 
-            # Flatten for functional model call: (B*N, Emb) and (B*N, Context)
+            # Flatten for functional model
             q_anchors_flat = tf.reshape(q_anchors, (-1, self.dims['emb_dim']))
             c_repeated_flat = tf.reshape(c_repeated, (-1, self.dims['context_dim']))
 

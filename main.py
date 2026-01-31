@@ -5,7 +5,6 @@ import src.utils.constansts as consts
 from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandler, ModelTrainingExperimentHandler
 from src.experiments.model_training_loop import ModelTrainingLoopExperimentHandler
 from src.experiments.k_fold_handler import KModelTrainingExperimentHandler
-from src.experiments.key_encoder_training_handler import KeyEncoderTrainingHandler
 from src.utils.config import config, update_config_from_args
 from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS, REPORT_PATH, OUTPUT_DIR_PATH
 

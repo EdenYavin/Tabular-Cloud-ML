@@ -1,5 +1,0 @@
-date,dataset_name,using_raw_features,iim_name,cloud_models,triangulation_method,triangulation_samples,k_fold_0_acc,k_fold_1_acc,k_fold_2_acc,dataset_size,k_fold_0_auc,k_fold_1_auc,k_fold_2_auc,triangulation_embedding,triangulation_mode,using_calib
-29/01/2026 22:25,heloc,False,deepset,[],gfps,5,0.5324,0.5314,0.5334,1.0,0.5327,0.5332,0.5362,dino,diff,False
-29/01/2026 22:36,heloc,False,deepset,['xception'],gfps,5,0.5324,0.5364,0.5354,1.0,0.5366,0.5426,0.5421,dino,diff,False
-29/01/2026 23:53,heloc,True,deepset,[],gfps,5,0.5344,0.5334,0.5334,1.0,0.5325,0.5469,0.5397,dino,diff,False
-29/01/2026 23:57,heloc,True,deepset,['xception'],gfps,5,0.5243,0.5243,0.5273,1.0,0.526,0.5262,0.5284,dino,diff,False

@@ -55,12 +55,12 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # We use a custom model class that overrides train_step
         self.model = self.build_gan_model()
 
-        # --- FIX: Compile with Loss OBJECT and Metrics ---
+        # --- FIX: Use TWO Optimizers ---
+        # Pass separate optimizer instances for the two training phases
         self.model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-            # Pass the object, not the string, so it is callable in train_step
+            optimizer_recon=tf.keras.optimizers.Adam(learning_rate=0.001),
+            optimizer_class=tf.keras.optimizers.Adam(learning_rate=0.001),
             loss=tf.keras.losses.CategoricalCrossentropy(),
-            # Pass metrics so evaluate() works
             metrics=['accuracy', AUC(multi_label=False, name='auc')]
         )
 
@@ -156,11 +156,14 @@ class DeepSetsGANModel(Model):
         self.acc_tracker = tf.keras.metrics.CategoricalAccuracy(name="accuracy")
         self.auc_tracker = AUC(multi_label=False, name="auc")
 
-    def compile(self, optimizer, loss, **kwargs):
-        # Pass to super so standard evaluate() works
-        super().compile(optimizer=optimizer, loss=loss, **kwargs)
-        self.optimizer = optimizer
-        self.class_loss_fn = loss  # Now holds the Object passed from init
+    def compile(self, optimizer_recon, optimizer_class, loss, **kwargs):
+        # Pass to super so standard evaluate() works.
+        # We pass None for the standard optimizer to avoid confusion/unused warnings.
+        super().compile(loss=loss, **kwargs)
+
+        self.optimizer_recon = optimizer_recon
+        self.optimizer_class = optimizer_class
+        self.class_loss_fn = loss
         self.lambda_recon = 50.0
 
     def call(self, inputs, training=False):
@@ -171,7 +174,6 @@ class DeepSetsGANModel(Model):
         c = self.encoder(q_anchors, training=training)
 
         # 3. Classify
-        # Reshape q_x to (B, Dim)
         q_x_vec = tf.reshape(q_x, (-1, self.dims['emb_dim']))
 
         classifier_inputs = [q_x_vec, c]
@@ -212,16 +214,14 @@ class DeepSetsGANModel(Model):
         q_x, q_anchors, cloud, p_anchors_target = self._slice_inputs(x)
 
         # ============================================================
-        # PHASE 1: Train Context (Encoder + Decoder) - FREEZE CLASSIFIER
+        # PHASE 1: Train Context (Encoder + Decoder)
         # ============================================================
         with tf.GradientTape() as tape_recon:
             # Generate Context
             c = self.encoder(q_anchors, training=True)
 
-            # Prepare Decoder Inputs (Repeat Context for each Anchor)
+            # Prepare Decoder Inputs
             c_repeated = tf.repeat(tf.expand_dims(c, 1), self.dims['n_anchors'], axis=1)
-
-            # Flatten for functional model call
             q_anchors_flat = tf.reshape(q_anchors, (-1, self.dims['emb_dim']))
             c_repeated_flat = tf.reshape(c_repeated, (-1, self.dims['context_dim']))
 
@@ -235,10 +235,10 @@ class DeepSetsGANModel(Model):
 
         trainable_vars_recon = self.encoder.trainable_variables + self.decoder.trainable_variables
         grads_recon = tape_recon.gradient(total_recon_loss, trainable_vars_recon)
-        self.optimizer.apply_gradients(zip(grads_recon, trainable_vars_recon))
+        self.optimizer_recon.apply_gradients(zip(grads_recon, trainable_vars_recon))
 
         # ============================================================
-        # PHASE 2: Train Classifier - FREEZE CONTEXT
+        # PHASE 2: Train Classifier
         # ============================================================
         with tf.GradientTape() as tape_class:
             # Get Fixed Context
@@ -258,7 +258,7 @@ class DeepSetsGANModel(Model):
 
         trainable_vars_class = self.classifier.trainable_variables
         grads_class = tape_class.gradient(class_loss, trainable_vars_class)
-        self.optimizer.apply_gradients(zip(grads_class, trainable_vars_class))
+        self.optimizer_class.apply_gradients(zip(grads_class, trainable_vars_class))
 
         # Update Metrics
         self.loss_tracker.update_state(class_loss + total_recon_loss)
@@ -278,6 +278,7 @@ class DeepSetsGANModel(Model):
     @property
     def metrics(self):
         return [self.loss_tracker, self.recon_loss_tracker, self.class_loss_tracker, self.acc_tracker, self.auc_tracker]
+
 
 
 class oldDeepSetsReconstructionIIM(NeuralNetworkInternalModel):

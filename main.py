@@ -5,6 +5,7 @@ import src.utils.constansts as consts
 from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandler, ModelTrainingExperimentHandler
 from src.experiments.model_training_loop import ModelTrainingLoopExperimentHandler
 from src.experiments.k_fold_handler import KModelTrainingExperimentHandler
+from src.experiments.t_network_training_handler import TNetworkTrainingHandler
 from src.utils.config import config, update_config_from_args
 from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS, REPORT_PATH, OUTPUT_DIR_PATH
 
@@ -317,8 +318,8 @@ def main():
     elif config.experiment_config.to_run == consts.EXPERIMENTS.TRAINING_LOOP:
         experiment_handler = ModelTrainingLoopExperimentHandler
 
-    elif config.experiment_config.to_run == consts.EXPERIMENTS.KEY_ENCODER_TRAINING:
-        experiment_handler = KeyEncoderTrainingHandler
+    elif config.experiment_config.to_run == consts.EXPERIMENTS.T_NETWORK_TRAINING:
+        experiment_handler = TNetworkTrainingHandler
 
     else:
         experiment_handler = ModelTrainingExperimentHandler
@@ -328,17 +329,6 @@ def main():
 
     # Instantiate handler with appropriate arguments
     handler_kwargs = {"report_path": report_path}
-    if config.experiment_config.to_run == consts.EXPERIMENTS.KEY_ENCODER_TRAINING:
-        handler_kwargs.update({
-            "num_keys": args.num_keys,
-            "num_calibration_pairs": args.num_calibration_pairs,
-            "embedding_dim": args.embedding_dim,
-            "output_embedding_dim": args.output_embedding_dim,
-            "num_epochs": args.num_epochs,
-            "batch_size": args.batch_size,
-            "learning_rate": args.learning_rate,
-            "output_dir": args.output_dir,
-        })
 
     with experiment_handler(**handler_kwargs) as experiment:
         experiment.run_experiment()

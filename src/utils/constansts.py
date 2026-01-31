@@ -66,6 +66,7 @@ class EXPERIMENTS(str, enum.Enum):
     INCREMENT_EVALUATION = "increment_eval"
     KEY_ENCODER_TRAINING = "key_encoder_training"
     DEEPSET_DATASET = "deepset_dataset"
+    T_NETWORK_TRAINING = "t_network_training"
 
 WINDOWS_OS_STR = "nt"
 IS_WINDOWS_OS = (os.name == WINDOWS_OS_STR)

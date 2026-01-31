@@ -157,10 +157,7 @@ class DeepSetsGANModel(Model):
         self.auc_tracker = AUC(multi_label=False, name="auc")
 
     def compile(self, optimizer_recon, optimizer_class, loss, **kwargs):
-        # Pass to super so standard evaluate() works.
-        # We pass None for the standard optimizer to avoid confusion/unused warnings.
         super().compile(loss=loss, **kwargs)
-
         self.optimizer_recon = optimizer_recon
         self.optimizer_class = optimizer_class
         self.class_loss_fn = loss
@@ -213,23 +210,15 @@ class DeepSetsGANModel(Model):
         # 1. Slice Inputs
         q_x, q_anchors, cloud, p_anchors_target = self._slice_inputs(x)
 
-        # ============================================================
-        # PHASE 1: Train Context (Encoder + Decoder)
-        # ============================================================
+        # --- PHASE 1: Reconstruction ---
         with tf.GradientTape() as tape_recon:
-            # Generate Context
             c = self.encoder(q_anchors, training=True)
-
-            # Prepare Decoder Inputs
             c_repeated = tf.repeat(tf.expand_dims(c, 1), self.dims['n_anchors'], axis=1)
             q_anchors_flat = tf.reshape(q_anchors, (-1, self.dims['emb_dim']))
             c_repeated_flat = tf.reshape(c_repeated, (-1, self.dims['context_dim']))
-
-            # Reconstruct
             p_anchors_pred_flat = self.decoder([q_anchors_flat, c_repeated_flat], training=True)
             p_anchors_pred = tf.reshape(p_anchors_pred_flat, (-1, self.dims['n_anchors'], self.dims['target_dim']))
 
-            # Loss
             recon_loss = tf.reduce_mean(tf.square(p_anchors_target - p_anchors_pred))
             total_recon_loss = recon_loss * self.lambda_recon
 
@@ -237,23 +226,15 @@ class DeepSetsGANModel(Model):
         grads_recon = tape_recon.gradient(total_recon_loss, trainable_vars_recon)
         self.optimizer_recon.apply_gradients(zip(grads_recon, trainable_vars_recon))
 
-        # ============================================================
-        # PHASE 2: Train Classifier
-        # ============================================================
+        # --- PHASE 2: Classification ---
         with tf.GradientTape() as tape_class:
-            # Get Fixed Context
             c_fixed = self.encoder(q_anchors, training=False)
-
-            # Classifier Inputs
             q_x_vec = tf.reshape(q_x, (-1, self.dims['emb_dim']))
             classifier_inputs = [q_x_vec, c_fixed]
             if cloud is not None:
                 classifier_inputs.append(cloud)
 
-            # Predict
             y_pred = self.classifier(classifier_inputs, training=True)
-
-            # Loss
             class_loss = self.class_loss_fn(y, y_pred, sample_weight=sample_weight)
 
         trainable_vars_class = self.classifier.trainable_variables
@@ -275,10 +256,64 @@ class DeepSetsGANModel(Model):
             "auc": self.auc_tracker.result(),
         }
 
+    # --- ADD THIS METHOD ---
+    def test_step(self, data):
+        """
+        Custom validation logic.
+        Calculates both reconstruction and classification losses without updating weights.
+        """
+        if len(data) == 3:
+            x, y, sample_weight = data
+        else:
+            x, y = data
+            sample_weight = None
+
+        # 1. Slice Inputs
+        q_x, q_anchors, cloud, p_anchors_target = self._slice_inputs(x)
+
+        # 2. Forward Pass (Reconstruction)
+        c = self.encoder(q_anchors, training=False)
+
+        c_repeated = tf.repeat(tf.expand_dims(c, 1), self.dims['n_anchors'], axis=1)
+        q_anchors_flat = tf.reshape(q_anchors, (-1, self.dims['emb_dim']))
+        c_repeated_flat = tf.reshape(c_repeated, (-1, self.dims['context_dim']))
+
+        p_anchors_pred_flat = self.decoder([q_anchors_flat, c_repeated_flat], training=False)
+        p_anchors_pred = tf.reshape(p_anchors_pred_flat, (-1, self.dims['n_anchors'], self.dims['target_dim']))
+
+        # Calculate Recon Loss
+        recon_loss = tf.reduce_mean(tf.square(p_anchors_target - p_anchors_pred))
+        total_recon_loss = recon_loss * self.lambda_recon
+
+        # 3. Forward Pass (Classification)
+        q_x_vec = tf.reshape(q_x, (-1, self.dims['emb_dim']))
+        classifier_inputs = [q_x_vec, c]
+        if cloud is not None:
+            classifier_inputs.append(cloud)
+
+        y_pred = self.classifier(classifier_inputs, training=False)
+
+        # Calculate Class Loss
+        class_loss = self.class_loss_fn(y, y_pred, sample_weight=sample_weight)
+
+        # 4. Update Metrics
+        self.loss_tracker.update_state(class_loss + total_recon_loss)
+        self.recon_loss_tracker.update_state(recon_loss)
+        self.class_loss_tracker.update_state(class_loss)
+        self.acc_tracker.update_state(y, y_pred)
+        self.auc_tracker.update_state(y, y_pred)
+
+        return {
+            "loss": self.loss_tracker.result(),
+            "recon_loss": self.recon_loss_tracker.result(),
+            "class_loss": self.class_loss_tracker.result(),
+            "accuracy": self.acc_tracker.result(),
+            "auc": self.auc_tracker.result(),
+        }
+
     @property
     def metrics(self):
         return [self.loss_tracker, self.recon_loss_tracker, self.class_loss_tracker, self.acc_tracker, self.auc_tracker]
-
 
 
 class oldDeepSetsReconstructionIIM(NeuralNetworkInternalModel):

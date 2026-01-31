@@ -192,6 +192,7 @@ class DeepSetsGANModel(Model):
         # Loss trackers
         self.loss_tracker = tf.keras.metrics.Mean(name="loss")
         self.recon_loss_tracker = tf.keras.metrics.Mean(name="recon_loss")
+        self.t_loss_tracker = tf.keras.metrics.Mean(name="t_loss")  # Encoder (T) loss
         self.class_loss_tracker = tf.keras.metrics.Mean(name="class_loss")
         self.acc_tracker = tf.keras.metrics.CategoricalAccuracy(name="accuracy")
         self.auc_tracker = AUC(multi_label=False, name="auc")
@@ -301,6 +302,7 @@ class DeepSetsGANModel(Model):
         # Update Metrics
         self.loss_tracker.update_state(class_loss + total_recon_loss)
         self.recon_loss_tracker.update_state(recon_loss)
+        self.t_loss_tracker.update_state(total_recon_loss)  # T (encoder) loss with lambda scaling
         self.class_loss_tracker.update_state(class_loss)
         self.acc_tracker.update_state(y, y_pred)
         self.auc_tracker.update_state(y, y_pred)
@@ -308,6 +310,7 @@ class DeepSetsGANModel(Model):
         return {
             "loss": self.loss_tracker.result(),
             "recon_loss": self.recon_loss_tracker.result(),
+            "t_loss": self.t_loss_tracker.result(),
             "class_loss": self.class_loss_tracker.result(),
             "accuracy": self.acc_tracker.result(),
             "auc": self.auc_tracker.result(),
@@ -356,6 +359,7 @@ class DeepSetsGANModel(Model):
         # 4. Update Metrics
         self.loss_tracker.update_state(class_loss + total_recon_loss)
         self.recon_loss_tracker.update_state(recon_loss)
+        self.t_loss_tracker.update_state(total_recon_loss)
         self.class_loss_tracker.update_state(class_loss)
         self.acc_tracker.update_state(y, y_pred)
         self.auc_tracker.update_state(y, y_pred)
@@ -363,6 +367,7 @@ class DeepSetsGANModel(Model):
         return {
             "loss": self.loss_tracker.result(),
             "recon_loss": self.recon_loss_tracker.result(),
+            "t_loss": self.t_loss_tracker.result(),
             "class_loss": self.class_loss_tracker.result(),
             "accuracy": self.acc_tracker.result(),
             "auc": self.auc_tracker.result(),
@@ -370,7 +375,7 @@ class DeepSetsGANModel(Model):
 
     @property
     def metrics(self):
-        return [self.loss_tracker, self.recon_loss_tracker, self.class_loss_tracker, self.acc_tracker, self.auc_tracker]
+        return [self.loss_tracker, self.recon_loss_tracker, self.t_loss_tracker, self.class_loss_tracker, self.acc_tracker, self.auc_tracker]
 
 
 class oldDeepSetsReconstructionIIM(NeuralNetworkInternalModel):

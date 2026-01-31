@@ -38,13 +38,13 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
 
     NEW Architecture (DeepSets on Anchor Pairs):
     - Encoder (T) input: Anchor pairs (p_i, q_i) for each anchor, plus p_x
-      - p_i = RAW tabular data (before encryption)
+      - p_i = Sparse autoencoder embeddings (before encryption)
       - q_i = Encrypted → DINO/CLIP embedding
     - Decoder target: Reconstruct q_x (encrypted X embedding)
 
     Input Vector: [ p_x | p_i | q_i | cloud | q_x_target ]
-    - p_x: raw_dim (raw tabular sample)
-    - p_i: n_anchors * raw_dim (raw tabular anchors)
+    - p_x: 64 (sparse autoencoder sample embedding)
+    - p_i: n_anchors * 64 (sparse autoencoder anchor embeddings)
     - q_i: n_anchors * emb_dim (encrypted anchor embeddings)
     - q_x_target: emb_dim (encrypted sample embedding - reconstruction target)
     """
@@ -132,15 +132,15 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
 
     def build_gan_model(self):
         # === 1. NEW Encoder (Deep Sets on Anchor Pairs): (p_i, q_i), p_x -> context ===
-        # Input: anchor pairs where p_i is RAW (raw_dim) and q_i is EMBEDDED (emb_dim)
-        # Concatenated → shape (batch, n_anchors, raw_dim + emb_dim)
-        # Plus p_x (raw tabular sample) for combining with pooled context
+        # Input: anchor pairs where p_i is sparse AE embedding (raw_dim=64) and q_i is ENCRYPTED→EMBEDDED (emb_dim)
+        # Concatenated → shape (batch, n_anchors, 64 + emb_dim)
+        # Plus p_x (sparse AE sample embedding) for combining with pooled context
 
-        anchor_pair_dim = self.raw_dim + self.embedding_dim  # p_i (raw) + q_i (emb) per anchor
+        anchor_pair_dim = self.raw_dim + self.embedding_dim  # p_i (sparse AE) + q_i (encrypted→emb) per anchor
 
         # φ network: processes each anchor pair
         encoder_input_pairs = Input(shape=(self.n_anchors, anchor_pair_dim), name="anchor_pairs")
-        encoder_input_px = Input(shape=(self.raw_dim,), name="p_x")  # p_x is raw tabular
+        encoder_input_px = Input(shape=(self.raw_dim,), name="p_x")  # p_x is sparse AE embedding
 
         # Per-anchor transformation (φ)
         x = TimeDistributed(Dense(512))(encoder_input_pairs)
@@ -154,7 +154,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # Pool across anchors (permutation invariant)
         c_anchors = GlobalAveragePooling1D()(x)  # Shape: (batch, 128)
 
-        # Combine with p_x (raw tabular sample)
+        # Combine with p_x (sparse AE sample embedding)
         combined = concatenate([c_anchors, encoder_input_px])
         context = Dense(256)(combined)
         context = BatchNormalization()(context)
@@ -292,11 +292,11 @@ class DeepSetsGANModel(Model):
         """
         cursor = 0
 
-        # p_x: Raw tabular sample (raw_dim)
+        # p_x: Sparse autoencoder sample embedding (64)
         p_x = inputs[:, cursor:cursor + self.dims['p_x']]
         cursor += self.dims['p_x']
 
-        # p_i: Raw tabular anchors (n_anchors * raw_dim)
+        # p_i: Sparse autoencoder anchor embeddings (n_anchors * 64)
         p_i_flat = inputs[:, cursor:cursor + self.dims['p_i']]
         cursor += self.dims['p_i']
 
@@ -1386,8 +1386,8 @@ class TNetworkOnlyIIM(tf.keras.Model):
     and properly reconstruct encrypted embeddings.
 
     Input vector structure: [p_x | p_i | q_i | cloud | q_x_target]
-    - p_x: Raw tabular sample (raw_dim,)
-    - p_i: Raw tabular anchors (n_anchors * raw_dim,)
+    - p_x: Sparse autoencoder sample embedding (64,)
+    - p_i: Sparse autoencoder anchor embeddings (n_anchors * 64,)
     - q_i: Encrypted anchor embeddings (n_anchors * emb_dim,)
     - cloud: Cloud model predictions (optional)
     - q_x_target: Target encrypted embedding to reconstruct (emb_dim,)

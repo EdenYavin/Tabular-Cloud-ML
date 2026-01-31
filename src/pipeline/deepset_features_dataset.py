@@ -18,8 +18,8 @@ class DeepSetFeatureEngineering(FeatureEngineeringPipeline):
     [ p_x | p_i | q_i | cloud | q_x_target ]
 
     Where:
-    - p_x: RAW tabular sample data (before encryption) - shape: (raw_dim,)
-    - p_i: RAW tabular anchor data (before encryption) - shape: (n_anchors * raw_dim,)
+    - p_x: Sparse autoencoder sample embedding (before encryption) - shape: (64,)
+    - p_i: Sparse autoencoder anchor embeddings (before encryption) - shape: (n_anchors * 64,)
     - q_i: Encrypted anchors → DINO/CLIP embedding - shape: (n_anchors * emb_dim,)
     - cloud: Cloud model predictions (optional) - shape: (1000 * num_cloud_models,)
     - q_x_target: Encrypted sample → DINO/CLIP embedding (reconstruction target) - shape: (emb_dim,)
@@ -41,7 +41,7 @@ class DeepSetFeatureEngineering(FeatureEngineeringPipeline):
 
     def _get_features(self, X, embeddings, y, is_test) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
-        # 1. Prepare Triangulation Samples (Anchors) - raw tabular vectors
+        # 1. Prepare Triangulation Samples (Anchors) - sparse AE embeddings
         triangulation_samples = self._get_triangulation_samples(
             embeddings, y,
             how_to_choose=config.experiment_config.triangulation_choosing,
@@ -49,10 +49,10 @@ class DeepSetFeatureEngineering(FeatureEngineeringPipeline):
         )
 
         # ================================================================
-        # p_i = RAW tabular anchor data (BEFORE encryption, no embedding)
-        # This is the plaintext representation
+        # p_i = Sparse autoencoder anchor embeddings (BEFORE encryption)
+        # This is the plaintext representation (64-dim embeddings per anchor)
         # ================================================================
-        flat_plaintext_anchors = triangulation_samples.flatten()  # Shape: (n_anchors * raw_dim,)
+        flat_plaintext_anchors = triangulation_samples.flatten()  # Shape: (n_anchors * 64,)
 
         predictions_for_baseline = np.array(list())
         observations, new_y = [], []
@@ -67,9 +67,9 @@ class DeepSetFeatureEngineering(FeatureEngineeringPipeline):
                     pbar.update(1)
 
                     # ================================================================
-                    # p_x = RAW tabular sample data (BEFORE encryption, no embedding)
+                    # p_x = Sparse autoencoder sample embedding (BEFORE encryption)
                     # ================================================================
-                    flat_plaintext_sample = x_emb.flatten()  # Shape: (raw_dim,)
+                    flat_plaintext_sample = x_emb.flatten()  # Shape: (64,)
 
                     # --- ENCRYPTION WITH CURRENT KEY ---
                     # 1. Encrypt Sample with current key
@@ -94,11 +94,11 @@ class DeepSetFeatureEngineering(FeatureEngineeringPipeline):
 
                     # --- CONSTRUCT OBSERVATION ---
                     # Structure: [ p_x | p_i | q_i | cloud | q_x_target ]
-                    # p_x, p_i = RAW tabular data (before encryption)
+                    # p_x, p_i = Sparse autoencoder embeddings (before encryption)
                     # q_i, q_x = encrypted → embedded vectors
                     observation_parts = [
-                        flat_plaintext_sample,           # p_x: raw sample (raw_dim)
-                        flat_plaintext_anchors,          # p_i: raw anchors (n_anchors * raw_dim)
+                        flat_plaintext_sample,           # p_x: sparse AE sample embedding (64)
+                        flat_plaintext_anchors,          # p_i: sparse AE anchor embeddings (n_anchors * 64)
                         flat_encrypted_anchor_emb,       # q_i: encrypted anchor embeddings (n_anchors * emb_dim)
                     ]
 

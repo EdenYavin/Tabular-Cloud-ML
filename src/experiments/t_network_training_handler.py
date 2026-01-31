@@ -8,6 +8,8 @@ encrypted embeddings without the classification head.
 
 from datetime import datetime
 import os
+import pickle
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -45,6 +47,28 @@ class TNetworkTrainingHandler(ExperimentHandler):
         super().__init__(experiment_name, report_path)
         self.history = None
         self.model = None
+
+    def _get_cache_path(self, dataset_name: str) -> Path:
+        """
+        Generate a unique cache path for the T network dataset.
+
+        The cache key includes:
+        - Dataset name
+        - Number of triangulation samples (anchors)
+        - Embedding model type
+        - Rotating key flag
+        - Cloud model names (if any)
+        """
+        n_anchors = config.experiment_config.n_triangulation_samples
+        embedding = config.encoder_config.embedding
+        rotate_key = "rotate" if config.encoder_config.rotating_key else "no_rotate"
+        cloud_models = "_".join(config.cloud_config.names) if config.cloud_config.names else "no_cloud"
+
+        cache_dir = Path(OUTPUT_DIR_PATH) / "t_network_cache" / dataset_name
+        cache_dir.mkdir(parents=True, exist_ok=True)
+
+        cache_filename = f"t_net_{n_anchors}anchors_{embedding}_{rotate_key}_{cloud_models}.pkl"
+        return cache_dir / cache_filename
 
     def run_experiment(self):
         """Run the T network training experiment."""
@@ -91,6 +115,20 @@ class TNetworkTrainingHandler(ExperimentHandler):
             Tuple of (train_data, val_data, test_data, metadata)
             Each data tuple is (X, y) where y is classification labels (ignored during training)
         """
+        # Check for cached dataset
+        cache_path = self._get_cache_path(dataset_name)
+        if cache_path.exists():
+            logger.info(f"Loading cached dataset from {cache_path}")
+            try:
+                with open(cache_path, 'rb') as f:
+                    cached_data = pickle.load(f)
+                logger.info("Successfully loaded cached dataset")
+                return cached_data
+            except Exception as e:
+                logger.warning(f"Failed to load cache: {e}. Recreating dataset...")
+
+        logger.info("Creating new dataset (cache not found)")
+
         # Load raw dataset
         raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
         logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}")
@@ -98,12 +136,14 @@ class TNetworkTrainingHandler(ExperimentHandler):
         # Get train/test split
         X_train, X_test, _, y_train, y_test, _ = RawSplitDBFactory.get_db(raw_dataset).get_split()
 
-        # Get embedding model
+        # Get sparse autoencoder embedding model (configured default)
+        # This produces 64-dim embeddings from raw tabular data
         embedding_model = EmbeddingsFactory().get_model(
             X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name
         )
 
-        # Embed raw data
+        # Embed raw data using SparseAE to get plaintext features (p_x, p_i)
+        # These 64-dim embeddings are used as "plaintext" before encryption
         from src.utils.db import EmbeddingDBFactory
         db = EmbeddingDBFactory.get_db(dataset_name, embedding_model)
         X_train_emb = db.get_embedding(X_train, is_test=False)
@@ -167,7 +207,17 @@ class TNetworkTrainingHandler(ExperimentHandler):
         metadata["train_samples"] = len(train_X)
         metadata["val_samples"] = len(val_X)
 
-        return (train_X, train_y), (val_X, val_y), (test_X, test_y), metadata
+        # Save to cache for future runs
+        dataset_tuple = ((train_X, train_y), (val_X, val_y), (test_X, test_y), metadata)
+        try:
+            logger.info(f"Saving dataset to cache: {cache_path}")
+            with open(cache_path, 'wb') as f:
+                pickle.dump(dataset_tuple, f)
+            logger.info("Dataset successfully cached")
+        except Exception as e:
+            logger.warning(f"Failed to save cache: {e}")
+
+        return dataset_tuple
 
     def _build_model(self, metadata: dict) -> TNetworkOnlyIIM:
         """Build the T Network model."""

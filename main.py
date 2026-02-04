@@ -255,6 +255,21 @@ def main():
         help="Use trained key encoder model for key fingerprinting during feature extraction",
     )
 
+    parser.add_argument(
+        "--pretrained-t-network",
+        type=str,
+        default=None,
+        dest="experiment_pretrained_t_network_path",
+        help="Path to pretrained T network model (.keras file)"
+    )
+
+    parser.add_argument(
+        "--freeze-t-network",
+        action="store_true",
+        dest="experiment_freeze_t_network",
+        help="Freeze T network and train only classifier"
+    )
+
     args = parser.parse_args()
 
     # Check if the list contains a single string with spaces and split it if necessary

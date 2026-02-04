@@ -67,7 +67,9 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
                     internal_model = InternalInferenceModelFactory().get_model(
                         num_classes=n_classes,
                         input_shape=X_train.shape[1],
-                        type=model_name
+                        type=model_name,
+                        pretrained_t_network_path=config.experiment_config.pretrained_t_network_path,
+                        freeze_t_network=config.experiment_config.freeze_t_network
                     )
                     logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} ####"
                                  f" Dataset Shape: Train - {X_train.shape}, Test: {X_test.shape}")

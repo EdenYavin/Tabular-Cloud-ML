@@ -78,6 +78,14 @@ class Config(BaseModel):
             description="Flag to indicate if the deepset should be used for the IIM",
             default=False
         )
+        pretrained_t_network_path: str = Field(
+            description="Path to pretrained T network model (.keras file)",
+            default=None
+        )
+        freeze_t_network: bool = Field(
+            description="Flag to freeze T network during training",
+            default=False
+        )
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,

@@ -26,6 +26,7 @@ from src.utils.db import RawSplitDBFactory
 from src.embeddings import EmbeddingsFactory
 from src.encryptor import EncryptorFactory
 from src.cloud import CLOUD_MODELS, DEFAULT_CLOUD_OUTPUT_SHAPE
+from src.utils.db import EmbeddingDBFactory
 
 
 class TNetworkTrainingHandler(ExperimentHandler):
@@ -95,12 +96,17 @@ class TNetworkTrainingHandler(ExperimentHandler):
             logger.info("Step 4: Evaluating on test set...")
             test_metrics = self._evaluate_model(test_data)
 
-            # Step 5: Log results
-            logger.info("Step 5: Logging results...")
+            # Step 5: Save trained model
+            logger.info("Step 5: Saving trained T Network model...")
+            model_save_path = self._save_model(dataset_name, metadata)
+
+            # Step 6: Log results
+            logger.info("Step 6: Logging results...")
             self._log_experiment_results(metadata, test_metrics)
 
             logger.info("=" * 60)
             logger.info("T Network Training Experiment Complete")
+            logger.info(f"Model saved to: {model_save_path}")
             logger.info(f"Final Test MSE: {test_metrics['test_mse']:.6f}")
             logger.info(f"Final Cosine Similarity: {test_metrics['test_cosine_similarity']:.6f}")
             logger.info("=" * 60)
@@ -144,7 +150,6 @@ class TNetworkTrainingHandler(ExperimentHandler):
 
         # Embed raw data using SparseAE to get plaintext features (p_x, p_i)
         # These 64-dim embeddings are used as "plaintext" before encryption
-        from src.utils.db import EmbeddingDBFactory
         db = EmbeddingDBFactory.get_db(dataset_name, embedding_model)
         X_train_emb = db.get_embedding(X_train, is_test=False)
         X_test_emb = db.get_embedding(X_test, is_test=True)
@@ -336,6 +341,33 @@ class TNetworkTrainingHandler(ExperimentHandler):
         logger.info(f"Test metrics: {metrics}")
 
         return metrics
+
+    def _save_model(self, dataset_name: str, metadata: dict) -> Path:
+        """Save the trained T Network model with metadata."""
+        # Create directory
+        t_network_dir = Path(OUTPUT_DIR_PATH) / "t_network_models"
+        t_network_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate filename from config
+        n_anchors = metadata["n_anchors"]
+        embedding = config.encoder_config.embedding
+        rotate_key = "rotate" if config.encoder_config.rotating_key else "no_rotate"
+
+        model_filename = f"t_network_{dataset_name}_{n_anchors}anchors_{embedding}_{rotate_key}.keras"
+        model_path = t_network_dir / model_filename
+
+        # Save model
+        self.model.save(model_path)
+        logger.info(f"T Network saved to {model_path}")
+
+        # Save metadata as JSON
+        metadata_path = model_path.with_suffix('.json')
+        import json
+        with open(metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
+        logger.info(f"Metadata saved to {metadata_path}")
+
+        return model_path
 
     def _log_experiment_results(self, metadata: dict, test_metrics: dict):
         """Log experiment results to the report."""

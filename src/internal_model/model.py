@@ -49,11 +49,13 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
     - q_x_target: emb_dim (encrypted sample embedding - reconstruction target)
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, pretrained_t_network_path=None, freeze_t_network=False, **kwargs):
         super().__init__(**kwargs)
         self.name = "deep_sets_gan_concat_iim"
         self.num_classes = kwargs.get("num_classes")
         self.input_shape_total = kwargs.get("input_shape")
+        self.pretrained_t_network_path = pretrained_t_network_path
+        self.freeze_t_network = freeze_t_network
 
         # --- Dimensions ---
         self.embedding_dim = 768 if "dino" in config.encoder_config.embedding else 512
@@ -130,17 +132,13 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
                 callbacks=[lr_scheduler, epoch_tracker]
             )
 
-    def build_gan_model(self):
-        # === 1. NEW Encoder (Deep Sets on Anchor Pairs): (p_i, q_i), p_x -> context ===
-        # Input: anchor pairs where p_i is sparse AE embedding (raw_dim=64) and q_i is ENCRYPTED→EMBEDDED (emb_dim)
-        # Concatenated → shape (batch, n_anchors, 64 + emb_dim)
-        # Plus p_x (sparse AE sample embedding) for combining with pooled context
-
-        anchor_pair_dim = self.raw_dim + self.embedding_dim  # p_i (sparse AE) + q_i (encrypted→emb) per anchor
+    def _build_encoder(self):
+        """Build the Deep Sets encoder architecture."""
+        anchor_pair_dim = self.raw_dim + self.embedding_dim
 
         # φ network: processes each anchor pair
         encoder_input_pairs = Input(shape=(self.n_anchors, anchor_pair_dim), name="anchor_pairs")
-        encoder_input_px = Input(shape=(self.raw_dim,), name="p_x")  # p_x is sparse AE embedding
+        encoder_input_px = Input(shape=(self.raw_dim,), name="p_x")
 
         # Per-anchor transformation (φ)
         x = TimeDistributed(Dense(512))(encoder_input_pairs)
@@ -149,24 +147,25 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         x = TimeDistributed(Dense(256))(x)
         x = TimeDistributed(BatchNormalization())(x)
         x = TimeDistributed(tf.keras.layers.LeakyReLU(alpha=0.1))(x)
-        x = TimeDistributed(Dense(128))(x)  # h_i
+        x = TimeDistributed(Dense(128))(x)
 
         # Pool across anchors (permutation invariant)
-        c_anchors = GlobalAveragePooling1D()(x)  # Shape: (batch, 128)
+        c_anchors = GlobalAveragePooling1D()(x)
 
         # Combine with p_x (sparse AE sample embedding)
         combined = concatenate([c_anchors, encoder_input_px])
         context = Dense(256)(combined)
         context = BatchNormalization()(context)
         context = tf.keras.layers.LeakyReLU(alpha=0.1)(context)
-        context = Dense(self.context_dim)(context)  # Final context: (batch, 128)
+        context = Dense(self.context_dim)(context)
         context = BatchNormalization()(context)
         context = tf.keras.layers.LeakyReLU(alpha=0.1)(context)
 
         encoder = Model(inputs=[encoder_input_pairs, encoder_input_px], outputs=context, name="encoder_deepsets")
+        return encoder
 
-        # === 2. NEW Decoder (T): context -> q_x ===
-        # Reconstructs encrypted X EMBEDDING from context
+    def _build_decoder(self):
+        """Build the T network decoder architecture."""
         decoder_input_context = Input(shape=(self.context_dim,))
 
         x = Dense(256)(decoder_input_context)
@@ -177,18 +176,18 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         x = BatchNormalization()(x)
         x = tf.keras.layers.LeakyReLU(alpha=0.1)(x)
 
-        dec_output = Dense(self.embedding_dim, activation='linear')(x)  # Output: q_x prediction (emb_dim)
+        dec_output = Dense(self.embedding_dim, activation='linear')(x)
 
         decoder = Model(inputs=decoder_input_context, outputs=dec_output, name="decoder_T")
+        return decoder
 
-        # === 3. Classifier (SIN): Concatenate(context, cloud) -> Label ===
-        # Uses context (which includes p_x info) + cloud predictions
+    def _build_classifier(self):
+        """Build the classifier (SIN) architecture."""
         input_c = Input(shape=(self.context_dim,))
         input_cloud = Input(shape=(self.cloud_vector_size,)) if self.cloud_vector_size > 0 else None
 
         features = [input_c]
         if input_cloud is not None:
-            # Project cloud predictions
             cloud_proj = Dense(256, activation='leaky_relu')(input_cloud)
             features.append(cloud_proj)
 
@@ -207,13 +206,102 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
             inputs_classifier.append(input_cloud)
 
         classifier = Model(inputs=inputs_classifier, outputs=class_output, name="classifier_head")
+        return classifier
 
-        # === 4. Wrap everything in the GAN Model ===
+    def _load_pretrained_t_network(self):
+        """Load pretrained T network and extract encoder/decoder."""
+        from pathlib import Path
+        import json
+
+        model_path = Path(self.pretrained_t_network_path)
+        if not model_path.exists():
+            raise FileNotFoundError(f"Pretrained T network not found: {model_path}")
+
+        logger.info(f"Loading pretrained T network from: {model_path}")
+
+        # Verify compatibility with metadata
+        metadata_path = model_path.with_suffix('.json')
+        if metadata_path.exists():
+            with open(metadata_path, 'r') as f:
+                saved_metadata = json.load(f)
+
+            # Warn on dimension mismatches
+            checks = [
+                ('n_anchors', self.n_anchors),
+                ('raw_dim', self.raw_dim),
+                ('emb_dim', self.embedding_dim)
+            ]
+            for key, expected in checks:
+                saved = saved_metadata.get(key)
+                if saved != expected:
+                    logger.warning(f"{key} mismatch: expected={expected}, saved={saved}")
+
+        # Load full T network
+        t_network = tf.keras.models.load_model(model_path)
+
+        # Rebuild encoder and decoder with same architecture
+        encoder = self._build_encoder()
+        decoder = self._build_decoder()
+
+        # Transfer weights layer by layer
+        for layer in encoder.layers:
+            if hasattr(layer, 'name'):
+                try:
+                    source_layer = t_network.get_layer(layer.name)
+                    layer.set_weights(source_layer.get_weights())
+                    logger.debug(f"Loaded encoder layer: {layer.name}")
+                except ValueError:
+                    logger.warning(f"Layer {layer.name} not found in pretrained model")
+
+        for layer in decoder.layers:
+            if hasattr(layer, 'name'):
+                try:
+                    source_layer = t_network.get_layer(layer.name)
+                    layer.set_weights(source_layer.get_weights())
+                    logger.debug(f"Loaded decoder layer: {layer.name}")
+                except ValueError:
+                    logger.warning(f"Layer {layer.name} not found in pretrained model")
+
+        logger.info("Successfully loaded pretrained T network weights")
+        return encoder, decoder
+
+    def _freeze_t_network(self, encoder, decoder):
+        """Freeze encoder and decoder layers."""
+        logger.info("Freezing T network (encoder + decoder) layers")
+
+        encoder.trainable = False
+        for layer in encoder.layers:
+            layer.trainable = False
+
+        decoder.trainable = False
+        for layer in decoder.layers:
+            layer.trainable = False
+
+        logger.info(f"Frozen encoder: {len(encoder.layers)} layers")
+        logger.info(f"Frozen decoder: {len(decoder.layers)} layers")
+
+    def build_gan_model(self):
+        """Build the GAN model, optionally loading pretrained T network."""
+
+        if self.pretrained_t_network_path:
+            encoder, decoder = self._load_pretrained_t_network()
+        else:
+            encoder = self._build_encoder()
+            decoder = self._build_decoder()
+
+        classifier = self._build_classifier()
+
+        # Freeze T-network if requested
+        if self.freeze_t_network and self.pretrained_t_network_path:
+            self._freeze_t_network(encoder, decoder)
+
+        # Wrap everything in the GAN Model
         return DeepSetsGANModel(
             encoder=encoder,
             decoder=decoder,
             classifier=classifier,
             input_shape_total=self.input_shape_total,
+            freeze_t_network=self.freeze_t_network,
             dims={
                 'p_x': self.p_x_size,
                 'p_i': self.p_i_size,
@@ -239,13 +327,14 @@ class DeepSetsGANModel(Model):
     - Classifier: Takes context + cloud → class prediction
     """
 
-    def __init__(self, encoder, decoder, classifier, input_shape_total, dims, **kwargs):
+    def __init__(self, encoder, decoder, classifier, input_shape_total, dims, freeze_t_network=False, **kwargs):
         super().__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
         self.classifier = classifier
         self.dims = dims
         self.input_shape_total = input_shape_total
+        self.freeze_t_network = freeze_t_network
 
         # Phase tracking for alternating training (True = reconstruction, False = classification)
         self.train_reconstruction_phase = tf.Variable(True, trainable=False, dtype=tf.bool)
@@ -334,9 +423,49 @@ class DeepSetsGANModel(Model):
             x, y = data
             sample_weight = None
 
-        # 1. Slice Inputs (NEW structure)
         p_x, anchor_pairs, cloud, q_x_target = self._slice_inputs(x)
 
+        # If T network is frozen, only train classifier
+        if self.freeze_t_network:
+            return self._train_step_classifier_only(p_x, anchor_pairs, cloud, y, sample_weight)
+        else:
+            return self._train_step_alternating(p_x, anchor_pairs, cloud, q_x_target, y, sample_weight)
+
+    def _train_step_classifier_only(self, p_x, anchor_pairs, cloud, y, sample_weight):
+        """Training step with frozen T network - only train classifier."""
+        class_vars = self.classifier.trainable_variables
+
+        with tf.GradientTape() as tape:
+            # Frozen encoder (no gradient tracking)
+            c = self.encoder([anchor_pairs, p_x], training=False)
+
+            # Classifier forward pass
+            classifier_inputs = [c]
+            if cloud is not None:
+                classifier_inputs.append(cloud)
+
+            y_pred = self.classifier(classifier_inputs, training=True)
+            class_loss = self.class_loss_fn(y, y_pred, sample_weight=sample_weight)
+
+        # Compute and apply gradients only for classifier
+        grads_class = tape.gradient(class_loss, class_vars)
+        self.optimizer_class.apply_gradients(zip(grads_class, class_vars))
+
+        # Update metrics
+        self.loss_tracker.update_state(class_loss)
+        self.class_loss_tracker.update_state(class_loss)
+        self.acc_tracker.update_state(y, y_pred)
+        self.auc_tracker.update_state(y, y_pred)
+
+        return {
+            "loss": self.loss_tracker.result(),
+            "class_loss": self.class_loss_tracker.result(),
+            "accuracy": self.acc_tracker.result(),
+            "auc": self.auc_tracker.result(),
+        }
+
+    def _train_step_alternating(self, p_x, anchor_pairs, cloud, q_x_target, y, sample_weight):
+        """Original alternating training step for reconstruction and classification."""
         # Get all trainable variables upfront (needed for tf.cond)
         recon_vars = self.encoder.trainable_variables + self.decoder.trainable_variables
         class_vars = self.classifier.trainable_variables

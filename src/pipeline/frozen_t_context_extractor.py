@@ -61,18 +61,15 @@ class FrozenTContextExtractor:
                 f"Failed to load T network from {t_network_path}: {e}"
             ) from e
 
-        # Extract the encoder submodel
-        if hasattr(self.t_network, 'encoder'):
-            self.encoder = self.t_network.encoder
-        else:
-            # Try to get encoder layer by name (alternative approach)
-            try:
-                self.encoder = self.t_network.get_layer('encoder_deepsets')
-            except ValueError:
-                raise ValueError(
-                    f"Could not find encoder in loaded T network. "
-                    f"Model type: {type(self.t_network).__name__}"
-                )
+        # Extract the encoder submodel (TNetworkOnlyIIM exposes self.encoder)
+        if not hasattr(self.t_network, 'encoder'):
+            raise ValueError(
+                f"Loaded T network does not have 'encoder' attribute. "
+                f"Model type: {type(self.t_network).__name__}. "
+                f"Ensure you're loading a TNetworkOnlyIIM model with encoder submodel."
+            )
+
+        self.encoder = self.t_network.encoder
 
         logger.info(
             f"FrozenTContextExtractor initialized: "
@@ -132,8 +129,7 @@ class FrozenTContextExtractor:
         anchor_pairs_tf = tf.constant(anchor_pairs, dtype=tf.float32)
         p_x_tf = tf.constant(p_x, dtype=tf.float32)
 
-        # Call encoder with [anchor_pairs, p_x] inputs
-        # The encoder expects: (anchor_pairs, p_x)
+        # Call encoder with [anchor_pairs, p_x] inputs as list
         context_tf = self.encoder([anchor_pairs_tf, p_x_tf])
 
         # Convert output back to numpy

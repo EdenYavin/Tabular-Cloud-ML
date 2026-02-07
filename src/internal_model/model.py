@@ -133,50 +133,63 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
             )
 
     def _build_encoder(self):
-        """Build the Deep Sets encoder architecture."""
+        """Build the Deep Sets encoder architecture - matches TNetworkOnlyIIM."""
         anchor_pair_dim = self.raw_dim + self.embedding_dim
 
-        # φ network: processes each anchor pair
+        # φ network inputs
         encoder_input_pairs = Input(shape=(self.n_anchors, anchor_pair_dim), name="anchor_pairs")
         encoder_input_px = Input(shape=(self.raw_dim,), name="p_x")
 
-        # Per-anchor transformation (φ)
-        x = TimeDistributed(Dense(512))(encoder_input_pairs)
-        x = TimeDistributed(BatchNormalization())(x)
-        x = TimeDistributed(tf.keras.layers.LeakyReLU(alpha=0.1))(x)
-        x = TimeDistributed(Dense(256))(x)
-        x = TimeDistributed(BatchNormalization())(x)
-        x = TimeDistributed(tf.keras.layers.LeakyReLU(alpha=0.1))(x)
-        x = TimeDistributed(Dense(128))(x)
+        # φ network: Per-anchor transformation (matches TNetworkOnlyIIM)
+        x = TimeDistributed(Dense(512, name='phi_dense1'), name='td_phi_dense1')(encoder_input_pairs)
+        x = TimeDistributed(BatchNormalization(name='phi_bn1'), name='td_phi_bn1')(x)
+        x = TimeDistributed(tf.keras.layers.LeakyReLU(alpha=0.1, name='phi_act1'), name='td_phi_act1')(x)
+
+        x = TimeDistributed(Dense(256, name='phi_dense2'), name='td_phi_dense2')(x)
+        x = TimeDistributed(BatchNormalization(name='phi_bn2'), name='td_phi_bn2')(x)
+        x = TimeDistributed(tf.keras.layers.LeakyReLU(alpha=0.1, name='phi_act2'), name='td_phi_act2')(x)
+
+        x = TimeDistributed(Dense(128, name='phi_dense3'), name='td_phi_dense3')(x)
 
         # Pool across anchors (permutation invariant)
-        c_anchors = GlobalAveragePooling1D()(x)
+        c_anchors = GlobalAveragePooling1D(name='anchor_pool')(x)  # (batch, 128)
 
-        # Combine with p_x (sparse AE sample embedding)
-        combined = concatenate([c_anchors, encoder_input_px])
-        context = Dense(256)(combined)
-        context = BatchNormalization()(context)
-        context = tf.keras.layers.LeakyReLU(alpha=0.1)(context)
-        context = Dense(self.context_dim)(context)
-        context = BatchNormalization()(context)
-        context = tf.keras.layers.LeakyReLU(alpha=0.1)(context)
+        # Process p_x through dedicated layers (matches TNetworkOnlyIIM)
+        p_x_features = Dense(256, activation='relu', name='p_x_dense1')(encoder_input_px)
+        p_x_features = Dense(128, activation='relu', name='p_x_dense2')(p_x_features)  # (batch, 128)
 
-        encoder = Model(inputs=[encoder_input_pairs, encoder_input_px], outputs=context, name="encoder_deepsets")
+        # Combine: c_anchors (128) + p_x_features (128) = 256
+        combined = concatenate([c_anchors, p_x_features], name='encoder_concat')
+
+        # ρ network (matches TNetworkOnlyIIM)
+        context = Dense(256, name='rho_dense1')(combined)
+        context = BatchNormalization(name='rho_bn1')(context)
+        context = tf.keras.layers.LeakyReLU(alpha=0.1, name='rho_act1')(context)
+
+        context = Dense(self.context_dim, name='rho_dense2')(context)
+        context = BatchNormalization(name='rho_bn2')(context)
+        context = tf.keras.layers.LeakyReLU(alpha=0.1, name='rho_act2')(context)
+
+        encoder = Model(
+            inputs=[encoder_input_pairs, encoder_input_px],
+            outputs=context,
+            name="encoder_deepsets"
+        )
         return encoder
 
     def _build_decoder(self):
-        """Build the T network decoder architecture."""
-        decoder_input_context = Input(shape=(self.context_dim,))
+        """Build the T network decoder architecture - matches TNetworkOnlyIIM."""
+        decoder_input_context = Input(shape=(self.context_dim,), name='decoder_input')
 
-        x = Dense(256)(decoder_input_context)
-        x = BatchNormalization()(x)
-        x = tf.keras.layers.LeakyReLU(alpha=0.1)(x)
+        x = Dense(256, name='decoder_dense1')(decoder_input_context)
+        x = BatchNormalization(name='decoder_bn1')(x)
+        x = tf.keras.layers.LeakyReLU(alpha=0.1, name='decoder_act1')(x)
 
-        x = Dense(512)(x)
-        x = BatchNormalization()(x)
-        x = tf.keras.layers.LeakyReLU(alpha=0.1)(x)
+        x = Dense(512, name='decoder_dense2')(x)
+        x = BatchNormalization(name='decoder_bn2')(x)
+        x = tf.keras.layers.LeakyReLU(alpha=0.1, name='decoder_act2')(x)
 
-        dec_output = Dense(self.embedding_dim, activation='linear')(x)
+        dec_output = Dense(self.embedding_dim, activation='linear', name='decoder_output')(x)
 
         decoder = Model(inputs=decoder_input_context, outputs=dec_output, name="decoder_T")
         return decoder
@@ -224,14 +237,7 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         if metadata_path.exists():
             with open(metadata_path, 'r') as f:
                 saved_metadata = json.load(f)
-
-            # Warn on dimension mismatches
-            checks = [
-                ('n_anchors', self.n_anchors),
-                ('raw_dim', self.raw_dim),
-                ('emb_dim', self.embedding_dim)
-            ]
-            for key, expected in checks:
+            for key, expected in [('n_anchors', self.n_anchors), ('raw_dim', self.raw_dim), ('emb_dim', self.embedding_dim)]:
                 saved = saved_metadata.get(key)
                 if saved != expected:
                     logger.warning(f"{key} mismatch: expected={expected}, saved={saved}")
@@ -239,30 +245,79 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         # Load full T network
         t_network = tf.keras.models.load_model(model_path)
 
-        # Rebuild encoder and decoder with same architecture
+        # Rebuild encoder and decoder with matching architecture
         encoder = self._build_encoder()
         decoder = self._build_decoder()
 
-        # Transfer weights layer by layer
-        for layer in encoder.layers:
-            if hasattr(layer, 'name'):
-                try:
-                    source_layer = t_network.get_layer(layer.name)
-                    layer.set_weights(source_layer.get_weights())
-                    logger.debug(f"Loaded encoder layer: {layer.name}")
-                except ValueError:
-                    logger.warning(f"Layer {layer.name} not found in pretrained model")
+        # Weight mapping for encoder: TNetworkOnlyIIM layer name -> DeepSetsIIM layer location
+        encoder_layer_mapping = {
+            # φ network layers (inside TimeDistributed)
+            'phi_dense1': 'td_phi_dense1',
+            'phi_bn1': 'td_phi_bn1',
+            'phi_act1': 'td_phi_act1',
+            'phi_dense2': 'td_phi_dense2',
+            'phi_bn2': 'td_phi_bn2',
+            'phi_act2': 'td_phi_act2',
+            'phi_dense3': 'td_phi_dense3',
+            # p_x processing layers (direct match)
+            'p_x_dense1': 'p_x_dense1',
+            'p_x_dense2': 'p_x_dense2',
+            # ρ network layers (direct match)
+            'rho_dense1': 'rho_dense1',
+            'rho_bn1': 'rho_bn1',
+            'rho_act1': 'rho_act1',
+            'rho_dense2': 'rho_dense2',
+            'rho_bn2': 'rho_bn2',
+            'rho_act2': 'rho_act2',
+        }
 
-        for layer in decoder.layers:
-            if hasattr(layer, 'name'):
-                try:
-                    source_layer = t_network.get_layer(layer.name)
-                    layer.set_weights(source_layer.get_weights())
-                    logger.debug(f"Loaded decoder layer: {layer.name}")
-                except ValueError:
-                    logger.warning(f"Layer {layer.name} not found in pretrained model")
+        # Transfer encoder weights
+        loaded_count = 0
+        for source_name, target_name in encoder_layer_mapping.items():
+            try:
+                source_layer = t_network.get_layer(source_name)
+                target_layer = encoder.get_layer(target_name)
 
-        logger.info("Successfully loaded pretrained T network weights")
+                # Handle TimeDistributed: extract inner layer
+                if hasattr(target_layer, 'layer'):
+                    target_layer = target_layer.layer
+
+                target_layer.set_weights(source_layer.get_weights())
+                loaded_count += 1
+                logger.debug(f"Loaded encoder weight: {source_name} -> {target_name}")
+            except ValueError as e:
+                logger.warning(f"Failed to load encoder layer {source_name}: {e}")
+
+        # Weight mapping for decoder (direct match)
+        decoder_layer_mapping = {
+            'decoder_dense1': 'decoder_dense1',
+            'decoder_bn1': 'decoder_bn1',
+            'decoder_act1': 'decoder_act1',
+            'decoder_dense2': 'decoder_dense2',
+            'decoder_bn2': 'decoder_bn2',
+            'decoder_act2': 'decoder_act2',
+            'decoder_output': 'decoder_output',
+        }
+
+        # Transfer decoder weights
+        for source_name, target_name in decoder_layer_mapping.items():
+            try:
+                source_layer = t_network.get_layer(source_name)
+                target_layer = decoder.get_layer(target_name)
+                target_layer.set_weights(source_layer.get_weights())
+                loaded_count += 1
+                logger.debug(f"Loaded decoder weight: {source_name} -> {target_name}")
+            except ValueError as e:
+                logger.warning(f"Failed to load decoder layer {source_name}: {e}")
+
+        total_expected = len(encoder_layer_mapping) + len(decoder_layer_mapping)
+        logger.info(f"Loaded {loaded_count}/{total_expected} T network layers")
+
+        if loaded_count < total_expected:
+            logger.warning(f"Some layers failed to load - T network may not be fully initialized")
+        elif loaded_count == total_expected:
+            logger.info("Successfully loaded all pretrained T network weights")
+
         return encoder, decoder
 
     def _freeze_t_network(self, encoder, decoder):

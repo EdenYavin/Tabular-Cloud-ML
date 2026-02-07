@@ -398,3 +398,57 @@ def generate_calibration_vectors(embedding_dim: int, distributions: list[str], s
 
     logger.info(f"Generated {len(calibration_vectors)} calibration vectors with distributions: {distributions}")
     return calibration_vectors
+
+
+def get_t_network_model_path(
+    dataset_name: str,
+    n_anchors: int = None,
+    embedding: str = None,
+    rotating_key: bool = None,
+    ensure_exists: bool = False
+) -> pathlib.Path:
+    """
+    Generate the standardized path for T-Network model files.
+
+    Uses config defaults if parameters not provided.
+
+    Args:
+        dataset_name: Name of the dataset the T-Network was trained on
+        n_anchors: Number of triangulation anchors (defaults to config)
+        embedding: Embedding model name (defaults to config)
+        rotating_key: Whether rotating key was used (defaults to config)
+        ensure_exists: If True, raises FileNotFoundError if path doesn't exist
+
+    Returns:
+        Path object pointing to the T-Network .keras file
+
+    Raises:
+        FileNotFoundError: If ensure_exists=True and file doesn't exist
+    """
+    # Use config defaults
+    if n_anchors is None:
+        n_anchors = config.experiment_config.n_triangulation_samples
+    if embedding is None:
+        embedding = config.encoder_config.embedding
+    if rotating_key is None:
+        rotating_key = config.encoder_config.rotating_key
+
+    # Construct path (SAME logic as _save_model)
+    rotate_key = "rotate" if rotating_key else "no_rotate"
+    model_filename = f"t_network_{dataset_name}_{n_anchors}anchors_{embedding}_{rotate_key}.keras"
+    model_path = pathlib.Path(OUTPUT_DIR_PATH) / "t_network_models" / model_filename
+
+    # Optional existence check with helpful error
+    if ensure_exists and not model_path.exists():
+        raise FileNotFoundError(
+            f"T-Network model not found at: {model_path}\n"
+            f"Expected parameters:\n"
+            f"  - Dataset: {dataset_name}\n"
+            f"  - Anchors: {n_anchors}\n"
+            f"  - Embedding: {embedding}\n"
+            f"  - Rotating Key: {rotating_key}\n"
+            f"Train a T-Network first with:\n"
+            f"  python main.py --experiment-to-run t_network_training --datasets {dataset_name}"
+        )
+
+    return model_path

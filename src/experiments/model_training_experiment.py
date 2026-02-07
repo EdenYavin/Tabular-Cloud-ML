@@ -64,11 +64,25 @@ class ModelTrainingExperimentHandler(ExperimentHandler):
 
                     X_train, y_train, X_test, y_test = self._collect_datasets(dataset_name=dataset_name)
 
+                    # Auto-determine T-Network path if freeze is enabled but path not specified
+                    pretrained_path = config.experiment_config.pretrained_t_network_path
+                    if config.experiment_config.freeze_t_network and not pretrained_path:
+                        from src.utils.helpers import get_t_network_model_path
+                        try:
+                            pretrained_path = get_t_network_model_path(
+                                dataset_name=dataset_name,
+                                ensure_exists=True  # Fail early with clear error
+                            )
+                            logger.info(f"Auto-determined T-Network path: {pretrained_path}")
+                        except FileNotFoundError as e:
+                            logger.error(str(e))
+                            raise
+
                     internal_model = InternalInferenceModelFactory().get_model(
                         num_classes=n_classes,
                         input_shape=X_train.shape[1],
                         type=model_name,
-                        pretrained_t_network_path=config.experiment_config.pretrained_t_network_path,
+                        pretrained_t_network_path=str(pretrained_path) if pretrained_path else None,
                         freeze_t_network=config.experiment_config.freeze_t_network
                     )
                     logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} ####"

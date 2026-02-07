@@ -292,7 +292,13 @@ class DeepSetsReconstructionIIM(NeuralNetworkInternalModel):
         classifier = self._build_classifier()
 
         # Freeze T-network if requested
-        if self.freeze_t_network and self.pretrained_t_network_path:
+        if self.freeze_t_network:
+            if not self.pretrained_t_network_path:
+                raise ValueError(
+                    "freeze_t_network=True requires a pretrained T-Network model. "
+                    "Either train a T-Network first with --experiment-to-run t_network_training "
+                    "or provide --pretrained-t-network <path>."
+                )
             self._freeze_t_network(encoder, decoder)
 
         # Wrap everything in the GAN Model

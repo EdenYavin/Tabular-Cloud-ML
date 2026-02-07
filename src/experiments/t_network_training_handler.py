@@ -344,17 +344,16 @@ class TNetworkTrainingHandler(ExperimentHandler):
 
     def _save_model(self, dataset_name: str, metadata: dict) -> Path:
         """Save the trained T Network model with metadata."""
-        # Create directory
-        t_network_dir = Path(OUTPUT_DIR_PATH) / "t_network_models"
-        t_network_dir.mkdir(parents=True, exist_ok=True)
+        from src.utils.helpers import get_t_network_model_path
 
-        # Generate filename from config
-        n_anchors = metadata["n_anchors"]
-        embedding = config.encoder_config.embedding
-        rotate_key = "rotate" if config.encoder_config.rotating_key else "no_rotate"
+        # Use shared utility to generate path
+        model_path = get_t_network_model_path(
+            dataset_name=dataset_name,
+            n_anchors=metadata["n_anchors"]
+        )
 
-        model_filename = f"t_network_{dataset_name}_{n_anchors}anchors_{embedding}_{rotate_key}.keras"
-        model_path = t_network_dir / model_filename
+        # Ensure directory exists
+        model_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Save model
         self.model.save(model_path)

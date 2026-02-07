@@ -61,6 +61,20 @@ else
     DEEPSET_FLAG=""
 fi
 
+# Freeze T-Network if requested (auto-determines path from config)
+if [ -n "$FREEZE_T_NETWORK" ] && [ "$FREEZE_T_NETWORK" = "1" ]; then
+    FREEZE_T_FLAG="--freeze-t-network"
+else
+    FREEZE_T_FLAG=""
+fi
+
+# Optional: Manual T-Network path override
+if [ -n "$PRETRAINED_T_NETWORK_PATH" ]; then
+    T_NETWORK_PATH_FLAG="--pretrained-t-network $PRETRAINED_T_NETWORK_PATH"
+else
+    T_NETWORK_PATH_FLAG=""
+fi
+
 # Echo Configuration
 echo "SLURM_JOBID=$SLURM_JOBID"
 echo "Dataset: $DATASET_NAME"
@@ -71,7 +85,9 @@ echo "Calibration Distributions: $CALIB_DISTRIBUTIONS"
 echo "N_P (Pred Vectors): $N_P | K-Folds: $K"
 echo "Using Cloud Model: $CLOUD_MODEL"
 echo "Use Key Encoder: $USE_KEY_ENCODER"
-echo "Use Deepset": $DEEPSET
+echo "Use Deepset: $DEEPSET"
+echo "Freeze T-Network: $FREEZE_T_NETWORK"
+echo "T-Network Path: ${PRETRAINED_T_NETWORK_PATH:-auto}"
 module load anaconda
 source activate tabml
 export TF_XLA_FLAGS=--tf_xla_auto_jit=0
@@ -123,6 +139,8 @@ python main.py \
     $CALIB_DISTS_FLAG \
     $KEY_ENCODER_FLAG \
     $DEEPSET_FLAG \
+    $FREEZE_T_FLAG \
+    $T_NETWORK_PATH_FLAG \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \

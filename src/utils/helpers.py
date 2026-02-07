@@ -103,6 +103,69 @@ def get_experiment_name() -> str:
     return f"{use_rotate_key}_{use_embed}_{use_cloud}{use_raw_features}{calib_str}"
 
 
+def load_pretrained_t_network(
+    model_path: str | pathlib.Path,
+    freeze_weights: bool = True
+) -> tf.keras.Model:
+    """
+    Load a pretrained T network model from disk.
+
+    Args:
+        model_path: Path to saved T network .keras file
+        freeze_weights: If True, set all layers to trainable=False
+
+    Returns:
+        Loaded TNetworkOnlyIIM model with frozen weights
+
+    Raises:
+        FileNotFoundError: If model_path does not exist
+        ValueError: If loaded model is not a TNetworkOnlyIIM instance
+    """
+    # Convert to Path object for easier handling
+    model_path = pathlib.Path(model_path)
+
+    # Check if model file exists
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"T network model file not found: {model_path}\n"
+            f"Please ensure the model has been trained and saved at this location."
+        )
+
+    # Load the model
+    try:
+        logger.info(f"Loading T network model from: {model_path}")
+        model = tf.keras.models.load_model(model_path)
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to load T network model from {model_path}: {e}"
+        ) from e
+
+    # Verify the model has an encoder attribute (confirms it's a TNetworkOnlyIIM)
+    if not hasattr(model, 'encoder'):
+        raise ValueError(
+            f"Loaded model does not have an 'encoder' attribute. "
+            f"Expected a TNetworkOnlyIIM model, got {type(model).__name__}"
+        )
+
+    # Freeze weights if requested
+    if freeze_weights:
+        for layer in model.layers:
+            layer.trainable = False
+        logger.info(f"Froze all {len(model.layers)} layers in T network")
+    else:
+        logger.info(f"Loaded T network with trainable weights")
+
+    # Log model information
+    try:
+        encoder_output_shape = model.encoder.output_shape
+        logger.info(f"T network encoder output shape: {encoder_output_shape}")
+    except Exception:
+        logger.warning("Could not determine encoder output shape")
+
+    logger.info(f"Successfully loaded T network from {model_path}")
+    return model
+
+
 def get_num_classes(y: np.ndarray) -> int:
     return len(np.unique(y))
 

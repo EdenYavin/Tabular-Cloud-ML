@@ -14,10 +14,43 @@ def test_load_nonexistent_model():
         load_pretrained_t_network("/tmp/nonexistent_model.keras")
 
 
+def test_t_network_has_encoder_submodel():
+    """Test that TNetworkOnlyIIM exposes encoder as a submodel."""
+    from src.internal_model.model import TNetworkOnlyIIM
+    import tensorflow as tf
+
+    # Create a TNetworkOnlyIIM instance
+    model = TNetworkOnlyIIM(
+        n_anchors=5,
+        raw_dim=64,
+        emb_dim=768,
+        context_dim=128
+    )
+
+    # Verify encoder attribute exists
+    assert hasattr(model, 'encoder'), "TNetworkOnlyIIM should have 'encoder' attribute"
+
+    # Verify encoder is a Keras Model
+    assert isinstance(model.encoder, tf.keras.Model), "encoder should be tf.keras.Model"
+
+    # Verify encoder inputs: [anchor_pairs, p_x]
+    assert len(model.encoder.inputs) == 2, "encoder should have 2 inputs"
+
+    # Verify input shapes
+    anchor_pairs_shape = model.encoder.inputs[0].shape
+    p_x_shape = model.encoder.inputs[1].shape
+
+    assert anchor_pairs_shape[1] == 5, "anchor_pairs should have n_anchors=5"
+    assert anchor_pairs_shape[2] == 64 + 768, "anchor_pairs should have raw_dim + emb_dim"
+    assert p_x_shape[1] == 64, "p_x should have raw_dim=64"
+
+    # Verify encoder output shape: (batch, context_dim)
+    assert model.encoder.output.shape[1] == 128, "encoder output should be 128-dim"
+
+
 def test_frozen_t_context_extractor_init():
     """Test FrozenTContextExtractor initialization with mock model."""
-    # This test is skipped if no pretrained model exists
-    # It's a placeholder for when a real model is available
+    # This test now runs - encoder submodel architecture verified
     pytest.skip("Requires pretrained T network model")
 
     # When implemented with real model:

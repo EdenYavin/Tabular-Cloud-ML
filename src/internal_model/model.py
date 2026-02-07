@@ -21,11 +21,15 @@ from src.utils.constansts import IIM_MODELS
 class EpochTrackerCallback(tf.keras.callbacks.Callback):
     """Callback to set training phase at the start of each epoch."""
     def on_epoch_begin(self, epoch, logs=None):
-        train_reconstruction = (epoch % 2 == 0)
-        self.model.train_reconstruction_phase.assign(train_reconstruction)
-
-        phase = "Reconstruction (Encoder+Decoder)" if train_reconstruction else "Classification"
-        logger.info(f"Epoch {epoch}: Training {phase}")
+        # If T network is frozen, always train classifier only
+        if getattr(self.model, 'freeze_t_network', False):
+            self.model.train_reconstruction_phase.assign(False)
+            logger.info(f"Epoch {epoch}: Training Classification (T-network frozen)")
+        else:
+            train_reconstruction = (epoch % 2 == 0)
+            self.model.train_reconstruction_phase.assign(train_reconstruction)
+            phase = "Reconstruction (Encoder+Decoder)" if train_reconstruction else "Classification"
+            logger.info(f"Epoch {epoch}: Training {phase}")
 
 models = {
     IIM_MODELS.XGBOOST.value: XGBClassifier,

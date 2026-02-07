@@ -1654,6 +1654,49 @@ class TNetworkOnlyIIM(tf.keras.Model):
         self.rho_bn2 = BatchNormalization(name='rho_bn2')
         self.rho_act2 = tf.keras.layers.LeakyReLU(alpha=0.1, name='rho_act2')
 
+        # Build encoder as a Keras functional model
+        # This allows the encoder to be called independently for context extraction
+        anchor_pairs_input = tf.keras.layers.Input(
+            shape=(self.n_anchors, anchor_pair_dim),
+            name='anchor_pairs'
+        )
+        p_x_input = tf.keras.layers.Input(
+            shape=(self.raw_dim,),
+            name='p_x_input'
+        )
+
+        # Process anchors through φ network
+        x = self.phi_dense1(anchor_pairs_input)
+        x = self.phi_bn1(x)
+        x = self.phi_act1(x)
+        x = self.phi_dense2(x)
+        x = self.phi_bn2(x)
+        x = self.phi_act2(x)
+        x = self.phi_dense3(x)
+
+        # Pool across anchors (permutation invariant)
+        c_anchors = tf.reduce_mean(x, axis=1)  # (batch, 128)
+
+        # Process p_x sample
+        p_x_features = self.p_x_dense1(p_x_input)
+        p_x_features = self.p_x_dense2(p_x_features)  # (batch, 128)
+
+        # Combine all features to create context (ρ network)
+        combined = tf.concat([c_anchors, p_x_features], axis=-1)  # (batch, 256)
+        context = self.rho_dense1(combined)
+        context = self.rho_bn1(context)
+        context = self.rho_act1(context)
+        context = self.rho_dense2(context)
+        context = self.rho_bn2(context)
+        context = self.rho_act2(context)  # (batch, context_dim)
+
+        # Create encoder submodel
+        self.encoder = tf.keras.Model(
+            inputs=[anchor_pairs_input, p_x_input],
+            outputs=context,
+            name='encoder_deepsets'
+        )
+
     def _build_decoder(self):
         """Build the T network decoder for q_x reconstruction."""
         self.decoder_dense1 = Dense(256, name='decoder_dense1')
@@ -1690,32 +1733,9 @@ class TNetworkOnlyIIM(tf.keras.Model):
         # Concatenate anchor pairs: (p_i, q_i) -> (batch, n_anchors, raw_dim + emb_dim)
         anchor_pairs = tf.concat([p_i_reshaped, q_i_reshaped], axis=-1)
 
-        # Process anchors through φ network (TimeDistributed equivalent)
-        x = self.phi_dense1(anchor_pairs)
-        x = self.phi_bn1(x, training=training)
-        x = self.phi_act1(x)
-
-        x = self.phi_dense2(x)
-        x = self.phi_bn2(x, training=training)
-        x = self.phi_act2(x)
-
-        x = self.phi_dense3(x)
-
-        # Pool across anchors (permutation invariant)
-        c_anchors = tf.reduce_mean(x, axis=1)  # (batch, 128)
-
-        # Process p_x sample
-        p_x_features = self.p_x_dense1(p_x)
-        p_x_features = self.p_x_dense2(p_x_features)  # (batch, 128)
-
-        # Combine all features to create context (ρ network)
-        combined = tf.concat([c_anchors, p_x_features], axis=-1)  # (batch, 256)
-        context = self.rho_dense1(combined)
-        context = self.rho_bn1(context, training=training)
-        context = self.rho_act1(context)
-        context = self.rho_dense2(context)
-        context = self.rho_bn2(context, training=training)
-        context = self.rho_act2(context)  # (batch, context_dim)
+        # Use encoder submodel to get context
+        # Note: BatchNormalization layers inside encoder will use training mode
+        context = self.encoder([anchor_pairs, p_x], training=training)  # (batch, context_dim)
 
         # Decode context to reconstruct q_x
         x = self.decoder_dense1(context)

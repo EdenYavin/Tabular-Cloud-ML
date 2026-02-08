@@ -7,6 +7,7 @@ from tqdm import tqdm
 from src.pipeline.deepset_features_dataset import DeepSetFeatureEngineering
 from src.pipeline.triangulations_features_dataset import TriangulationFeatureEngineering
 from src.pipeline.raw_features_engineering import RawFeaturesEngineering
+from src.pipeline.feature_ablation_dataset import FeatureAblationPipeline
 from src.cloud import CLOUD_MODELS, DEFAULT_CLOUD_OUTPUT_SHAPE
 from src.encryptor import EncryptorFactory
 from src.embeddings import EmbeddingsFactory
@@ -55,7 +56,16 @@ class DatasetCreationHandler(ExperimentHandler):
                     logger.debug(f"Experiment name is {self.experiment_name}, Dataset is {dataset_name}. "
                                  f"#### Number of datasets versions: {n_pred_vectors} ####")
 
-                    if config.experiment_config.use_deepset:
+                    if config.experiment_config.feature_combination:
+                        # Feature ablation pipeline for frozen T network experiments
+                        dataset_creator = FeatureAblationPipeline(
+                            dataset_name=dataset_name,
+                            encryptor=encryptor,
+                            embeddings_model=embedding_model,
+                            metadata=raw_dataset.metadata
+                        )
+
+                    elif config.experiment_config.use_deepset:
                         dataset_creator = DeepSetFeatureEngineering(
                             dataset_name=dataset_name,
                             encryptor=encryptor,

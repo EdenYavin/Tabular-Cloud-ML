@@ -30,6 +30,7 @@ class IIM_MODELS(str, enum.Enum):
     FILM_CONDITIONED = "film_conditioned"
     DEEPSET = "deepset"
     T_NETWORK_ONLY = "t_network_only"
+    FLEXIBLE_SIN = "flexible_sin"
 
 class CLOUD_MODELS(str, enum.Enum):
     ENSEMBLE_OF_TABULAR_MODELS = "ensemble"

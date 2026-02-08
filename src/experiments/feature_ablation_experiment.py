@@ -1,0 +1,302 @@
+"""
+Feature Ablation Experiment Handler.
+
+Orchestrates batch training runs for all 4 feature combinations (combo1-combo4)
+using FlexibleSINClassifier to evaluate the relative importance of:
+- p_x: Raw sparse autoencoder sample embeddings
+- q_x: Encrypted sample embeddings (DINO/CLIP)
+- T_context: Frozen T network encoder outputs
+- cloud: Cloud model predictions
+
+Runs 4 sequential experiments and generates side-by-side comparison report.
+"""
+
+import gc
+import pickle
+import numpy as np
+from pathlib import Path
+from keras import backend as K
+from loguru import logger
+
+from src.internal_model import InternalInferenceModelFactory
+from src.dataset import DatasetFactory, RawDataset
+from src.utils.config import config
+from src.experiments.base import ExperimentHandler
+from src.utils.helpers import get_experiment_name, get_dataset_path
+from src.utils.constansts import (
+    DATASET_FILE_NAME,
+    BASELINE_DATASET_FILE_NAME,
+    REPORT_PATH,
+    FEATURE_COMBINATIONS
+)
+
+
+class FeatureAblationExperimentHandler(ExperimentHandler):
+    """
+    Batch experiment runner for feature ablation study.
+
+    Executes training for all 4 feature combinations sequentially:
+    1. combo1: [p_x, q_x, T_context] - Baseline with all features except cloud
+    2. combo2: [q_x, T_context] - Remove p_x to test raw embedding importance
+    3. combo3: [p_x, q_x, T_context, cloud] - Full feature set
+    4. combo4: [q_x, T_context, cloud] - Cloud features without raw embeddings
+
+    Each combination uses:
+    - Identical train/val/test splits from cached dataset files
+    - Same FlexibleSINClassifier architecture
+    - Same training hyperparameters
+    - Same evaluation metrics (accuracy, AUC)
+
+    Results are logged to CSV report for side-by-side comparison.
+    """
+
+    def __init__(self, report_path=REPORT_PATH):
+        """
+        Initialize Feature Ablation Experiment Handler.
+
+        Args:
+            report_path: Path to CSV report file for results logging
+        """
+        super().__init__(get_experiment_name(), report_path=report_path)
+
+        logger.info("### FEATURE ABLATION EXPERIMENT HANDLER ###")
+        logger.info(f"Report path: {report_path}")
+
+        # Validate all combinations are cacheable
+        self.combinations = [
+            FEATURE_COMBINATIONS.COMBO1,
+            FEATURE_COMBINATIONS.COMBO2,
+            FEATURE_COMBINATIONS.COMBO3,
+            FEATURE_COMBINATIONS.COMBO4
+        ]
+
+    def _collect_datasets(self, dataset_name, feature_combination):
+        """
+        Load cached datasets for a specific feature combination.
+
+        Args:
+            dataset_name: Dataset name (e.g., 'adult', 'heloc')
+            feature_combination: Feature combination enum (combo1-combo4)
+
+        Returns:
+            Tuple of (X_train, y_train, X_test, y_test)
+
+        Raises:
+            FileNotFoundError: If cached dataset not found for combination
+        """
+        X_train, y_train = [], []
+
+        for folder in range(1, self.n_pred_vectors + 1):
+            # get_dataset_path now accepts feature_combination parameter
+            path = get_dataset_path(
+                dataset_name,
+                folder,
+                feature_combination=feature_combination
+            ) / DATASET_FILE_NAME
+
+            if not path.exists():
+                raise FileNotFoundError(
+                    f"Dataset cache not found for {feature_combination}: {path}\n"
+                    f"Run dataset creation first with --feature-combination {feature_combination}"
+                )
+
+            logger.debug(f"Loading dataset from {path}")
+
+            with open(path, "rb") as f:
+                data = pickle.load(f)
+                X_train.append(data.train.features)
+                y_train.append(data.train.labels)
+
+        return np.vstack(X_train), np.vstack(y_train), data.test.features, data.test.labels
+
+    def _run_single_combination(self, dataset_name, feature_combination, n_classes, original_size):
+        """
+        Train FlexibleSINClassifier on a single feature combination.
+
+        Args:
+            dataset_name: Dataset name
+            feature_combination: Feature combination enum (combo1-combo4)
+            n_classes: Number of target classes
+            original_size: Original dataset shape (for logging)
+
+        Returns:
+            Dictionary of test metrics
+
+        Raises:
+            FileNotFoundError: If cached dataset not found
+        """
+        logger.info(
+            f"\n{'='*80}\n"
+            f"Running Feature Ablation: {feature_combination.upper()}\n"
+            f"Dataset: {dataset_name}, n_pred_vectors: {self.n_pred_vectors}\n"
+            f"{'='*80}"
+        )
+
+        # Load cached datasets for this combination
+        X_train, y_train, X_test, y_test = self._collect_datasets(
+            dataset_name=dataset_name,
+            feature_combination=feature_combination
+        )
+
+        logger.info(
+            f"Loaded data for {feature_combination}: "
+            f"Train: {X_train.shape}, Test: {X_test.shape}"
+        )
+
+        # Create FlexibleSINClassifier - automatically adapts to input dimensions
+        internal_model = InternalInferenceModelFactory().get_model(
+            num_classes=n_classes,
+            input_shape=X_train.shape[1],
+            type="flexible_sin"
+        )
+
+        logger.info(
+            f"Training FlexibleSINClassifier for {feature_combination}\n"
+            f"Input shape: {X_train.shape[1]} dims, Output classes: {n_classes}"
+        )
+
+        # Train model
+        internal_model.fit(
+            X=X_train, y=y_train,
+            validation_data=(X_test, y_test)
+        )
+
+        # Evaluate on test set
+        test_metrics = internal_model.evaluate(
+            X=X_test, y=y_test, metrics=config.iim_config.metrics
+        )
+
+        logger.info(
+            f"{feature_combination} Test Metrics: {test_metrics}"
+        )
+
+        # Save training history and plots
+        path = get_dataset_path(
+            dataset_name=dataset_name,
+            n_pred_vectors=self.n_pred_vectors,
+            feature_combination=feature_combination
+        )
+        history_path = path / f"{feature_combination}_history.pkl"
+        plot_path = path / f"{feature_combination}_train_plot.png"
+
+        internal_model.save_history(history_path)
+        internal_model.plot_history(plot_path)
+
+        # Load baseline if available
+        if config.iim_config.train_baseline:
+            baseline_path = path / BASELINE_DATASET_FILE_NAME
+            if baseline_path.exists():
+                with open(baseline_path, "rb") as f:
+                    baseline_dataset = pickle.load(f)
+
+                logger.info(
+                    f"Training baseline embedding model for {feature_combination}\n"
+                    f"Baseline dataset size: {baseline_dataset.train.features.shape}"
+                )
+
+                baseline_emb_acc, embeddings_baseline_f1 = self.get_embedding_baseline(
+                    baseline_dataset
+                )
+            else:
+                logger.warning(f"Baseline dataset not found at {baseline_path}")
+                baseline_emb_acc, embeddings_baseline_f1 = 0, 0
+        else:
+            baseline_emb_acc, embeddings_baseline_f1 = 0, 0
+
+        # Log results to report
+        self.log_results(
+            dataset_name=dataset_name,
+            train_shape=original_size,
+            new_train_shape=X_train.shape,
+            test_shape=X_test.shape,
+            cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
+            embeddings_baseline_acc=baseline_emb_acc,
+            embeddings_baseline_f1=embeddings_baseline_f1,
+            test_metrics=test_metrics,
+            iim_model_name=f"flexible_sin_{feature_combination}",
+            total_params=internal_model.model.count_params(),
+            n_pred_vectors=self.n_pred_vectors,
+        )
+
+        # Clean up memory
+        del X_train, X_test, y_test, y_train, internal_model
+        gc.collect()
+        K.clear_session()
+
+        return test_metrics
+
+    def run_experiment(self):
+        """
+        Execute feature ablation experiment for all combinations.
+
+        For each dataset in config:
+        1. Load dataset metadata (n_classes, original size)
+        2. Run training for combo1 (baseline without cloud)
+        3. Run training for combo2 (remove p_x)
+        4. Run training for combo3 (full feature set)
+        5. Run training for combo4 (cloud without p_x)
+        6. Log all results to CSV report
+
+        Results are automatically saved after each combination via log_results().
+
+        Returns:
+            DataFrame with experiment results for all combinations
+        """
+        logger.info(
+            f"### STARTING FEATURE ABLATION EXPERIMENT ###\n"
+            f"Experiment: {get_experiment_name()}\n"
+            f"Datasets: {config.dataset_config.names}\n"
+            f"Combinations: {[combo.value for combo in self.combinations]}"
+        )
+
+        for dataset_name in config.dataset_config.names:
+            logger.info(f"\n{'#'*80}\n# Dataset: {dataset_name.upper()}\n{'#'*80}")
+
+            # Load dataset metadata
+            try:
+                raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
+                logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}")
+                n_classes = raw_dataset.get_n_classes()
+                original_size = raw_dataset.get_dataset()[0].shape
+                del raw_dataset
+            except Exception as e:
+                logger.warning(
+                    f"Error loading Dataset {dataset_name}: {e}\n"
+                    f"Using default number of classes -> 2"
+                )
+                n_classes, original_size = 2, (0, 0)
+
+            # Run experiments for all combinations
+            for feature_combination in self.combinations:
+                try:
+                    self._run_single_combination(
+                        dataset_name=dataset_name,
+                        feature_combination=feature_combination.value,
+                        n_classes=n_classes,
+                        original_size=original_size
+                    )
+
+                    logger.info(
+                        f"✓ Completed {feature_combination.value} for {dataset_name}"
+                    )
+
+                except FileNotFoundError as e:
+                    logger.error(
+                        f"✗ Skipping {feature_combination.value} - {str(e)}"
+                    )
+                    continue
+
+                except Exception as e:
+                    logger.error(
+                        f"✗ Error running {feature_combination.value} for {dataset_name}: {e}"
+                    )
+                    continue
+
+        logger.info(
+            f"\n{'#'*80}\n"
+            f"# FEATURE ABLATION EXPERIMENT COMPLETE\n"
+            f"# Results saved to: {self.report_path}\n"
+            f"{'#'*80}"
+        )
+
+        return self.report

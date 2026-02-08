@@ -1571,6 +1571,85 @@ class StackingMixedInternalModel(StackingInternalModel):
         return self.final_model.predict(meta_features)
 
 
+class FlexibleSINClassifier(NeuralNetworkInternalModel):
+    """
+    Flexible Single Inference Network (SIN) classifier for feature ablation studies.
+
+    This classifier accepts variable input_shape parameter and dynamically builds
+    a Dense neural network architecture at runtime. Designed for frozen T network
+    ablation experiments where different feature combinations have different dimensions.
+
+    Supported feature combinations:
+    - combo1: [p_x, q_x, T_context] → 960 dims
+    - combo2: [q_x, T_context] → 896 dims
+    - combo3: [p_x, q_x, T_context, cloud] → 960+cloud dims
+    - combo4: [q_x, T_context, cloud] → 896+cloud dims
+
+    Architecture:
+    - Input layer: Dynamic shape based on input_shape parameter
+    - BatchNormalization
+    - Dense(128, activation='leaky_relu')
+    - Dropout(dropout_rate)
+    - Output layer: Dense(num_classes, activation='softmax')
+
+    The architecture adapts to any input dimension without code changes.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "flexible_sin_classifier"
+        num_classes = kwargs.get("num_classes")
+        input_shape = kwargs.get("input_shape")
+
+        # Log initialization for ablation study context
+        logger.info(f"FlexibleSINClassifier initialized: input_shape={input_shape}, num_classes={num_classes}")
+
+        # Build the model with dynamic input shape
+        self.model = self.get_model(num_classes=num_classes, input_shape=input_shape)
+
+    def get_model(self, num_classes, input_shape):
+        """
+        Build Dense architecture with dynamic input shape.
+
+        Args:
+            num_classes: Number of output classes
+            input_shape: Input feature dimension (varies by combination)
+
+        Returns:
+            Compiled Keras model
+        """
+        # Dynamic input layer - accepts any dimension
+        inputs = Input(shape=(input_shape,), name='feature_input')
+
+        # Normalize input features
+        x = BatchNormalization(name='input_bn')(inputs)
+
+        # Hidden layer - fixed 128 units regardless of input size
+        x = Dense(units=128, activation='leaky_relu', name='hidden_dense')(x)
+        x = Dropout(self.dropout_rate, name='hidden_dropout')(x)
+
+        # Output layer
+        outputs = Dense(units=num_classes, activation='softmax', name='output')(x)
+
+        # Create the model
+        model = Model(inputs=inputs, outputs=outputs, name='flexible_sin')
+
+        # Compile with optimizer and metrics
+        model.compile(
+            optimizer='adam',
+            loss='categorical_crossentropy',
+            metrics=['accuracy', AUC(multi_label=False, name='auc')]
+        )
+
+        logger.info(f"FlexibleSINClassifier model built:")
+        logger.info(f"  Input shape: {input_shape}")
+        logger.info(f"  Hidden units: 128")
+        logger.info(f"  Output classes: {num_classes}")
+        logger.info(f"  Total parameters: {model.count_params()}")
+
+        return model
+
+
 class TNetworkOnlyIIM(tf.keras.Model):
     """
     T Network-Only model for reconstruction experiments.

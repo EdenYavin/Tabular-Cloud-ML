@@ -48,8 +48,8 @@ class DatasetCreationHandler(ExperimentHandler):
 
                 for n_pred_vectors in tqdm(range(1, self.n_pred_vectors + 1), desc=f"Preparing Dataset {dataset_name}", unit="dataset"):
 
-                    if os.path.exists(get_dataset_path(dataset_name, n_pred_vectors) / DATASET_FILE_NAME) and config.dataset_config.use_cache:
-                        logger.info(f"Dataset {get_dataset_path(dataset_name, n_pred_vectors)}"
+                    if os.path.exists(get_dataset_path(dataset_name, n_pred_vectors, feature_combination=config.experiment_config.feature_combination) / DATASET_FILE_NAME) and config.dataset_config.use_cache:
+                        logger.info(f"Dataset {get_dataset_path(dataset_name, n_pred_vectors, feature_combination=config.experiment_config.feature_combination)}"
                                     f" already exists, skipping creation")
                         continue
 
@@ -94,7 +94,7 @@ class DatasetCreationHandler(ExperimentHandler):
                         dataset_creator.create(X_sample, y_sample, X_test, y_test)
                     )
 
-                    path = get_dataset_path(dataset_name, n_pred_vectors)
+                    path = get_dataset_path(dataset_name, n_pred_vectors, feature_combination=config.experiment_config.feature_combination)
                     os.makedirs(path, exist_ok=True)
 
                     logger.debug("Finished Creating the dataset.\n"

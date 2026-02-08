@@ -43,7 +43,7 @@ def plot_history(history, filename=None, title=None):
     plt.show()
 
 
-def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True) -> pathlib.Path:
+def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True, feature_combination=None) -> pathlib.Path:
     rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
     use_cloud_features = "cloud" if (config.cloud_config.names and use_cloud) else "no_cloud"
     cloud_models = "_".join(config.cloud_config.names) if (config.cloud_config.names and use_cloud) else ""
@@ -74,14 +74,19 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True) -> pathl
     else:
         use_calib_vector = ""
 
+    # Include feature combination identifier if present
+    feature_combo_dir = ""
+    if feature_combination:
+        feature_combo_dir = f"ablation_{feature_combination}"
+
     if config.experiment_config.use_deepset:
         path = (pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models /
-                embedding_model / use_raw_features / str(n_pred_vectors) / triang_type  / triang_num / "deepset")
+                embedding_model / use_raw_features / str(n_pred_vectors) / triang_type  / triang_num / "deepset" / feature_combo_dir)
     else:
         path = (pathlib.Path(
             OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / embedding_model
                 / use_raw_features / str(n_pred_vectors) / triang_type / triang_features / use_calib_vector /
-                    triang_num)
+                    triang_num / feature_combo_dir)
     os.makedirs(path, exist_ok=True)
     return path
 

@@ -86,6 +86,10 @@ class Config(BaseModel):
             description="Flag to freeze T network during training",
             default=False
         )
+        feature_combination: str = Field(
+            description="Feature combination to generate for ablation study: combo1, combo2, combo3, or combo4",
+            default=None
+        )
 
 
     experiment_config: ExperimentConfig = ExperimentConfig(n_triangulation_samples=5, n_pred_vectors=1, k_folds=1,
@@ -161,3 +165,7 @@ def update_config_from_args(config: Config, args: argparse.Namespace):
         arg_name = f"experiment_{field_name.replace('-', '_')}"
         if arg_name in args_dict and args_dict[arg_name] is not None:
             setattr(config.experiment_config, field_name, args_dict[arg_name])
+
+    # Special case: --feature-combination maps to experiment_config.feature_combination
+    if 'feature_combination' in args_dict and args_dict['feature_combination'] is not None:
+        config.experiment_config.feature_combination = args_dict['feature_combination']

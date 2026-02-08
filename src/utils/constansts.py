@@ -68,6 +68,12 @@ class EXPERIMENTS(str, enum.Enum):
     DEEPSET_DATASET = "deepset_dataset"
     T_NETWORK_TRAINING = "t_network_training"
 
+class FEATURE_COMBINATIONS(str, enum.Enum):
+    COMBO1 = "combo1"  # [p_x, q_x, T_context]
+    COMBO2 = "combo2"  # [q_x, T_context]
+    COMBO3 = "combo3"  # [p_x, q_x, T_context, cloud]
+    COMBO4 = "combo4"  # [q_x, T_context, cloud]
+
 WINDOWS_OS_STR = "nt"
 IS_WINDOWS_OS = (os.name == WINDOWS_OS_STR)
 

@@ -68,6 +68,7 @@ class EXPERIMENTS(str, enum.Enum):
     KEY_ENCODER_TRAINING = "key_encoder_training"
     DEEPSET_DATASET = "deepset_dataset"
     T_NETWORK_TRAINING = "t_network_training"
+    ABLATION_EXPERIMENT = "ablation_experiment"
 
 class FEATURE_COMBINATIONS(str, enum.Enum):
     COMBO1 = "combo1"  # [p_x, q_x, T_context]

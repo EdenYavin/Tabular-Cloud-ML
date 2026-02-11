@@ -205,7 +205,7 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
         batch_p_i = []
         batch_q_i = []
 
-        with tqdm(total=len(embeddings), leave=True, position=0,
+        with tqdm(total=len(embeddings), leave=True,
                   desc=f"FeatureAblation-{self.feature_combination}") as pbar:
             with tf.device(GPU_DEVICE):
 

@@ -14,6 +14,7 @@ Runs 4 sequential experiments and generates side-by-side comparison report.
 import gc
 import pickle
 import numpy as np
+import os
 from pathlib import Path
 from keras import backend as K
 from loguru import logger
@@ -29,6 +30,11 @@ from src.utils.constansts import (
     REPORT_PATH,
     FEATURE_COMBINATIONS
 )
+from src.pipeline.feature_ablation_dataset import FeatureAblationPipeline
+from src.encryptor import EncryptorFactory
+from src.embeddings import EmbeddingsFactory
+from src.utils.db import RawSplitDBFactory
+from src.cloud import CLOUD_MODELS, DEFAULT_CLOUD_OUTPUT_SHAPE
 
 
 class FeatureAblationExperimentHandler(ExperimentHandler):
@@ -70,6 +76,86 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             FEATURE_COMBINATIONS.CLOUD_NO_RAW
         ]
 
+        return np.vstack(X_train), np.vstack(y_train), data.test.features, data.test.labels
+
+    def _create_dataset_if_missing(self, dataset_name, feature_combination):
+        """
+        Check if dataset exists, and if not, create it on the fly.
+        """
+        # Check if 1st fold exists (usually enough to know if dataset was created)
+        path = get_dataset_path(
+            dataset_name,
+            1,
+            feature_combination=feature_combination
+        ) / DATASET_FILE_NAME
+
+        if path.exists():
+            return
+
+        logger.info(f"Dataset for {dataset_name} ({feature_combination}) not found.")
+        logger.info(f"Creating dataset on the fly...")
+
+        # 1. Load Raw Dataset & Splits
+        raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
+        
+        # Get Cloud Output Shape
+        if config.cloud_config.names:
+            cloud_model_output = CLOUD_MODELS[config.cloud_config.names[0]].input_shape
+        else:
+            cloud_model_output = DEFAULT_CLOUD_OUTPUT_SHAPE
+
+        # Initialize Factories
+        embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name)
+        encryptor = EncryptorFactory.get_model(dataset_name=dataset_name, output_shape=cloud_model_output)
+
+        # Get Split (Train/Test/Sample)
+        X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
+        
+        # Initialize Pipeline
+        dataset_creator = FeatureAblationPipeline(
+            dataset_name=dataset_name,
+            encryptor=encryptor,
+            embeddings_model=embedding_model,
+            metadata=raw_dataset.metadata
+        )
+
+        # 2. Loop through requested number of prediction vectors
+        for n_pred_vectors in range(1, self.n_pred_vectors + 1):
+            
+            # Check if this specific fold already exists
+            fold_path = get_dataset_path(
+                dataset_name, 
+                n_pred_vectors, 
+                feature_combination=feature_combination
+            )
+            
+            if (fold_path / DATASET_FILE_NAME).exists():
+                continue
+
+            logger.info(f"Generating fold {n_pred_vectors}/{self.n_pred_vectors} for {dataset_name}...")
+
+            # Create Dataset
+            dataset, emb_baseline_dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
+
+            # Save to Disk
+            os.makedirs(fold_path, exist_ok=True)
+            
+            with open(fold_path / BASELINE_DATASET_FILE_NAME, "wb") as f:
+                pickle.dump(emb_baseline_dataset, f)
+
+            with open(fold_path / DATASET_FILE_NAME, "wb") as f:
+                pickle.dump(dataset, f)
+            
+            # Cleanup
+            del dataset, emb_baseline_dataset
+            gc.collect()
+            
+        logger.info(f"Successfully created dataset for {feature_combination}")
+        
+        # Cleanup Factories
+        del raw_dataset, embedding_model, encryptor, dataset_creator
+        gc.collect()
+
     def _collect_datasets(self, dataset_name, feature_combination):
         """
         Load cached datasets for a specific feature combination.
@@ -84,7 +170,11 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
         Raises:
             FileNotFoundError: If cached dataset not found for combination
         """
+        # Ensure dataset exists before trying to load
+        self._create_dataset_if_missing(dataset_name, feature_combination)
+
         X_train, y_train = [], []
+        data = None
 
         for folder in range(1, self.n_pred_vectors + 1):
             # get_dataset_path now accepts feature_combination parameter
@@ -106,6 +196,9 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
                 data = pickle.load(f)
                 X_train.append(data.train.features)
                 y_train.append(data.train.labels)
+
+        if data is None:
+             raise ValueError(f"No data loaded for {dataset_name} {feature_combination}")
 
         return np.vstack(X_train), np.vstack(y_train), data.test.features, data.test.labels
 

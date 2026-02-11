@@ -15,7 +15,7 @@ import gc
 import pickle
 import numpy as np
 import os
-from pathlib import Path
+from tqdm import tqdm
 from keras import backend as K
 from loguru import logger
 
@@ -76,24 +76,8 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             FEATURE_COMBINATIONS.CLOUD_NO_RAW
         ]
 
-        return np.vstack(X_train), np.vstack(y_train), data.test.features, data.test.labels
 
-    def _create_dataset_if_missing(self, dataset_name, feature_combination):
-        """
-        Check if dataset exists, and if not, create it on the fly.
-        """
-        # Check if 1st fold exists (usually enough to know if dataset was created)
-        path = get_dataset_path(
-            dataset_name,
-            1,
-            feature_combination=feature_combination
-        ) / DATASET_FILE_NAME
-
-        if path.exists():
-            return
-
-        logger.info(f"Dataset for {dataset_name} ({feature_combination}) not found.")
-        logger.info(f"Creating dataset on the fly...")
+    def _create_dataset_if_missing(self, dataset_name, feature_combination, n_pred):
 
         # 1. Load Raw Dataset & Splits
         raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
@@ -119,42 +103,37 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             metadata=raw_dataset.metadata
         )
 
-        # 2. Loop through requested number of prediction vectors
-        for n_pred_vectors in range(1, self.n_pred_vectors + 1):
-            
-            # Check if this specific fold already exists
-            fold_path = get_dataset_path(
-                dataset_name, 
-                n_pred_vectors, 
-                feature_combination=feature_combination
-            )
-            
-            if (fold_path / DATASET_FILE_NAME).exists():
-                continue
+        # Check if this specific fold already exists
+        fold_path = get_dataset_path(
+            dataset_name,
+            n_pred,
+            feature_combination=feature_combination
+        )
 
-            logger.info(f"Generating fold {n_pred_vectors}/{self.n_pred_vectors} for {dataset_name}...")
+        if (fold_path / DATASET_FILE_NAME).exists():
+            logger.info(f"Dataset for {feature_combination} already exists, skipping creation")
+            with open(fold_path / DATASET_FILE_NAME, "rb") as f:
+                return pickle.load(f)
 
-            # Create Dataset
-            dataset, emb_baseline_dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
+        logger.info(f"Generating fold {fold_path / DATASET_FILE_NAME} dataset...")
 
-            # Save to Disk
-            os.makedirs(fold_path, exist_ok=True)
-            
-            with open(fold_path / BASELINE_DATASET_FILE_NAME, "wb") as f:
-                pickle.dump(emb_baseline_dataset, f)
+        # Create Dataset
+        dataset, emb_baseline_dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
 
-            with open(fold_path / DATASET_FILE_NAME, "wb") as f:
-                pickle.dump(dataset, f)
-            
-            # Cleanup
-            del dataset, emb_baseline_dataset
-            gc.collect()
-            
-        logger.info(f"Successfully created dataset for {feature_combination}")
-        
-        # Cleanup Factories
-        del raw_dataset, embedding_model, encryptor, dataset_creator
+        # Save to Disk
+        os.makedirs(fold_path, exist_ok=True)
+
+        with open(fold_path / BASELINE_DATASET_FILE_NAME, "wb") as f:
+            pickle.dump(emb_baseline_dataset, f)
+
+        with open(fold_path / DATASET_FILE_NAME, "wb") as f:
+            logger.debug(f"Saving dataset to {fold_path / DATASET_FILE_NAME}")
+            pickle.dump(dataset, f)
+
+        del raw_dataset, embedding_model, encryptor, dataset_creator, emb_baseline_dataset
         gc.collect()
+        return dataset
+
 
     def _collect_datasets(self, dataset_name, feature_combination):
         """
@@ -167,40 +146,23 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
         Returns:
             Tuple of (X_train, y_train, X_test, y_test)
 
-        Raises:
-            FileNotFoundError: If cached dataset not found for combination
         """
-        # Ensure dataset exists before trying to load
-        self._create_dataset_if_missing(dataset_name, feature_combination)
 
         X_train, y_train = [], []
-        data = None
+        X_test, y_test = None, None
 
-        for folder in range(1, self.n_pred_vectors + 1):
-            # get_dataset_path now accepts feature_combination parameter
-            path = get_dataset_path(
-                dataset_name,
-                folder,
-                feature_combination=feature_combination
-            ) / DATASET_FILE_NAME
+        for folder in tqdm(range(1, self.n_pred_vectors + 1), desc=f"Loading {feature_combination} datasets", position=0, leave=True):
 
-            if not path.exists():
-                raise FileNotFoundError(
-                    f"Dataset cache not found for {feature_combination}: {path}\n"
-                    f"Run dataset creation first with --feature-combination {feature_combination}"
-                )
+            data = self._create_dataset_if_missing(dataset_name, feature_combination, folder)
 
-            logger.debug(f"Loading dataset from {path}")
+            X_train.append(data.train.features)
+            y_train.append(data.train.labels)
+            X_test = data.test.features
+            y_test = data.test.labels
+            del data
+            gc.collect()
 
-            with open(path, "rb") as f:
-                data = pickle.load(f)
-                X_train.append(data.train.features)
-                y_train.append(data.train.labels)
-
-        if data is None:
-             raise ValueError(f"No data loaded for {dataset_name} {feature_combination}")
-
-        return np.vstack(X_train), np.vstack(y_train), data.test.features, data.test.labels
+        return np.vstack(X_train), np.vstack(y_train), X_test, y_test
 
     def _run_single_combination(self, dataset_name, feature_combination, n_classes, original_size):
         """

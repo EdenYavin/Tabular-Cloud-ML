@@ -62,13 +62,11 @@ else
     RAW_FEATURES_FLAG=""
 fi
 
-# Pretrained T Network Path (REQUIRED)
+# Pretrained T Network Path (Optional - uses default path if not specified)
 if [ -n "$PRETRAINED_T_NETWORK_PATH" ]; then
     T_NETWORK_PATH_FLAG="--pretrained-t-network $PRETRAINED_T_NETWORK_PATH"
 else
-    echo "ERROR: PRETRAINED_T_NETWORK_PATH environment variable not set!"
-    echo "Please export PRETRAINED_T_NETWORK_PATH=/path/to/your/t_network.keras"
-    exit 1
+    T_NETWORK_PATH_FLAG=""
 fi
 
 # IIM Epochs

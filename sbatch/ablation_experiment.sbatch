@@ -16,42 +16,42 @@
 
 # Triangulation Mode
 if [ -n "$TRIANGULATION_MODE" ]; then
-    TRIANG_MODE_FLAG="--experiment-triangulation-mode $TRIANGULATION_MODE"
+    TRIANG_MODE_FLAG="--triangulation-mode $TRIANGULATION_MODE"
 else
     TRIANG_MODE_FLAG=""
 fi
 
 # Triangulation Embedding Model
 if [ -n "$TRIANGULATION_EMBEDDING" ]; then
-    TRIANG_EMB_FLAG="--encoder-embedding $TRIANGULATION_EMBEDDING"
+    TRIANG_EMB_FLAG="--triangulation-embedding-model $TRIANGULATION_EMBEDDING"
 else
     TRIANG_EMB_FLAG=""
 fi
 
 # Triangulation Choosing Method
 if [ -n "$CHOOSE" ]; then
-    TRIANG_CHOOSE_FLAG="--experiment-triangulation-choosing $CHOOSE"
+    TRIANG_CHOOSE_FLAG="--triangulation-choosing $CHOOSE"
 else
     TRIANG_CHOOSE_FLAG=""
 fi
 
 # Number of Triangulation Samples (Anchors)
 if [ -n "$TRIANGULATIONS_NUMBER" ]; then
-    TRIANG_SAMPLES_FLAG="--experiment-n-triangulation-samples $TRIANGULATIONS_NUMBER"
+    TRIANG_SAMPLES_FLAG="--triangulation-samples $TRIANGULATIONS_NUMBER"
 else
     TRIANG_SAMPLES_FLAG=""
 fi
 
 # Number of Prediction Vectors
 if [ -n "$N_P" ]; then
-    N_P_FLAG="--experiment-n-pred-vectors $N_P"
+    N_P_FLAG="--number-of-prediction-vector $N_P"
 else
-    N_P_FLAG="--experiment-n-pred-vectors 1"
+    N_P_FLAG="--number-of-prediction-vector 1"
 fi
 
 # Cloud Models (for combo3/combo4)
 if [ -n "$CLOUD_MODELS" ]; then
-    CLOUD_FLAG="--cloud-names $CLOUD_MODELS"
+    CLOUD_FLAG="--use-cloud-models $CLOUD_MODELS"
 else
     CLOUD_FLAG=""
 fi
@@ -65,26 +65,26 @@ fi
 
 # Pretrained T Network Path (Optional - uses default path if not specified)
 if [ -n "$PRETRAINED_T_NETWORK_PATH" ]; then
-    T_NETWORK_PATH_FLAG="--experiment-pretrained-t-network-path $PRETRAINED_T_NETWORK_PATH"
+    T_NETWORK_PATH_FLAG="--pretrained-t-network $PRETRAINED_T_NETWORK_PATH"
 else
     T_NETWORK_PATH_FLAG=""
 fi
 
 # Freeze T Network (default: true for ablation studies)
-FREEZE_T_FLAG="--experiment-freeze-t-network"
+FREEZE_T_FLAG="--freeze-t-network"
 
 # IIM Epochs
 if [ -n "$IIM_EPOCHS" ]; then
-    EPOCHS_FLAG="--iim-neural-net-epochs $IIM_EPOCHS"
+    EPOCHS_FLAG="--iim-epochs $IIM_EPOCHS"
 else
-    EPOCHS_FLAG="--iim-neural-net-epochs 100"
+    EPOCHS_FLAG="--iim-epochs 100"
 fi
 
 # K-Fold iterations (default: 1)
 if [ -n "$K_FOLDS" ]; then
-    K_FOLDS_FLAG="--experiment-k-folds $K_FOLDS"
+    K_FOLDS_FLAG="--k-training $K_FOLDS"
 else
-    K_FOLDS_FLAG="--experiment-k-folds 1"
+    K_FOLDS_FLAG="--k-training 1"
 fi
 
 # -----------------------------------------
@@ -152,7 +152,7 @@ python main.py \
     $CLOUD_FLAG \
     $EPOCHS_FLAG \
     $K_FOLDS_FLAG \
-    --dataset-names "$DATASET_NAME" \
+    --datasets "$DATASET_NAME" \
     --dataset-use-cache
 
 if [ $? -ne 0 ]; then

@@ -24,6 +24,7 @@ from src.utils.constansts import GPU_DEVICE, FEATURE_COMBINATIONS
 from src.pipeline.base import FeatureEngineeringPipeline
 from src.pipeline.frozen_t_context_extractor import FrozenTContextExtractor
 from src.utils.config import config
+from src.utils.helpers import get_t_network_model_path
 from loguru import logger
 
 
@@ -77,17 +78,25 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
             f"### FEATURE ABLATION PIPELINE - {self.feature_combination.upper()} ###"
         )
 
-        # Check if pretrained T network path is specified
-        if not config.experiment_config.pretrained_t_network_path:
-            raise ValueError(
-                "pretrained_t_network_path must be specified in config. "
-                "Use --experiment-pretrained-t-network-path /path/to/model.keras"
+        # Determine T network path (use explicit path or generate default)
+        if config.experiment_config.pretrained_t_network_path:
+            t_network_path = Path(config.experiment_config.pretrained_t_network_path)
+            logger.info(f"Using explicit T network path: {t_network_path}")
+        else:
+            # Generate default path based on dataset and config
+            t_network_path = get_t_network_model_path(
+                dataset_name=dataset_name,
+                ensure_exists=False  # We'll check existence below
             )
+            logger.info(f"Using default T network path: {t_network_path}")
 
-        t_network_path = Path(config.experiment_config.pretrained_t_network_path)
+        # Verify the T network model exists
         if not t_network_path.exists():
             raise FileNotFoundError(
-                f"Pretrained T network not found at: {t_network_path}"
+                f"Pretrained T network not found at: {t_network_path}\n"
+                f"Either:\n"
+                f"  1. Train a T network first: python main.py --experiment-to-run t_network_training --datasets {dataset_name}\n"
+                f"  2. Provide explicit path: --pretrained-t-network /path/to/model.keras"
             )
 
         # Initialize Frozen T Context Extractor

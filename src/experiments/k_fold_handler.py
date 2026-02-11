@@ -14,6 +14,7 @@ from loguru import logger
 from src.experiments.base import ExperimentHandler
 from src.utils.helpers import get_experiment_name, get_dataset_path
 from src.utils.constansts import DATASET_FILE_NAME, REPORT_PATH, OUTPUT_DIR_PATH, IIM_MODELS
+from src.utils.helpers import get_t_network_model_path
 
 
 class KModelTrainingExperimentHandler(ExperimentHandler):
@@ -78,7 +79,6 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                     # Auto-determine T-Network path if freeze is enabled but path not specified
                     pretrained_path = config.experiment_config.pretrained_t_network_path
                     if config.experiment_config.freeze_t_network and not pretrained_path:
-                        from src.utils.helpers import get_t_network_model_path
                         try:
                             pretrained_path = get_t_network_model_path(
                                 dataset_name=dataset_name,

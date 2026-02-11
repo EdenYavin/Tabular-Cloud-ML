@@ -28,7 +28,8 @@ from src.utils.constansts import (
     DATASET_FILE_NAME,
     BASELINE_DATASET_FILE_NAME,
     REPORT_PATH,
-    FEATURE_COMBINATIONS
+    FEATURE_COMBINATIONS,
+    IIM_MODELS
 )
 from src.pipeline.feature_ablation_dataset import FeatureAblationPipeline
 from src.encryptor import EncryptorFactory
@@ -198,34 +199,60 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             f"Train: {X_train.shape}, Test: {X_test.shape}"
         )
 
-        # Create FlexibleSINClassifier - automatically adapts to input dimensions
-        internal_model = InternalInferenceModelFactory().get_model(
-            num_classes=n_classes,
-            input_shape=X_train.shape[1],
-            type="flexible_sin"
-        )
+        # Initialize metric collectors for K-fold training
+        test_accs = []
+        test_aucs = []
 
         logger.info(
-            f"Training FlexibleSINClassifier for {feature_combination}\n"
-            f"Input shape: {X_train.shape[1]} dims, Output classes: {n_classes}"
+            f"Running {config.experiment_config.k_folds} training iterations for {feature_combination}"
         )
 
-        # Train model
-        internal_model.fit(
-            X=X_train, y=y_train,
-            validation_data=(X_test, y_test)
-        )
+        for k_iter in tqdm(
+            range(config.experiment_config.k_folds),
+            total=config.experiment_config.k_folds,
+            desc=f"K-fold training: {feature_combination}",
+            position=1,
+            leave=False
+        ):
+            logger.debug(f"K-fold iteration {k_iter + 1}/{config.experiment_config.k_folds}")
 
-        # Evaluate on test set
-        test_metrics = internal_model.evaluate(
-            X=X_test, y=y_test, metrics=config.iim_config.metrics
-        )
+            # Create FlexibleSINClassifier - automatically adapts to input dimensions
+            internal_model = InternalInferenceModelFactory().get_model(
+                num_classes=n_classes,
+                input_shape=X_train.shape[1],
+                type=IIM_MODELS.FLEXIBLE_SIN
+            )
 
-        logger.info(
-            f"{feature_combination} Test Metrics: {test_metrics}"
-        )
+            logger.info(
+                f"Training FlexibleSINClassifier for {feature_combination} (iteration {k_iter + 1})\n"
+                f"Input shape: {X_train.shape[1]} dims, Output classes: {n_classes}"
+            )
 
-        # Save training history and plots
+            # Train model
+            internal_model.fit(
+                X=X_train, y=y_train,
+                validation_data=(X_test, y_test)
+            )
+
+            # Evaluate on test set
+            test_metrics = internal_model.evaluate(
+                X=X_test, y=y_test, metrics=config.iim_config.metrics
+            )
+
+            logger.info(
+                f"{feature_combination} K-fold {k_iter + 1} Test Metrics: {test_metrics}"
+            )
+
+            # Extract accuracy and AUC from test_metrics dict
+            test_acc = test_metrics.get("test_accuracy", test_metrics.get("accuracy", 0.0))
+            test_auc = test_metrics.get("test_auc", test_metrics.get("auc", 0.0))
+
+            test_accs.append(round(float(test_acc), 4))
+            test_aucs.append(round(float(test_auc), 4))
+
+            logger.debug(f"K-fold {k_iter + 1}: acc={test_acc:.4f}, auc={test_auc:.4f}")
+
+        # Save training history and plots (using last iteration's model)
         path = get_dataset_path(
             dataset_name=dataset_name,
             n_pred_vectors=self.n_pred_vectors,
@@ -237,40 +264,13 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
         internal_model.save_history(history_path)
         internal_model.plot_history(plot_path)
 
-        # Load baseline if available
-        if config.iim_config.train_baseline:
-            baseline_path = path / BASELINE_DATASET_FILE_NAME
-            if baseline_path.exists():
-                with open(baseline_path, "rb") as f:
-                    baseline_dataset = pickle.load(f)
-
-                logger.info(
-                    f"Training baseline embedding model for {feature_combination}\n"
-                    f"Baseline dataset size: {baseline_dataset.train.features.shape}"
-                )
-
-                baseline_emb_acc, embeddings_baseline_f1 = self.get_embedding_baseline(
-                    baseline_dataset
-                )
-            else:
-                logger.warning(f"Baseline dataset not found at {baseline_path}")
-                baseline_emb_acc, embeddings_baseline_f1 = 0, 0
-        else:
-            baseline_emb_acc, embeddings_baseline_f1 = 0, 0
-
-        # Log results to report
-        self.log_results(
+        # Log K-fold results to report
+        self.log_k_results(
             dataset_name=dataset_name,
-            train_shape=original_size,
-            new_train_shape=X_train.shape,
-            test_shape=X_test.shape,
             cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
-            embeddings_baseline_acc=baseline_emb_acc,
-            embeddings_baseline_f1=embeddings_baseline_f1,
-            test_metrics=test_metrics,
-            iim_model_name=f"flexible_sin_{feature_combination}",
-            total_params=internal_model.model.count_params(),
-            n_pred_vectors=self.n_pred_vectors,
+            iim_name=f"flexible_sin_{feature_combination}",
+            k_test_accuracies=test_accs,
+            k_test_aucs=test_aucs
         )
 
         # Clean up memory

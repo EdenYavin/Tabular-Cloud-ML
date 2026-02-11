@@ -101,6 +101,7 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             dataset_name=dataset_name,
             encryptor=encryptor,
             embeddings_model=embedding_model,
+            feature_combination=feature_combination,
             metadata=raw_dataset.metadata
         )
 

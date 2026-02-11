@@ -35,12 +35,12 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
     This pipeline extracts features from a frozen, pretrained T network and combines
     them with raw embeddings and/or cloud predictions based on the selected combination.
 
-    The feature_combination is specified via config.experiment_config.feature_combination
-    and must be one of: baseline_no_cloud, no_raw_embedding, full_features, or cloud_no_raw.
+    The feature_combination is passed as a constructor parameter and must be one of:
+    baseline_no_cloud, no_raw_embedding, full_features, or cloud_no_raw.
     """
 
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
-                 metadata=None):
+                 feature_combination: str, metadata=None):
         """
         Initialize Feature Ablation Pipeline.
 
@@ -48,22 +48,23 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
             dataset_name: Name of dataset being processed
             encryptor: Encryptor model for generating encrypted embeddings
             embeddings_model: Embedding model for raw features
+            feature_combination: Feature combination to generate (baseline_no_cloud, no_raw_embedding, full_features, cloud_no_raw)
             metadata: Optional dataset metadata
 
         Raises:
-            ValueError: If feature_combination not specified in config
+            ValueError: If feature_combination is invalid
             FileNotFoundError: If pretrained T network path not found
         """
         super().__init__(dataset_name, encryptor, embeddings_model, metadata)
 
-        # Validate feature combination is specified
-        if not config.experiment_config.feature_combination:
+        # Validate feature combination
+        if not feature_combination:
             raise ValueError(
-                "feature_combination must be specified in config. "
-                "Use --feature-combination baseline_no_cloud|no_raw_embedding|full_features|cloud_no_raw"
+                "feature_combination must be provided. "
+                "Must be one of: baseline_no_cloud, no_raw_embedding, full_features, cloud_no_raw"
             )
 
-        self.feature_combination = config.experiment_config.feature_combination
+        self.feature_combination = feature_combination
 
         # Validate it's a valid combination
         try:

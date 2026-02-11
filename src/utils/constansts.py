@@ -71,10 +71,10 @@ class EXPERIMENTS(str, enum.Enum):
     ABLATION_EXPERIMENT = "ablation_experiment"
 
 class FEATURE_COMBINATIONS(str, enum.Enum):
-    COMBO1 = "combo1"  # [p_x, q_x, T_context]
-    COMBO2 = "combo2"  # [q_x, T_context]
-    COMBO3 = "combo3"  # [p_x, q_x, T_context, cloud]
-    COMBO4 = "combo4"  # [q_x, T_context, cloud]
+    BASELINE_NO_CLOUD = "baseline_no_cloud"  # [p_x, q_x, T_context]
+    NO_RAW_EMBEDDING = "no_raw_embedding"    # [q_x, T_context]
+    FULL_FEATURES = "full_features"          # [p_x, q_x, T_context, cloud]
+    CLOUD_NO_RAW = "cloud_no_raw"            # [q_x, T_context, cloud]
 
 WINDOWS_OS_STR = "nt"
 IS_WINDOWS_OS = (os.name == WINDOWS_OS_STR)

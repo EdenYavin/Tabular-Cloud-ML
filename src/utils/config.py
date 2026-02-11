@@ -87,7 +87,7 @@ class Config(BaseModel):
             default=False
         )
         feature_combination: str = Field(
-            description="Feature combination to generate for ablation study: combo1, combo2, combo3, or combo4",
+            description="Feature combination to generate for ablation study: baseline_no_cloud, no_raw_embedding, full_features, or cloud_no_raw",
             default=None
         )
 

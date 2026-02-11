@@ -2,10 +2,10 @@
 Feature Ablation Pipeline for Frozen T Network Studies.
 
 Generates 4 different feature combinations for ablation experiments:
-- combo1: [p_x, q_x, T_context] - 960 dims (64 + 768 + 128)
-- combo2: [q_x, T_context] - 896 dims (768 + 128)
-- combo3: [p_x, q_x, T_context, cloud] - 960+cloud dims
-- combo4: [q_x, T_context, cloud] - 896+cloud dims
+- baseline_no_cloud: [p_x, q_x, T_context] - 960 dims (64 + 768 + 128)
+- no_raw_embedding: [q_x, T_context] - 896 dims (768 + 128)
+- full_features: [p_x, q_x, T_context, cloud] - 960+cloud dims
+- cloud_no_raw: [q_x, T_context, cloud] - 896+cloud dims
 
 Where:
 - p_x: Raw sparse autoencoder sample embedding (64 dims)
@@ -35,7 +35,7 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
     them with raw embeddings and/or cloud predictions based on the selected combination.
 
     The feature_combination is specified via config.experiment_config.feature_combination
-    and must be one of: combo1, combo2, combo3, or combo4.
+    and must be one of: baseline_no_cloud, no_raw_embedding, full_features, or cloud_no_raw.
     """
 
     def __init__(self, dataset_name, encryptor: BaseEncryptor, embeddings_model,
@@ -59,7 +59,7 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
         if not config.experiment_config.feature_combination:
             raise ValueError(
                 "feature_combination must be specified in config. "
-                "Use --feature-combination combo1|combo2|combo3|combo4"
+                "Use --feature-combination baseline_no_cloud|no_raw_embedding|full_features|cloud_no_raw"
             )
 
         self.feature_combination = config.experiment_config.feature_combination
@@ -70,7 +70,7 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
         except ValueError:
             raise ValueError(
                 f"Invalid feature_combination: {self.feature_combination}. "
-                f"Must be one of: combo1, combo2, combo3, combo4"
+                f"Must be one of: baseline_no_cloud, no_raw_embedding, full_features, cloud_no_raw"
             )
 
         logger.info(
@@ -126,11 +126,11 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
         self._log_combination_info()
 
         # Check if cloud models needed
-        if self.feature_combination in ["combo3", "combo4"]:
+        if self.feature_combination in ["full_features", "cloud_no_raw"]:
             if not config.cloud_config.names:
                 raise ValueError(
                     f"{self.feature_combination} requires cloud models. "
-                    f"Specify --cloud-names [model1] [model2] ..."
+                    f"Specify --use-cloud-models [model1] [model2] ..."
                 )
             logger.info(
                 f"Cloud models enabled for {self.feature_combination}: "
@@ -140,10 +140,10 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
     def _log_combination_info(self):
         """Log information about the selected feature combination."""
         combo_info = {
-            "combo1": "[p_x(64), q_x(768/512), T_context(128)] → 960/704 dims",
-            "combo2": "[q_x(768/512), T_context(128)] → 896/640 dims",
-            "combo3": "[p_x(64), q_x(768/512), T_context(128), cloud(N)] → 960/704+N dims",
-            "combo4": "[q_x(768/512), T_context(128), cloud(N)] → 896/640+N dims"
+            "baseline_no_cloud": "[p_x(64), q_x(768/512), T_context(128)] → 960/704 dims",
+            "no_raw_embedding": "[q_x(768/512), T_context(128)] → 896/640 dims",
+            "full_features": "[p_x(64), q_x(768/512), T_context(128), cloud(N)] → 960/704+N dims",
+            "cloud_no_raw": "[q_x(768/512), T_context(128), cloud(N)] → 896/640+N dims"
         }
 
         logger.info(f"Feature combination: {combo_info[self.feature_combination]}")
@@ -159,7 +159,7 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
         4. Extract q_x (encrypted sample → DINO/CLIP embedding)
         5. Extract q_i (encrypted anchors → DINO/CLIP embeddings)
         6. Call FrozenTContextExtractor.extract_context(p_x, p_i, q_i) → T_context (128 dims)
-        7. Generate cloud predictions if needed (combo3/combo4)
+        7. Generate cloud predictions if needed (full_features/cloud_no_raw)
         8. Build observation based on feature_combination
 
         Args:
@@ -251,7 +251,7 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
                     # --- CONSTRUCT OBSERVATION BASED ON COMBINATION ---
                     observation_parts = []
 
-                    if self.feature_combination == "combo1":
+                    if self.feature_combination == "baseline_no_cloud":
                         # [p_x, q_x, T_context]
                         observation_parts = [
                             flat_plaintext_sample,       # p_x: 64
@@ -259,14 +259,14 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
                             flat_T_context               # T_context: 128
                         ]
 
-                    elif self.feature_combination == "combo2":
+                    elif self.feature_combination == "no_raw_embedding":
                         # [q_x, T_context]
                         observation_parts = [
                             flat_encrypted_sample_emb,   # q_x: 768/512
                             flat_T_context               # T_context: 128
                         ]
 
-                    elif self.feature_combination == "combo3":
+                    elif self.feature_combination == "full_features":
                         # [p_x, q_x, T_context, cloud]
                         observation_parts = [
                             flat_plaintext_sample,       # p_x: 64
@@ -281,7 +281,7 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
                             predictions.append(pred.flatten())
                         observation_parts.append(np.hstack(predictions))
 
-                    elif self.feature_combination == "combo4":
+                    elif self.feature_combination == "cloud_no_raw":
                         # [q_x, T_context, cloud]
                         observation_parts = [
                             flat_encrypted_sample_emb,   # q_x: 768/512

@@ -1,7 +1,7 @@
 """
 Feature Ablation Experiment Handler.
 
-Orchestrates batch training runs for all 4 feature combinations (combo1-combo4)
+Orchestrates batch training runs for all 4 feature combinations
 using FlexibleSINClassifier to evaluate the relative importance of:
 - p_x: Raw sparse autoencoder sample embeddings
 - q_x: Encrypted sample embeddings (DINO/CLIP)
@@ -36,10 +36,10 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
     Batch experiment runner for feature ablation study.
 
     Executes training for all 4 feature combinations sequentially:
-    1. combo1: [p_x, q_x, T_context] - Baseline with all features except cloud
-    2. combo2: [q_x, T_context] - Remove p_x to test raw embedding importance
-    3. combo3: [p_x, q_x, T_context, cloud] - Full feature set
-    4. combo4: [q_x, T_context, cloud] - Cloud features without raw embeddings
+    1. baseline_no_cloud: [p_x, q_x, T_context] - Baseline with all features except cloud
+    2. no_raw_embedding: [q_x, T_context] - Remove p_x to test raw embedding importance
+    3. full_features: [p_x, q_x, T_context, cloud] - Full feature set
+    4. cloud_no_raw: [q_x, T_context, cloud] - Cloud features without raw embeddings
 
     Each combination uses:
     - Identical train/val/test splits from cached dataset files
@@ -64,10 +64,10 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
 
         # Validate all combinations are cacheable
         self.combinations = [
-            FEATURE_COMBINATIONS.COMBO1,
-            FEATURE_COMBINATIONS.COMBO2,
-            FEATURE_COMBINATIONS.COMBO3,
-            FEATURE_COMBINATIONS.COMBO4
+            FEATURE_COMBINATIONS.BASELINE_NO_CLOUD,
+            FEATURE_COMBINATIONS.NO_RAW_EMBEDDING,
+            FEATURE_COMBINATIONS.FULL_FEATURES,
+            FEATURE_COMBINATIONS.CLOUD_NO_RAW
         ]
 
     def _collect_datasets(self, dataset_name, feature_combination):
@@ -76,7 +76,7 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
 
         Args:
             dataset_name: Dataset name (e.g., 'adult', 'heloc')
-            feature_combination: Feature combination enum (combo1-combo4)
+            feature_combination: Feature combination enum (baseline_no_cloud, no_raw_embedding, full_features, cloud_no_raw)
 
         Returns:
             Tuple of (X_train, y_train, X_test, y_test)
@@ -115,7 +115,7 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
 
         Args:
             dataset_name: Dataset name
-            feature_combination: Feature combination enum (combo1-combo4)
+            feature_combination: Feature combination enum (baseline_no_cloud, no_raw_embedding, full_features, cloud_no_raw)
             n_classes: Number of target classes
             original_size: Original dataset shape (for logging)
 
@@ -231,10 +231,10 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
 
         For each dataset in config:
         1. Load dataset metadata (n_classes, original size)
-        2. Run training for combo1 (baseline without cloud)
-        3. Run training for combo2 (remove p_x)
-        4. Run training for combo3 (full feature set)
-        5. Run training for combo4 (cloud without p_x)
+        2. Run training for baseline_no_cloud (baseline without cloud)
+        3. Run training for no_raw_embedding (remove p_x)
+        4. Run training for full_features (full feature set)
+        5. Run training for cloud_no_raw (cloud without p_x)
         6. Log all results to CSV report
 
         Results are automatically saved after each combination via log_results().

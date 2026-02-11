@@ -270,6 +270,15 @@ def main():
         help="Freeze T network and train only classifier"
     )
 
+    parser.add_argument(
+        "--feature-combination",
+        type=str,
+        default=None,
+        dest="experiment_feature_combination",
+        choices=["baseline_no_cloud", "no_raw_embedding", "full_features", "cloud_no_raw"],
+        help="Feature combination for ablation study: baseline_no_cloud (all local), no_raw_embedding (no p_x), full_features (all), cloud_no_raw (cloud without p_x)"
+    )
+
     args = parser.parse_args()
 
     # Check if the list contains a single string with spaces and split it if necessary

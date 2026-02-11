@@ -111,17 +111,24 @@ which python
 export TF_XLA_FLAGS=--tf_xla_auto_jit=0
 
 # -----------------------------------------
-# STEP 1: Create datasets for all 4 combos
+# Process each combination: create dataset then train
 # -----------------------------------------
 
 echo ""
 echo "==============================================="
-echo "STEP 1: Creating datasets for all combinations"
+echo "Processing Feature Combinations Sequentially"
 echo "==============================================="
 
-# Combo1: [p_x, q_x, T_context]
+# -----------------------------------------
+# Combination 1: baseline_no_cloud
+# -----------------------------------------
 echo ""
-echo "--- Creating combo1 dataset ---"
+echo "═══════════════════════════════════════════════"
+echo "COMBINATION 1/4: baseline_no_cloud"
+echo "═══════════════════════════════════════════════"
+
+echo ""
+echo "--- Step 1.1: Creating dataset ---"
 python main.py \
     --experiment-to-run dataset_creation \
     --encoder-rotating-key \
@@ -133,17 +140,49 @@ python main.py \
     $N_P_FLAG \
     $T_NETWORK_PATH_FLAG \
     --datasets "$DATASET_NAME" \
-    --feature-combination combo1 \
+    --feature-combination baseline_no_cloud \
     --dataset-use-cache
 
 if [ $? -ne 0 ]; then
-    echo "❌ Combo1 dataset creation failed! Exiting."
+    echo "❌ baseline_no_cloud dataset creation failed! Exiting."
     exit 1
 fi
 
-# Combo2: [q_x, T_context]
 echo ""
-echo "--- Creating combo2 dataset ---"
+echo "--- Step 1.2: Training model ---"
+python main.py \
+    --experiment-to-run model_training \
+    --encoder-rotating-key \
+    $RAW_FEATURES_FLAG \
+    $TRIANG_MODE_FLAG \
+    $TRIANG_EMB_FLAG \
+    $TRIANG_CHOOSE_FLAG \
+    $TRIANG_SAMPLES_FLAG \
+    $N_P_FLAG \
+    $T_NETWORK_PATH_FLAG \
+    $EPOCHS_FLAG \
+    --datasets "$DATASET_NAME" \
+    --feature-combination baseline_no_cloud \
+    --iim-name flexible_sin \
+    --dataset-use-cache
+
+if [ $? -ne 0 ]; then
+    echo "❌ baseline_no_cloud training failed! Exiting."
+    exit 1
+fi
+
+echo "✅ baseline_no_cloud complete!"
+
+# -----------------------------------------
+# Combination 2: no_raw_embedding
+# -----------------------------------------
+echo ""
+echo "═══════════════════════════════════════════════"
+echo "COMBINATION 2/4: no_raw_embedding"
+echo "═══════════════════════════════════════════════"
+
+echo ""
+echo "--- Step 2.1: Creating dataset ---"
 python main.py \
     --experiment-to-run dataset_creation \
     --encoder-rotating-key \
@@ -155,17 +194,49 @@ python main.py \
     $N_P_FLAG \
     $T_NETWORK_PATH_FLAG \
     --datasets "$DATASET_NAME" \
-    --feature-combination combo2 \
+    --feature-combination no_raw_embedding \
     --dataset-use-cache
 
 if [ $? -ne 0 ]; then
-    echo "❌ Combo2 dataset creation failed! Exiting."
+    echo "❌ no_raw_embedding dataset creation failed! Exiting."
     exit 1
 fi
 
-# Combo3: [p_x, q_x, T_context, cloud]
 echo ""
-echo "--- Creating combo3 dataset ---"
+echo "--- Step 2.2: Training model ---"
+python main.py \
+    --experiment-to-run model_training \
+    --encoder-rotating-key \
+    $RAW_FEATURES_FLAG \
+    $TRIANG_MODE_FLAG \
+    $TRIANG_EMB_FLAG \
+    $TRIANG_CHOOSE_FLAG \
+    $TRIANG_SAMPLES_FLAG \
+    $N_P_FLAG \
+    $T_NETWORK_PATH_FLAG \
+    $EPOCHS_FLAG \
+    --datasets "$DATASET_NAME" \
+    --feature-combination no_raw_embedding \
+    --iim-name flexible_sin \
+    --dataset-use-cache
+
+if [ $? -ne 0 ]; then
+    echo "❌ no_raw_embedding training failed! Exiting."
+    exit 1
+fi
+
+echo "✅ no_raw_embedding complete!"
+
+# -----------------------------------------
+# Combination 3: full_features
+# -----------------------------------------
+echo ""
+echo "═══════════════════════════════════════════════"
+echo "COMBINATION 3/4: full_features"
+echo "═══════════════════════════════════════════════"
+
+echo ""
+echo "--- Step 3.1: Creating dataset ---"
 python main.py \
     --experiment-to-run dataset_creation \
     --encoder-rotating-key \
@@ -178,51 +249,18 @@ python main.py \
     $T_NETWORK_PATH_FLAG \
     $CLOUD_FLAG \
     --datasets "$DATASET_NAME" \
-    --feature-combination combo3 \
+    --feature-combination full_features \
     --dataset-use-cache
 
 if [ $? -ne 0 ]; then
-    echo "❌ Combo3 dataset creation failed! Exiting."
-    exit 1
-fi
-
-# Combo4: [q_x, T_context, cloud]
-echo ""
-echo "--- Creating combo4 dataset ---"
-python main.py \
-    --experiment-to-run dataset_creation \
-    --encoder-rotating-key \
-    $RAW_FEATURES_FLAG \
-    $TRIANG_MODE_FLAG \
-    $TRIANG_EMB_FLAG \
-    $TRIANG_CHOOSE_FLAG \
-    $TRIANG_SAMPLES_FLAG \
-    $N_P_FLAG \
-    $T_NETWORK_PATH_FLAG \
-    $CLOUD_FLAG \
-    --datasets "$DATASET_NAME" \
-    --feature-combination combo4 \
-    --dataset-use-cache
-
-if [ $? -ne 0 ]; then
-    echo "❌ Combo4 dataset creation failed! Exiting."
+    echo "❌ full_features dataset creation failed! Exiting."
     exit 1
 fi
 
 echo ""
-echo "✅ All dataset combinations created successfully!"
-
-# -----------------------------------------
-# STEP 2: Run ablation experiment
-# -----------------------------------------
-
-echo ""
-echo "==============================================="
-echo "STEP 2: Running Feature Ablation Training"
-echo "==============================================="
-
+echo "--- Step 3.2: Training model ---"
 python main.py \
-    --experiment-to-run ablation_experiment \
+    --experiment-to-run model_training \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG \
     $TRIANG_MODE_FLAG \
@@ -234,15 +272,88 @@ python main.py \
     $CLOUD_FLAG \
     $EPOCHS_FLAG \
     --datasets "$DATASET_NAME" \
+    --feature-combination full_features \
+    --iim-name flexible_sin \
     --dataset-use-cache
 
 if [ $? -ne 0 ]; then
-    echo "❌ Ablation experiment failed!"
+    echo "❌ full_features training failed! Exiting."
+    exit 1
+fi
+
+echo "✅ full_features complete!"
+
+# -----------------------------------------
+# Combination 4: cloud_no_raw
+# -----------------------------------------
+echo ""
+echo "═══════════════════════════════════════════════"
+echo "COMBINATION 4/4: cloud_no_raw"
+echo "═══════════════════════════════════════════════"
+
+echo ""
+echo "--- Step 4.1: Creating dataset ---"
+python main.py \
+    --experiment-to-run dataset_creation \
+    --encoder-rotating-key \
+    $RAW_FEATURES_FLAG \
+    $TRIANG_MODE_FLAG \
+    $TRIANG_EMB_FLAG \
+    $TRIANG_CHOOSE_FLAG \
+    $TRIANG_SAMPLES_FLAG \
+    $N_P_FLAG \
+    $T_NETWORK_PATH_FLAG \
+    $CLOUD_FLAG \
+    --datasets "$DATASET_NAME" \
+    --feature-combination cloud_no_raw \
+    --dataset-use-cache
+
+if [ $? -ne 0 ]; then
+    echo "❌ cloud_no_raw dataset creation failed! Exiting."
     exit 1
 fi
 
 echo ""
+echo "--- Step 4.2: Training model ---"
+python main.py \
+    --experiment-to-run model_training \
+    --encoder-rotating-key \
+    $RAW_FEATURES_FLAG \
+    $TRIANG_MODE_FLAG \
+    $TRIANG_EMB_FLAG \
+    $TRIANG_CHOOSE_FLAG \
+    $TRIANG_SAMPLES_FLAG \
+    $N_P_FLAG \
+    $T_NETWORK_PATH_FLAG \
+    $CLOUD_FLAG \
+    $EPOCHS_FLAG \
+    --datasets "$DATASET_NAME" \
+    --feature-combination cloud_no_raw \
+    --iim-name flexible_sin \
+    --dataset-use-cache
+
+if [ $? -ne 0 ]; then
+    echo "❌ cloud_no_raw training failed! Exiting."
+    exit 1
+fi
+
+echo "✅ cloud_no_raw complete!"
+
+# -----------------------------------------
+# Final Summary
+# -----------------------------------------
+
+echo ""
 echo "==============================================="
-echo "✅ Feature Ablation Experiment Complete!"
+echo "✅ ALL FEATURE COMBINATIONS COMPLETE!"
+echo "==============================================="
+echo ""
 echo "Results saved to output/report.csv"
+echo ""
+echo "Completed combinations:"
+echo "  1. baseline_no_cloud: [p_x, q_x, T_context]"
+echo "  2. no_raw_embedding: [q_x, T_context]"
+echo "  3. full_features: [p_x, q_x, T_context, cloud]"
+echo "  4. cloud_no_raw: [q_x, T_context, cloud]"
+echo ""
 echo "==============================================="

@@ -1580,10 +1580,10 @@ class FlexibleSINClassifier(NeuralNetworkInternalModel):
     ablation experiments where different feature combinations have different dimensions.
 
     Supported feature combinations:
-    - combo1: [p_x, q_x, T_context] → 960 dims
-    - combo2: [q_x, T_context] → 896 dims
-    - combo3: [p_x, q_x, T_context, cloud] → 960+cloud dims
-    - combo4: [q_x, T_context, cloud] → 896+cloud dims
+    - baseline_no_cloud: [p_x, q_x, T_context] → 960 dims
+    - no_raw_embedding: [q_x, T_context] → 896 dims
+    - full_features: [p_x, q_x, T_context, cloud] → 960+cloud dims
+    - cloud_no_raw: [q_x, T_context, cloud] → 896+cloud dims
 
     Architecture:
     - Input layer: Dynamic shape based on input_shape parameter

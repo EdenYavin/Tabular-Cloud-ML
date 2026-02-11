@@ -167,7 +167,10 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
 
     def _run_single_combination(self, dataset_name, feature_combination, n_classes, original_size):
         """
-        Train FlexibleSINClassifier on a single feature combination.
+        Train FlexibleSINClassifier on a single feature combination using K-fold iterations.
+
+        Runs config.experiment_config.k_folds training iterations with the same train/test split,
+        collecting accuracy and AUC metrics across all runs for statistical robustness.
 
         Args:
             dataset_name: Dataset name
@@ -176,7 +179,7 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             original_size: Original dataset shape (for logging)
 
         Returns:
-            Dictionary of test metrics
+            None (results logged via log_k_results)
 
         Raises:
             FileNotFoundError: If cached dataset not found

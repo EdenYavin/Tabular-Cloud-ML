@@ -8,72 +8,83 @@
 
 # =============================================================================
 # Feature Ablation Experiment - Frozen T Network Study
-# Trains FlexibleSINClassifier on all 4 feature combinations
+# Trains FlexibleSINClassifier on all 4 feature combinations using
+# FeatureAblationExperimentHandler
 # =============================================================================
 
 # --- Build flags from environment variables ---
 
 # Triangulation Mode
 if [ -n "$TRIANGULATION_MODE" ]; then
-    TRIANG_MODE_FLAG="--triangulation-mode $TRIANGULATION_MODE"
+    TRIANG_MODE_FLAG="--experiment-triangulation-mode $TRIANGULATION_MODE"
 else
     TRIANG_MODE_FLAG=""
 fi
 
 # Triangulation Embedding Model
 if [ -n "$TRIANGULATION_EMBEDDING" ]; then
-    TRIANG_EMB_FLAG="--triangulation-embedding-model $TRIANGULATION_EMBEDDING"
+    TRIANG_EMB_FLAG="--encoder-embedding $TRIANGULATION_EMBEDDING"
 else
     TRIANG_EMB_FLAG=""
 fi
 
 # Triangulation Choosing Method
 if [ -n "$CHOOSE" ]; then
-    TRIANG_CHOOSE_FLAG="--triangulation-choosing $CHOOSE"
+    TRIANG_CHOOSE_FLAG="--experiment-triangulation-choosing $CHOOSE"
 else
     TRIANG_CHOOSE_FLAG=""
 fi
 
 # Number of Triangulation Samples (Anchors)
 if [ -n "$TRIANGULATIONS_NUMBER" ]; then
-    TRIANG_SAMPLES_FLAG="--triangulation-samples $TRIANGULATIONS_NUMBER"
+    TRIANG_SAMPLES_FLAG="--experiment-n-triangulation-samples $TRIANGULATIONS_NUMBER"
 else
     TRIANG_SAMPLES_FLAG=""
 fi
 
 # Number of Prediction Vectors
 if [ -n "$N_P" ]; then
-    N_P_FLAG="--number-of-prediction-vector $N_P"
+    N_P_FLAG="--experiment-n-pred-vectors $N_P"
 else
-    N_P_FLAG="--number-of-prediction-vector 1"
+    N_P_FLAG="--experiment-n-pred-vectors 1"
 fi
 
 # Cloud Models (for combo3/combo4)
 if [ -n "$CLOUD_MODELS" ]; then
-    CLOUD_FLAG="--use-cloud-models $CLOUD_MODELS"
+    CLOUD_FLAG="--cloud-names $CLOUD_MODELS"
 else
     CLOUD_FLAG=""
 fi
 
 # Use Raw Features
 if [ -n "$USE_RAW_FEATURES" ] && [ "$USE_RAW_FEATURES" = "1" ]; then
-    RAW_FEATURES_FLAG="--use-raw-features"
+    RAW_FEATURES_FLAG="--experiment-use-raw"
 else
     RAW_FEATURES_FLAG=""
 fi
 
 # Pretrained T Network Path (Optional - uses default path if not specified)
 if [ -n "$PRETRAINED_T_NETWORK_PATH" ]; then
-    T_NETWORK_PATH_FLAG="--pretrained-t-network $PRETRAINED_T_NETWORK_PATH"
+    T_NETWORK_PATH_FLAG="--experiment-pretrained-t-network-path $PRETRAINED_T_NETWORK_PATH"
 else
     T_NETWORK_PATH_FLAG=""
 fi
 
+# Freeze T Network (default: true for ablation studies)
+FREEZE_T_FLAG="--experiment-freeze-t-network"
+
 # IIM Epochs
 if [ -n "$IIM_EPOCHS" ]; then
-    EPOCHS_FLAG="--iim-epochs $IIM_EPOCHS"
+    EPOCHS_FLAG="--iim-neural-net-epochs $IIM_EPOCHS"
 else
-    EPOCHS_FLAG="--iim-epochs 100"
+    EPOCHS_FLAG="--iim-neural-net-epochs 100"
+fi
+
+# K-Fold iterations (default: 1)
+if [ -n "$K_FOLDS" ]; then
+    K_FOLDS_FLAG="--experiment-k-folds $K_FOLDS"
+else
+    K_FOLDS_FLAG="--experiment-k-folds 1"
 fi
 
 # -----------------------------------------
@@ -88,12 +99,14 @@ echo "SLURM_JOB_NODELIST=$SLURM_JOB_NODELIST"
 echo ""
 echo "Configuration:"
 echo "  Dataset: $DATASET_NAME"
-echo "  T Network Path: ${PRETRAINED_T_NETWORK_PATH:-default}"
+echo "  T Network Path: ${PRETRAINED_T_NETWORK_PATH:-auto-detect}"
+echo "  Freeze T Network: true"
 echo "  Triangulation Mode: $TRIANGULATION_MODE"
 echo "  Triangulation Embedding: $TRIANGULATION_EMBEDDING"
 echo "  Triangulation Choosing: $CHOOSE"
 echo "  Number of Anchors: $TRIANGULATIONS_NUMBER"
 echo "  N_P (Pred Vectors): $N_P"
+echo "  K-Folds: ${K_FOLDS:-1}"
 echo "  IIM Epochs: ${IIM_EPOCHS:-100}"
 echo "  Cloud Models: ${CLOUD_MODELS:-None}"
 echo "  Use Raw Features: ${USE_RAW_FEATURES:-0}"
@@ -111,26 +124,22 @@ which python
 export TF_XLA_FLAGS=--tf_xla_auto_jit=0
 
 # -----------------------------------------
-# Process each combination: create dataset then train
+# Run Feature Ablation Experiment
+# Processes all 4 combinations automatically:
+#   1. baseline_no_cloud: [p_x, q_x, T_context]
+#   2. no_raw_embedding: [q_x, T_context]
+#   3. full_features: [p_x, q_x, T_context, cloud]
+#   4. cloud_no_raw: [q_x, T_context, cloud]
 # -----------------------------------------
 
 echo ""
 echo "==============================================="
-echo "Processing Feature Combinations Sequentially"
+echo "Running Feature Ablation Experiment Handler"
 echo "==============================================="
-
-# -----------------------------------------
-# Combination 1: baseline_no_cloud
-# -----------------------------------------
 echo ""
-echo "═══════════════════════════════════════════════"
-echo "COMBINATION 1/4: baseline_no_cloud"
-echo "═══════════════════════════════════════════════"
 
-echo ""
-echo "--- Step 1.1: Creating dataset ---"
 python main.py \
-    --experiment-to-run dataset_creation \
+    --experiment-to-run ablation_experiment \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG \
     $TRIANG_MODE_FLAG \
@@ -139,205 +148,18 @@ python main.py \
     $TRIANG_SAMPLES_FLAG \
     $N_P_FLAG \
     $T_NETWORK_PATH_FLAG \
-    --datasets "$DATASET_NAME" \
-    --feature-combination baseline_no_cloud \
-    --dataset-use-cache
-
-if [ $? -ne 0 ]; then
-    echo "❌ baseline_no_cloud dataset creation failed! Exiting."
-    exit 1
-fi
-
-echo ""
-echo "--- Step 1.2: Training model ---"
-python main.py \
-    --experiment-to-run model_training \
-    --encoder-rotating-key \
-    $RAW_FEATURES_FLAG \
-    $TRIANG_MODE_FLAG \
-    $TRIANG_EMB_FLAG \
-    $TRIANG_CHOOSE_FLAG \
-    $TRIANG_SAMPLES_FLAG \
-    $N_P_FLAG \
-    $T_NETWORK_PATH_FLAG \
-    $EPOCHS_FLAG \
-    --datasets "$DATASET_NAME" \
-    --feature-combination baseline_no_cloud \
-    --iim-name flexible_sin \
-    --dataset-use-cache
-
-if [ $? -ne 0 ]; then
-    echo "❌ baseline_no_cloud training failed! Exiting."
-    exit 1
-fi
-
-echo "✅ baseline_no_cloud complete!"
-
-# -----------------------------------------
-# Combination 2: no_raw_embedding
-# -----------------------------------------
-echo ""
-echo "═══════════════════════════════════════════════"
-echo "COMBINATION 2/4: no_raw_embedding"
-echo "═══════════════════════════════════════════════"
-
-echo ""
-echo "--- Step 2.1: Creating dataset ---"
-python main.py \
-    --experiment-to-run dataset_creation \
-    --encoder-rotating-key \
-    $RAW_FEATURES_FLAG \
-    $TRIANG_MODE_FLAG \
-    $TRIANG_EMB_FLAG \
-    $TRIANG_CHOOSE_FLAG \
-    $TRIANG_SAMPLES_FLAG \
-    $N_P_FLAG \
-    $T_NETWORK_PATH_FLAG \
-    --datasets "$DATASET_NAME" \
-    --feature-combination no_raw_embedding \
-    --dataset-use-cache
-
-if [ $? -ne 0 ]; then
-    echo "❌ no_raw_embedding dataset creation failed! Exiting."
-    exit 1
-fi
-
-echo ""
-echo "--- Step 2.2: Training model ---"
-python main.py \
-    --experiment-to-run model_training \
-    --encoder-rotating-key \
-    $RAW_FEATURES_FLAG \
-    $TRIANG_MODE_FLAG \
-    $TRIANG_EMB_FLAG \
-    $TRIANG_CHOOSE_FLAG \
-    $TRIANG_SAMPLES_FLAG \
-    $N_P_FLAG \
-    $T_NETWORK_PATH_FLAG \
-    $EPOCHS_FLAG \
-    --datasets "$DATASET_NAME" \
-    --feature-combination no_raw_embedding \
-    --iim-name flexible_sin \
-    --dataset-use-cache
-
-if [ $? -ne 0 ]; then
-    echo "❌ no_raw_embedding training failed! Exiting."
-    exit 1
-fi
-
-echo "✅ no_raw_embedding complete!"
-
-# -----------------------------------------
-# Combination 3: full_features
-# -----------------------------------------
-echo ""
-echo "═══════════════════════════════════════════════"
-echo "COMBINATION 3/4: full_features"
-echo "═══════════════════════════════════════════════"
-
-echo ""
-echo "--- Step 3.1: Creating dataset ---"
-python main.py \
-    --experiment-to-run dataset_creation \
-    --encoder-rotating-key \
-    $RAW_FEATURES_FLAG \
-    $TRIANG_MODE_FLAG \
-    $TRIANG_EMB_FLAG \
-    $TRIANG_CHOOSE_FLAG \
-    $TRIANG_SAMPLES_FLAG \
-    $N_P_FLAG \
-    $T_NETWORK_PATH_FLAG \
-    $CLOUD_FLAG \
-    --datasets "$DATASET_NAME" \
-    --feature-combination full_features \
-    --dataset-use-cache
-
-if [ $? -ne 0 ]; then
-    echo "❌ full_features dataset creation failed! Exiting."
-    exit 1
-fi
-
-echo ""
-echo "--- Step 3.2: Training model ---"
-python main.py \
-    --experiment-to-run model_training \
-    --encoder-rotating-key \
-    $RAW_FEATURES_FLAG \
-    $TRIANG_MODE_FLAG \
-    $TRIANG_EMB_FLAG \
-    $TRIANG_CHOOSE_FLAG \
-    $TRIANG_SAMPLES_FLAG \
-    $N_P_FLAG \
-    $T_NETWORK_PATH_FLAG \
+    $FREEZE_T_FLAG \
     $CLOUD_FLAG \
     $EPOCHS_FLAG \
-    --datasets "$DATASET_NAME" \
-    --feature-combination full_features \
-    --iim-name flexible_sin \
+    $K_FOLDS_FLAG \
+    --dataset-names "$DATASET_NAME" \
     --dataset-use-cache
 
 if [ $? -ne 0 ]; then
-    echo "❌ full_features training failed! Exiting."
+    echo ""
+    echo "❌ Feature ablation experiment failed!"
     exit 1
 fi
-
-echo "✅ full_features complete!"
-
-# -----------------------------------------
-# Combination 4: cloud_no_raw
-# -----------------------------------------
-echo ""
-echo "═══════════════════════════════════════════════"
-echo "COMBINATION 4/4: cloud_no_raw"
-echo "═══════════════════════════════════════════════"
-
-echo ""
-echo "--- Step 4.1: Creating dataset ---"
-python main.py \
-    --experiment-to-run dataset_creation \
-    --encoder-rotating-key \
-    $RAW_FEATURES_FLAG \
-    $TRIANG_MODE_FLAG \
-    $TRIANG_EMB_FLAG \
-    $TRIANG_CHOOSE_FLAG \
-    $TRIANG_SAMPLES_FLAG \
-    $N_P_FLAG \
-    $T_NETWORK_PATH_FLAG \
-    $CLOUD_FLAG \
-    --datasets "$DATASET_NAME" \
-    --feature-combination cloud_no_raw \
-    --dataset-use-cache
-
-if [ $? -ne 0 ]; then
-    echo "❌ cloud_no_raw dataset creation failed! Exiting."
-    exit 1
-fi
-
-echo ""
-echo "--- Step 4.2: Training model ---"
-python main.py \
-    --experiment-to-run model_training \
-    --encoder-rotating-key \
-    $RAW_FEATURES_FLAG \
-    $TRIANG_MODE_FLAG \
-    $TRIANG_EMB_FLAG \
-    $TRIANG_CHOOSE_FLAG \
-    $TRIANG_SAMPLES_FLAG \
-    $N_P_FLAG \
-    $T_NETWORK_PATH_FLAG \
-    $CLOUD_FLAG \
-    $EPOCHS_FLAG \
-    --datasets "$DATASET_NAME" \
-    --feature-combination cloud_no_raw \
-    --iim-name flexible_sin \
-    --dataset-use-cache
-
-if [ $? -ne 0 ]; then
-    echo "❌ cloud_no_raw training failed! Exiting."
-    exit 1
-fi
-
-echo "✅ cloud_no_raw complete!"
 
 # -----------------------------------------
 # Final Summary
@@ -345,15 +167,18 @@ echo "✅ cloud_no_raw complete!"
 
 echo ""
 echo "==============================================="
-echo "✅ ALL FEATURE COMBINATIONS COMPLETE!"
+echo "✅ FEATURE ABLATION EXPERIMENT COMPLETE!"
 echo "==============================================="
 echo ""
 echo "Results saved to output/report.csv"
 echo ""
-echo "Completed combinations:"
+echo "All 4 combinations processed:"
 echo "  1. baseline_no_cloud: [p_x, q_x, T_context]"
 echo "  2. no_raw_embedding: [q_x, T_context]"
 echo "  3. full_features: [p_x, q_x, T_context, cloud]"
 echo "  4. cloud_no_raw: [q_x, T_context, cloud]"
+echo ""
+echo "K-fold iterations: ${K_FOLDS:-1}"
+echo "Results logged via log_k_results() for statistical analysis"
 echo ""
 echo "==============================================="

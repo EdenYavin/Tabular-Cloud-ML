@@ -142,8 +142,6 @@ class FrozenTContextExtractor:
                 f"expected ({batch_size}, 128)"
             )
 
-        logger.debug(f"Extracted context embeddings: shape={context.shape}")
-
         return context
 
     def verify_frozen(self) -> bool:

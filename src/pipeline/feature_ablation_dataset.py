@@ -201,12 +201,7 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
         # Initialize Cloud Context
         cloud = self.cloud_model_manager.__enter__()
 
-        # Batch collection for T_context extraction (more efficient than per-sample)
-        batch_p_x = []
-        batch_p_i = []
-        batch_q_i = []
-
-        with tqdm(total=len(embeddings), leave=True,
+        with tqdm(total=len(embeddings), leave=True, position=0,
                   desc=f"FeatureAblation-{self.feature_combination}") as pbar:
             with tf.device(GPU_DEVICE):
 
@@ -261,7 +256,7 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
                     # --- CONSTRUCT OBSERVATION BASED ON COMBINATION ---
                     observation_parts = []
 
-                    if self.feature_combination == "baseline_no_cloud":
+                    if self.feature_combination == FEATURE_COMBINATIONS.BASELINE_NO_CLOUD:
                         # [p_x, q_x, T_context]
                         observation_parts = [
                             flat_plaintext_sample,       # p_x: 64
@@ -269,14 +264,14 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
                             flat_T_context               # T_context: 128
                         ]
 
-                    elif self.feature_combination == "no_raw_embedding":
+                    elif self.feature_combination == FEATURE_COMBINATIONS.NO_RAW_EMBEDDING:
                         # [q_x, T_context]
                         observation_parts = [
                             flat_encrypted_sample_emb,   # q_x: 768/512
                             flat_T_context               # T_context: 128
                         ]
 
-                    elif self.feature_combination == "full_features":
+                    elif self.feature_combination == FEATURE_COMBINATIONS.FULL_FEATURES:
                         # [p_x, q_x, T_context, cloud]
                         observation_parts = [
                             flat_plaintext_sample,       # p_x: 64
@@ -291,7 +286,7 @@ class FeatureAblationPipeline(FeatureEngineeringPipeline):
                             predictions.append(pred.flatten())
                         observation_parts.append(np.hstack(predictions))
 
-                    elif self.feature_combination == "cloud_no_raw":
+                    elif self.feature_combination == FEATURE_COMBINATIONS.CLOUD_NO_RAW:
                         # [q_x, T_context, cloud]
                         observation_parts = [
                             flat_encrypted_sample_emb,   # q_x: 768/512

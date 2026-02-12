@@ -351,6 +351,9 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
                     )
                     continue
 
+                logger.info(f"Saving report for {feature_combination.value}")
+                self.save()
+
         logger.info(
             f"\n{'#'*80}\n"
             f"# FEATURE ABLATION EXPERIMENT COMPLETE\n"

@@ -280,8 +280,9 @@ def main():
         args.experiment_triangulation_choosing = triang_args[0].split()
         logger.debug(f"DEBUG: Fixed triangulation args to: {args.experiment_triangulation_choosing}")
 
-    if args.dataset_names and len(args.dataset_names.split()) > 1:
-        args.dataset_names = args.dataset_names.split()
+    logger.debug("DATASETS ---",args.dataset_names)
+    if args.dataset_names and len(args.dataset_names[0].split()) > 1:
+        args.dataset_names = args.dataset_names[0].split()
         logger.debug(f"DEBUG: Fixed dataset names args to: {args.dataset_names}")
 
     # Check if the list contains a single string with spaces and split it if necessary

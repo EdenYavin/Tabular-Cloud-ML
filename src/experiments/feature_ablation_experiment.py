@@ -311,7 +311,7 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
         for dataset_name in config.dataset_config.names:
             logger.info(f"\n{'#'*80}\n# Dataset: {dataset_name.upper()}\n{'#'*80}")
 
-            report_path = os.path.join(OUTPUT_DIR_PATH, dataset_name, "k_report.csv")
+            report_path = os.path.join(OUTPUT_DIR_PATH, "ablation",dataset_name, "k_report.csv")
             self.set_report_path(report_path)
             logger.info(f"Report path set to {report_path}")
 

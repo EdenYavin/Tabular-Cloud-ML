@@ -29,7 +29,7 @@ from src.utils.constansts import (
     BASELINE_DATASET_FILE_NAME,
     REPORT_PATH,
     FEATURE_COMBINATIONS,
-    IIM_MODELS
+    IIM_MODELS, OUTPUT_DIR_PATH
 )
 from src.pipeline.feature_ablation_dataset import FeatureAblationPipeline
 from src.encryptor import EncryptorFactory
@@ -311,7 +311,10 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
         for dataset_name in config.dataset_config.names:
             logger.info(f"\n{'#'*80}\n# Dataset: {dataset_name.upper()}\n{'#'*80}")
 
-            # Load dataset metadata
+            report_path = os.path.join(OUTPUT_DIR_PATH, dataset_name, "k_report.csv")
+            self.set_report_path(report_path)
+            logger.info(f"Report path set to {report_path}")
+
             try:
                 raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
                 logger.debug(f"Original Dataset Size: {raw_dataset.get_dataset()[0].shape}")

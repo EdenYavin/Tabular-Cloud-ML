@@ -72,7 +72,7 @@ class EXPERIMENTS(str, enum.Enum):
 
 class FEATURE_COMBINATIONS(str, enum.Enum):
     BASELINE_NO_CLOUD = "baseline_no_cloud"  # [p_x, q_x, T_context]
-    NO_RAW_EMBEDDING = "no_raw_embedding"    # [q_x, T_context]
+    NO_RAW_EMBEDDING = "no_raw_embedding_no_cloud"    # [q_x, T_context]
     FULL_FEATURES = "full_features"          # [p_x, q_x, T_context, cloud]
     CLOUD_NO_RAW = "cloud_no_raw"            # [q_x, T_context, cloud]
 

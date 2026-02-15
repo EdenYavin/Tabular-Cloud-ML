@@ -87,6 +87,13 @@ else
     K_FOLDS_FLAG="--k-training 1"
 fi
 
+# IIM Model Name (default: lstm)
+if [ -n "$IIM_NAME" ]; then
+    IIM_NAME_FLAG="--iim-name $IIM_NAME"
+else
+    IIM_NAME_FLAG="--iim-name lstm"
+fi
+
 # -----------------------------------------
 # Echo configuration info
 # -----------------------------------------
@@ -99,6 +106,7 @@ echo "SLURM_JOB_NODELIST=$SLURM_JOB_NODELIST"
 echo ""
 echo "Configuration:"
 echo "  Dataset: $DATASET_NAME"
+echo "  IIM Model: ${IIM_NAME:-lstm}"
 echo "  T Network Path: ${PRETRAINED_T_NETWORK_PATH:-auto-detect}"
 echo "  Freeze T Network: true"
 echo "  Triangulation Mode: $TRIANGULATION_MODE"
@@ -152,6 +160,7 @@ python main.py \
     $CLOUD_FLAG \
     $EPOCHS_FLAG \
     $K_FOLDS_FLAG \
+    $IIM_NAME_FLAG \
     --datasets "$DATASET_NAME" \
     --dataset-use-cache
 

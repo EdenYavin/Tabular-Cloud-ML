@@ -71,10 +71,10 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
 
         # Validate all combinations are cacheable
         self.combinations = [
-            FEATURE_COMBINATIONS.BASELINE_NO_CLOUD,
+            # FEATURE_COMBINATIONS.BASELINE_NO_CLOUD,
             FEATURE_COMBINATIONS.NO_RAW_EMBEDDING,
-            FEATURE_COMBINATIONS.FULL_FEATURES,
-            FEATURE_COMBINATIONS.CLOUD_NO_RAW
+            # FEATURE_COMBINATIONS.FULL_FEATURES,
+            # FEATURE_COMBINATIONS.CLOUD_NO_RAW
         ]
 
 

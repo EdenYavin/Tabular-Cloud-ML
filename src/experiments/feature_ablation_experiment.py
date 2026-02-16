@@ -224,6 +224,8 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             internal_model = InternalInferenceModelFactory().get_model(
                 num_classes=n_classes,
                 input_shape=X_train.shape[1],
+                type=config.iim_config.name[0] if type(config.iim_config.name) == list else config.iim_config.name,
+
             )
 
             logger.info(

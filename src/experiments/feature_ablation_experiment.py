@@ -220,6 +220,11 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
         ):
             logger.debug(f"K-fold iteration {k_iter + 1}/{config.experiment_config.k_folds}")
 
+            logger.info(
+                f"Training {config.iim_config.name} for {feature_combination} (iteration {k_iter + 1})\n"
+                f"Input shape: {X_train.shape[1]} dims, Output classes: {n_classes}"
+            )
+
             # Create FlexibleSINClassifier - automatically adapts to input dimensions
             internal_model = InternalInferenceModelFactory().get_model(
                 num_classes=n_classes,
@@ -228,10 +233,6 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
 
             )
 
-            logger.info(
-                f"Training {config.iim_config.name} for {feature_combination} (iteration {k_iter + 1})\n"
-                f"Input shape: {X_train.shape[1]} dims, Output classes: {n_classes}"
-            )
 
             # Train model
             internal_model.fit(

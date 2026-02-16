@@ -274,7 +274,7 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             self.log_k_results(
                 dataset_name=dataset_name,
                 cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
-                iim_name=f"{config.iim_config.name}_{feature_combination}",
+                iim_name=f"{model}_{feature_combination}",
                 k_test_accuracies=test_accs,
                 k_test_aucs=test_aucs
             )

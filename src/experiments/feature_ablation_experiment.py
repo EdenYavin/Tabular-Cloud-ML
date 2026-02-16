@@ -210,81 +210,81 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
         logger.info(
             f"Running {config.experiment_config.k_folds} training iterations for {feature_combination}"
         )
+        for model in config.iim_config.name:
 
-        for k_iter in tqdm(
-            range(config.experiment_config.k_folds),
-            total=config.experiment_config.k_folds,
-            desc=f"K-fold training: {feature_combination}",
-            position=1,
-            leave=False
-        ):
-            logger.debug(f"K-fold iteration {k_iter + 1}/{config.experiment_config.k_folds}")
+            for k_iter in tqdm(
+                range(config.experiment_config.k_folds),
+                total=config.experiment_config.k_folds,
+                desc=f"K-fold training: {feature_combination}",
+                position=1,
+                leave=False
+            ):
+                logger.debug(f"K-fold iteration {k_iter + 1}/{config.experiment_config.k_folds}")
 
-            logger.info(
-                f"Training {config.iim_config.name} for {feature_combination} (iteration {k_iter + 1})\n"
-                f"Input shape: {X_train.shape[1]} dims, Output classes: {n_classes}"
+                logger.info(
+                    f"Training {model} for {feature_combination} (iteration {k_iter + 1})\n"
+                    f"Input shape: {X_train.shape[1]} dims, Output classes: {n_classes}"
+                )
+
+                # Create FlexibleSINClassifier - automatically adapts to input dimensions
+                internal_model = InternalInferenceModelFactory().get_model(
+                    num_classes=n_classes,
+                    input_shape=X_train.shape[1],
+                    type=model,
+                )
+
+
+                # Train model
+                internal_model.fit(
+                    X=X_train, y=y_train,
+                    validation_data=(X_test, y_test)
+                )
+
+                # Evaluate on test set
+                test_metrics = internal_model.evaluate(
+                    X=X_test, y=y_test, metrics=config.iim_config.metrics
+                )
+
+                logger.info(
+                    f"{feature_combination} K-fold {k_iter + 1} Test Metrics: {test_metrics}"
+                )
+
+                # Extract accuracy and AUC from test_metrics dict
+                test_acc = test_metrics.get("test_accuracy", test_metrics.get("accuracy", 0.0))
+                test_auc = test_metrics.get("test_auc", test_metrics.get("auc", 0.0))
+
+                test_accs.append(round(float(test_acc), 4))
+                test_aucs.append(round(float(test_auc), 4))
+
+                logger.debug(f"K-fold {k_iter + 1}: acc={test_acc:.4f}, auc={test_auc:.4f}")
+
+            # Save training history and plots (using last iteration's model)
+            path = get_dataset_path(
+                dataset_name=dataset_name,
+                n_pred_vectors=self.n_pred_vectors,
+                feature_combination=feature_combination
+            )
+            history_path = path / f"{feature_combination}_history.pkl"
+            plot_path = path / f"{feature_combination}_train_plot.png"
+
+            internal_model.save_history(history_path)
+            internal_model.plot_history(plot_path)
+
+            # Log K-fold results to report
+            self.log_k_results(
+                dataset_name=dataset_name,
+                cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
+                iim_name=f"{config.iim_config.name}_{feature_combination}",
+                k_test_accuracies=test_accs,
+                k_test_aucs=test_aucs
             )
 
-            # Create FlexibleSINClassifier - automatically adapts to input dimensions
-            internal_model = InternalInferenceModelFactory().get_model(
-                num_classes=n_classes,
-                input_shape=X_train.shape[1],
-                type=config.iim_config.name[0] if type(config.iim_config.name) == list else config.iim_config.name,
+            # Clean up memory
+            del X_train, X_test, y_test, y_train, internal_model
+            gc.collect()
+            K.clear_session()
 
-            )
-
-
-            # Train model
-            internal_model.fit(
-                X=X_train, y=y_train,
-                validation_data=(X_test, y_test)
-            )
-
-            # Evaluate on test set
-            test_metrics = internal_model.evaluate(
-                X=X_test, y=y_test, metrics=config.iim_config.metrics
-            )
-
-            logger.info(
-                f"{feature_combination} K-fold {k_iter + 1} Test Metrics: {test_metrics}"
-            )
-
-            # Extract accuracy and AUC from test_metrics dict
-            test_acc = test_metrics.get("test_accuracy", test_metrics.get("accuracy", 0.0))
-            test_auc = test_metrics.get("test_auc", test_metrics.get("auc", 0.0))
-
-            test_accs.append(round(float(test_acc), 4))
-            test_aucs.append(round(float(test_auc), 4))
-
-            logger.debug(f"K-fold {k_iter + 1}: acc={test_acc:.4f}, auc={test_auc:.4f}")
-
-        # Save training history and plots (using last iteration's model)
-        path = get_dataset_path(
-            dataset_name=dataset_name,
-            n_pred_vectors=self.n_pred_vectors,
-            feature_combination=feature_combination
-        )
-        history_path = path / f"{feature_combination}_history.pkl"
-        plot_path = path / f"{feature_combination}_train_plot.png"
-
-        internal_model.save_history(history_path)
-        internal_model.plot_history(plot_path)
-
-        # Log K-fold results to report
-        self.log_k_results(
-            dataset_name=dataset_name,
-            cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
-            iim_name=f"{config.iim_config.name}_{feature_combination}",
-            k_test_accuracies=test_accs,
-            k_test_aucs=test_aucs
-        )
-
-        # Clean up memory
-        del X_train, X_test, y_test, y_train, internal_model
-        gc.collect()
-        K.clear_session()
-
-        return test_metrics
+            return test_metrics
 
     def run_experiment(self):
         """

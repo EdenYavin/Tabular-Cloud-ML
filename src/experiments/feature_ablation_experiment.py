@@ -228,7 +228,7 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             )
 
             logger.info(
-                f"Training FlexibleSINClassifier for {feature_combination} (iteration {k_iter + 1})\n"
+                f"Training {config.iim_config.name} for {feature_combination} (iteration {k_iter + 1})\n"
                 f"Input shape: {X_train.shape[1]} dims, Output classes: {n_classes}"
             )
 

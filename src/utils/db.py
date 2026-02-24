@@ -3,7 +3,7 @@ from pathlib import Path
 from tqdm import tqdm
 from loguru import logger
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 import numpy as np
 import os, tensorflow as tf
 
@@ -242,3 +242,102 @@ class RawSplitDBFactory:
 
         RawSplitDBFactory.dbs[dataset_name] = RawDataExperimentDatabase(dataset)
         return RawSplitDBFactory.dbs[dataset_name]
+
+
+class KFoldSplitDB:
+    """
+    Generates and caches K stratified fold index splits for a raw dataset.
+
+    Fold indices are stored as:
+        store/dataset/<dataset>_kfold_<K>.json
+
+    Each fold key maps to {"train_index": [...], "test_index": [...]}.
+    """
+
+    def __init__(self, dataset: RawDataset, n_splits: int):
+        self.dataset = dataset
+        self.n_splits = n_splits
+
+        db_path = os.path.join(DATA_CACHE_PATH, dataset.name)
+        os.makedirs(db_path, exist_ok=True)
+        self.db_path = os.path.join(db_path, f"{dataset.name}_kfold_{n_splits}.json")
+
+        if os.path.exists(self.db_path):
+            with open(self.db_path, "r") as f:
+                self.db = json.load(f)
+            logger.info(
+                f"Loaded existing {n_splits}-fold splits for '{dataset.name}' "
+                f"from {self.db_path}"
+            )
+        else:
+            self.db = {}
+            self._generate_folds()
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _generate_folds(self):
+        """Create stratified K-fold splits and persist them to disk."""
+        X, y = self.dataset.get_dataset()
+
+        skf = StratifiedKFold(n_splits=self.n_splits, shuffle=True, random_state=42)
+
+        for fold_idx, (train_idx, test_idx) in enumerate(skf.split(X, y)):
+            self.db[str(fold_idx)] = {
+                "train_index": X.iloc[train_idx].index.tolist(),
+                "test_index": X.iloc[test_idx].index.tolist(),
+            }
+
+        with open(self.db_path, "w") as f:
+            json.dump(self.db, f)
+
+        logger.info(
+            f"Generated and cached {self.n_splits}-fold splits for "
+            f"'{self.dataset.name}' → {self.db_path}"
+        )
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def get_fold(self, k: int) -> tuple:
+        """
+        Return (X_train, X_test, y_train, y_test) numpy arrays for fold *k*.
+
+        X_train / y_train : the K-1 folds used for pipeline/model training.
+        X_test  / y_test  : the held-out fold used for evaluation only.
+        """
+        if str(k) not in self.db:
+            raise ValueError(
+                f"Fold {k} not found in KFoldSplitDB for '{self.dataset.name}'. "
+                f"Available folds: 0..{self.n_splits - 1}"
+            )
+
+        X, y = self.dataset.get_dataset()
+        fold_data = self.db[str(k)]
+
+        X_train = X.loc[fold_data["train_index"]]
+        y_train = y.loc[fold_data["train_index"]]
+        X_test  = X.loc[fold_data["test_index"]]
+        y_test  = y.loc[fold_data["test_index"]]
+
+        logger.info(
+            f"Fold {k}/{self.n_splits - 1} '{self.dataset.name}': "
+            f"train={len(X_train)}, test={len(X_test)}"
+        )
+
+        return X_train.values, X_test.values, y_train.values, y_test.values
+
+
+class KFoldSplitDBFactory:
+    """Singleton factory — one KFoldSplitDB per (dataset_name, n_splits) pair."""
+
+    _dbs: dict = {}
+
+    @staticmethod
+    def get_db(dataset: RawDataset, n_splits: int) -> KFoldSplitDB:
+        key = (dataset.name, n_splits)
+        if key not in KFoldSplitDBFactory._dbs:
+            KFoldSplitDBFactory._dbs[key] = KFoldSplitDB(dataset, n_splits)
+        return KFoldSplitDBFactory._dbs[key]

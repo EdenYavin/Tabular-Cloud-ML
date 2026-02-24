@@ -4,7 +4,7 @@ from pathlib import Path
 import src.utils.constansts as consts
 from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandler, ModelTrainingExperimentHandler, FeatureAblationExperimentHandler
 from src.experiments.model_training_loop import ModelTrainingLoopExperimentHandler
-from src.experiments.k_fold_handler import KModelTrainingExperimentHandler
+from src.experiments.training_k_times import KModelTrainingExperimentHandler
 from src.experiments.t_network_training_handler import TNetworkTrainingHandler
 from src.utils.config import config, update_config_from_args
 from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS, REPORT_PATH, OUTPUT_DIR_PATH

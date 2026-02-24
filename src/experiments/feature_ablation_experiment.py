@@ -8,7 +8,12 @@ using FlexibleSINClassifier to evaluate the relative importance of:
 - T_context: Frozen T network encoder outputs
 - cloud: Cloud model predictions
 
-Runs 4 sequential experiments and generates side-by-side comparison report.
+When config.experiment_config.k_folds > 1, runs TRUE K-Fold Cross Validation:
+  - The full dataset is split into K stratified folds (cached to disk)
+  - For each fold k: train on K-1 folds, evaluate on fold k
+  - Metrics are aggregated across all K held-out test sets
+
+When k_folds == 1, falls back to the original single-split behaviour.
 """
 
 import gc
@@ -34,7 +39,7 @@ from src.utils.constansts import (
 from src.pipeline.feature_ablation_dataset import FeatureAblationPipeline
 from src.encryptor import EncryptorFactory
 from src.embeddings import EmbeddingsFactory
-from src.utils.db import RawSplitDBFactory
+from src.utils.db import RawSplitDBFactory, KFoldSplitDBFactory
 from src.cloud import CLOUD_MODELS, DEFAULT_CLOUD_OUTPUT_SHAPE
 
 
@@ -54,6 +59,10 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
     - Same training hyperparameters
     - Same evaluation metrics (accuracy, AUC)
 
+    When k_folds > 1 in config, performs TRUE K-Fold Cross Validation:
+    Each fold uses a *different* held-out test set (1/K of the data) and
+    the remaining K-1 folds as training data.
+
     Results are logged to CSV report for side-by-side comparison.
     """
 
@@ -69,7 +78,6 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
         logger.info("### FEATURE ABLATION EXPERIMENT HANDLER ###")
         logger.info(f"Report path: {report_path}")
 
-        # Validate all combinations are cacheable
         self.combinations = [
             # FEATURE_COMBINATIONS.BASELINE_NO_CLOUD,
             FEATURE_COMBINATIONS.NO_RAW_EMBEDDING,
@@ -77,85 +85,160 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             # FEATURE_COMBINATIONS.CLOUD_NO_RAW
         ]
 
+    # -------------------------------------------------------------------------
+    # Dataset helpers
+    # -------------------------------------------------------------------------
 
-    def _create_dataset_if_missing(self, dataset_name, feature_combination, n_pred):
+    def _build_pipeline_inputs(self, dataset_name) -> tuple:
+        """
+        Initialise and return the objects needed by FeatureAblationPipeline.
 
-        # 1. Load Raw Dataset & Splits
+        Returns:
+            (raw_dataset, embedding_model, encryptor, cloud_model_output)
+        """
         raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
-        
-        # Get Cloud Output Shape
+
         if config.cloud_config.names:
             cloud_model_output = CLOUD_MODELS[config.cloud_config.names[0]].input_shape
         else:
             cloud_model_output = DEFAULT_CLOUD_OUTPUT_SHAPE
 
-        # Initialize Factories
-        embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name)
-        encryptor = EncryptorFactory.get_model(dataset_name=dataset_name, output_shape=cloud_model_output)
+        embedding_model = EmbeddingsFactory().get_model(
+            X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name
+        )
+        encryptor = EncryptorFactory.get_model(
+            dataset_name=dataset_name, output_shape=cloud_model_output
+        )
 
-        # Get Split (Train/Test/Sample)
-        X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
-        
-        # Initialize Pipeline
+        return raw_dataset, embedding_model, encryptor, cloud_model_output
+
+    def _create_dataset_if_missing(
+        self,
+        dataset_name: str,
+        feature_combination: str,
+        n_pred: int,
+        X_sample,
+        y_sample,
+        X_test,
+        y_test,
+        fold_idx: int = None,
+    ):
+        """
+        Create (or load from cache) the processed IIM dataset for one
+        (n_pred_vector, feature_combination, fold) triplet.
+
+        The dataset is cached under a path that includes
+        `fold_{fold_idx}/` as the *last* directory segment when fold_idx
+        is provided, so per-fold caches never collide.
+
+        Args:
+            dataset_name:        Dataset name (e.g. 'mushroom')
+            feature_combination: One of the FEATURE_COMBINATIONS values
+            n_pred:              Prediction-vector index (1-based)
+            X_sample:            Raw feature array for pipeline training
+            y_sample:            Label array for pipeline training
+            X_test:              Raw feature array for evaluation
+            y_test:              Label array for evaluation
+            fold_idx:            Fold index (None → original single-split mode)
+
+        Returns:
+            Loaded IIMDataset object
+        """
+        fold_path = get_dataset_path(
+            dataset_name,
+            n_pred,
+            feature_combination=feature_combination,
+            fold_idx=fold_idx,
+        )
+
+        if (fold_path / DATASET_FILE_NAME).exists():
+            logger.info(
+                f"Dataset already cached — loading: {fold_path / DATASET_FILE_NAME}"
+            )
+            with open(fold_path / DATASET_FILE_NAME, "rb") as f:
+                return pickle.load(f)
+
+        logger.info(f"Generating dataset → {fold_path / DATASET_FILE_NAME}")
+
+        # Initialise pipeline
+        raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
+        if config.cloud_config.names:
+            cloud_model_output = CLOUD_MODELS[config.cloud_config.names[0]].input_shape
+        else:
+            cloud_model_output = DEFAULT_CLOUD_OUTPUT_SHAPE
+
+        embedding_model = EmbeddingsFactory().get_model(
+            X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name
+        )
+        encryptor = EncryptorFactory.get_model(
+            dataset_name=dataset_name, output_shape=cloud_model_output
+        )
+
         dataset_creator = FeatureAblationPipeline(
             dataset_name=dataset_name,
             encryptor=encryptor,
             embeddings_model=embedding_model,
             feature_combination=feature_combination,
-            metadata=raw_dataset.metadata
+            metadata=raw_dataset.metadata,
         )
 
-        # Check if this specific fold already exists
-        fold_path = get_dataset_path(
-            dataset_name,
-            n_pred,
-            feature_combination=feature_combination
+        dataset, emb_baseline_dataset = dataset_creator.create(
+            X_sample, y_sample, X_test, y_test
         )
 
-        if (fold_path / DATASET_FILE_NAME).exists():
-            logger.info(f"Dataset for {feature_combination} already exists, skipping creation")
-            with open(fold_path / DATASET_FILE_NAME, "rb") as f:
-                return pickle.load(f)
-
-        logger.info(f"Generating fold {fold_path / DATASET_FILE_NAME} dataset...")
-
-        # Create Dataset
-        dataset, emb_baseline_dataset = dataset_creator.create(X_sample, y_sample, X_test, y_test)
-
-        # Save to Disk
+        # Persist to disk
         os.makedirs(fold_path, exist_ok=True)
 
         with open(fold_path / BASELINE_DATASET_FILE_NAME, "wb") as f:
             pickle.dump(emb_baseline_dataset, f)
 
         with open(fold_path / DATASET_FILE_NAME, "wb") as f:
-            logger.debug(f"Saving dataset to {fold_path / DATASET_FILE_NAME}")
+            logger.debug(f"Saving dataset → {fold_path / DATASET_FILE_NAME}")
             pickle.dump(dataset, f)
 
         del raw_dataset, embedding_model, encryptor, dataset_creator, emb_baseline_dataset
         gc.collect()
         return dataset
 
+    # -------------------------------------------------------------------------
+    # Original single-split dataset loading (k_folds == 1)
+    # -------------------------------------------------------------------------
 
-    def _collect_datasets(self, dataset_name, feature_combination):
+    def _collect_datasets(self, dataset_name: str, feature_combination: str):
         """
-        Load cached datasets for a specific feature combination.
+        Load/create cached datasets for a specific feature combination
+        using the *original* single fixed split.
 
-        Args:
-            dataset_name: Dataset name (e.g., 'adult', 'heloc')
-            feature_combination: Feature combination enum (baseline_no_cloud, no_raw_embedding, full_features, cloud_no_raw)
+        Used only when ``config.experiment_config.k_folds == 1``.
 
         Returns:
             Tuple of (X_train, y_train, X_test, y_test)
-
         """
+        raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
+        X_train_raw, X_test_raw, X_sample_raw, y_train_raw, y_test_raw, y_sample_raw = (
+            RawSplitDBFactory.get_db(raw_dataset).get_split()
+        )
+        del raw_dataset
 
         X_train, y_train = [], []
         X_test, y_test = None, None
 
-        for folder in tqdm(range(1, self.n_pred_vectors + 1), desc=f"Loading {feature_combination} datasets", position=0, leave=True):
-
-            data = self._create_dataset_if_missing(dataset_name, feature_combination, folder)
+        for folder in tqdm(
+            range(1, self.n_pred_vectors + 1),
+            desc=f"Loading {feature_combination} datasets",
+            position=0,
+            leave=True,
+        ):
+            data = self._create_dataset_if_missing(
+                dataset_name=dataset_name,
+                feature_combination=feature_combination,
+                n_pred=folder,
+                X_sample=X_sample_raw,
+                y_sample=y_sample_raw,
+                X_test=X_test_raw,
+                y_test=y_test_raw,
+                fold_idx=None,
+            )
 
             X_train.append(data.train.features)
             y_train.append(data.train.labels)
@@ -166,103 +249,203 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
 
         return np.vstack(X_train), np.vstack(y_train), X_test, y_test
 
-    def _run_single_combination(self, dataset_name, feature_combination, n_classes, original_size):
-        """
-        Train FlexibleSINClassifier on a single feature combination using K-fold iterations.
+    # -------------------------------------------------------------------------
+    # True K-Fold dataset loading (k_folds > 1)
+    # -------------------------------------------------------------------------
 
-        Runs config.experiment_config.k_folds training iterations with the same train/test split,
-        collecting accuracy and AUC metrics across all runs for statistical robustness.
+    def _collect_datasets_for_fold(
+        self,
+        dataset_name: str,
+        feature_combination: str,
+        fold_idx: int,
+    ):
+        """
+        Load/create cached datasets for *one* K-fold cross-validation fold.
+
+        For fold ``fold_idx``:
+        - ``X_sample / y_sample`` = the K-1 training folds fed through the
+          FeatureAblationPipeline to produce IIM training features.
+        - ``X_test / y_test``    = the held-out fold used only for evaluation.
+
+        Processed outputs are cached under ``…/fold_{fold_idx}/`` so that
+        repeated runs skip the expensive pipeline step.
 
         Args:
-            dataset_name: Dataset name
-            feature_combination: Feature combination enum (baseline_no_cloud, no_raw_embedding, full_features, cloud_no_raw)
-            n_classes: Number of target classes
-            original_size: Original dataset shape (for logging)
+            dataset_name:        Dataset name
+            feature_combination: Feature combination string
+            fold_idx:            Which of the K folds is the held-out test set
 
         Returns:
-            None (results logged via log_k_results)
-
-        Raises:
-            FileNotFoundError: If cached dataset not found
+            Tuple of (X_train_stacked, y_train_stacked, X_test, y_test)
         """
+        raw_dataset: RawDataset = DatasetFactory().get_dataset(dataset_name)
+        k_fold_db = KFoldSplitDBFactory.get_db(
+            raw_dataset, n_splits=config.experiment_config.k_folds
+        )
+        # X_sample = training portion (K-1 folds), X_test = held-out fold k
+        X_sample_raw, X_test_raw, y_sample_raw, y_test_raw = k_fold_db.get_fold(fold_idx)
+        del raw_dataset
+
+        X_train_parts, y_train_parts = [], []
+
+        for n_pred in tqdm(
+            range(1, self.n_pred_vectors + 1),
+            desc=f"Fold {fold_idx} | {feature_combination}",
+            position=0,
+            leave=True,
+        ):
+            data = self._create_dataset_if_missing(
+                dataset_name=dataset_name,
+                feature_combination=feature_combination,
+                n_pred=n_pred,
+                X_sample=X_sample_raw,
+                y_sample=y_sample_raw,
+                X_test=X_test_raw,
+                y_test=y_test_raw,
+                fold_idx=fold_idx,
+            )
+
+            X_train_parts.append(data.train.features)
+            y_train_parts.append(data.train.labels)
+            X_test = data.test.features
+            y_test = data.test.labels
+            del data
+            gc.collect()
+
+        return (
+            np.vstack(X_train_parts),
+            np.vstack(y_train_parts),
+            X_test,
+            y_test,
+        )
+
+    # -------------------------------------------------------------------------
+    # Core experiment runner
+    # -------------------------------------------------------------------------
+
+    def _run_single_combination(
+        self,
+        dataset_name: str,
+        feature_combination: str,
+        n_classes: int,
+        original_size: tuple,
+    ):
+        """
+        Train FlexibleSINClassifier on a single feature combination.
+
+        When ``config.experiment_config.k_folds == 1``:
+            Uses the original fixed train/test split (legacy behaviour).
+
+        When ``config.experiment_config.k_folds > 1``:
+            Performs TRUE K-Fold Cross Validation — each fold uses a
+            *different* held-out test set; metrics are aggregated across all K
+            held-out evaluations.
+
+        Args:
+            dataset_name:        Dataset name
+            feature_combination: Feature combination enum value string
+            n_classes:           Number of target classes
+            original_size:       Original dataset shape (for logging)
+
+        Returns:
+            Last fold's test_metrics dict
+        """
+        k_folds = config.experiment_config.k_folds
+        use_true_kfold = k_folds > 1
+
         logger.info(
             f"\n{'='*80}\n"
             f"Running Feature Ablation: {feature_combination.upper()}\n"
-            f"Dataset: {dataset_name}, n_pred_vectors: {self.n_pred_vectors}\n"
+            f"Dataset: {dataset_name}  |  n_pred_vectors: {self.n_pred_vectors}  |  "
+            f"{'True K-Fold CV (' + str(k_folds) + ' folds)' if use_true_kfold else 'Single split'}\n"
             f"{'='*80}"
         )
 
-        # Load cached datasets for this combination
-        X_train, y_train, X_test, y_test = self._collect_datasets(
-            dataset_name=dataset_name,
-            feature_combination=feature_combination
-        )
+        for model_name in config.iim_config.name:
 
-        logger.info(
-            f"Loaded data for {feature_combination}: "
-            f"Train: {X_train.shape}, Test: {X_test.shape}"
-        )
+            test_accs: list[float] = []
+            test_aucs: list[float] = []
+            test_metrics = {}
 
-        # Initialize metric collectors for K-fold training
-        test_accs = []
-        test_aucs = []
+            fold_iter = range(k_folds) if use_true_kfold else [None]
 
-        logger.info(
-            f"Running {config.experiment_config.k_folds} training iterations for {feature_combination}"
-        )
-        for model in config.iim_config.name:
-
-            for k_iter in tqdm(
-                range(config.experiment_config.k_folds),
-                total=config.experiment_config.k_folds,
-                desc=f"K-fold training: {feature_combination}",
-                position=1,
-                leave=False
+            for fold_idx in tqdm(
+                fold_iter,
+                total=k_folds,
+                desc=f"{'K-fold' if use_true_kfold else 'Training'}: {feature_combination}",
+                position=0,
+                leave=True,
             ):
-                logger.debug(f"K-fold iteration {k_iter + 1}/{config.experiment_config.k_folds}")
+                # ---- Load / create the (fold-specific) processed dataset ----
+                if use_true_kfold:
+                    logger.info(
+                        f"K-Fold {fold_idx + 1}/{k_folds} — "
+                        f"held-out fold: {fold_idx}"
+                    )
+                    X_train, y_train, X_test, y_test = self._collect_datasets_for_fold(
+                        dataset_name=dataset_name,
+                        feature_combination=feature_combination,
+                        fold_idx=fold_idx,
+                    )
+                else:
+                    X_train, y_train, X_test, y_test = self._collect_datasets(
+                        dataset_name=dataset_name,
+                        feature_combination=feature_combination,
+                    )
 
                 logger.info(
-                    f"Training {model} for {feature_combination} (iteration {k_iter + 1})\n"
-                    f"Input shape: {X_train.shape[1]} dims, Output classes: {n_classes}"
+                    f"{'Fold ' + str(fold_idx) + ' ' if use_true_kfold else ''}"
+                    f"Data loaded — Train: {X_train.shape}, Test: {X_test.shape}"
                 )
 
-                # Create FlexibleSINClassifier - automatically adapts to input dimensions
+                # ---- Train ----
                 internal_model = InternalInferenceModelFactory().get_model(
                     num_classes=n_classes,
                     input_shape=X_train.shape[1],
-                    type=model,
+                    type=model_name,
                 )
 
-
-                # Train model
                 internal_model.fit(
-                    X=X_train, y=y_train,
-                    validation_data=(X_test, y_test)
+                    X=X_train,
+                    y=y_train,
+                    validation_data=(X_test, y_test),
                 )
 
-                # Evaluate on test set
+                # ---- Evaluate ----
                 test_metrics = internal_model.evaluate(
                     X=X_test, y=y_test, metrics=config.iim_config.metrics
                 )
 
+                fold_label = f"Fold {fold_idx}" if use_true_kfold else "Run"
                 logger.info(
-                    f"{feature_combination} K-fold {k_iter + 1} Test Metrics: {test_metrics}"
+                    f"{feature_combination} | {fold_label} | Test Metrics: {test_metrics}"
                 )
 
-                # Extract accuracy and AUC from test_metrics dict
-                test_acc = test_metrics.get("test_accuracy", test_metrics.get("accuracy", 0.0))
-                test_auc = test_metrics.get("test_auc", test_metrics.get("auc", 0.0))
+                test_acc = test_metrics.get(
+                    "test_accuracy", test_metrics.get("accuracy", 0.0)
+                )
+                test_auc = test_metrics.get(
+                    "test_auc", test_metrics.get("auc", 0.0)
+                )
 
                 test_accs.append(round(float(test_acc), 4))
                 test_aucs.append(round(float(test_auc), 4))
 
-                logger.debug(f"K-fold {k_iter + 1}: acc={test_acc:.4f}, auc={test_auc:.4f}")
+                logger.debug(
+                    f"{'Fold ' + str(fold_idx) if use_true_kfold else 'Run'}: "
+                    f"acc={test_acc:.4f}, auc={test_auc:.4f}"
+                )
 
-            # Save training history and plots (using last iteration's model)
+                # Per-fold cleanup
+                del X_train, y_train, X_test, y_test
+                gc.collect()
+                K.clear_session()
+
+            # ---- Save history / plot using the last fold's model ----
             path = get_dataset_path(
                 dataset_name=dataset_name,
                 n_pred_vectors=self.n_pred_vectors,
-                feature_combination=feature_combination
+                feature_combination=feature_combination,
             )
             history_path = path / f"{feature_combination}_history.pkl"
             plot_path = path / f"{feature_combination}_train_plot.png"
@@ -270,21 +453,22 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             internal_model.save_history(history_path)
             internal_model.plot_history(plot_path)
 
-            # Log K-fold results to report
+            # ---- Log aggregated results ----
             self.log_k_results(
                 dataset_name=dataset_name,
-                cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
-                iim_name=f"{model}_{feature_combination}",
+                cloud_models_names=str(
+                    [cloud_model for cloud_model in config.cloud_config.names]
+                ),
+                iim_name=f"{model_name}_{feature_combination}",
                 k_test_accuracies=test_accs,
-                k_test_aucs=test_aucs
+                k_test_aucs=test_aucs,
             )
 
-            # Clean up memory
-            del X_train, X_test, y_test, y_train, internal_model
+            del internal_model
             gc.collect()
             K.clear_session()
 
-            return test_metrics
+        return test_metrics
 
     def run_experiment(self):
         """
@@ -292,11 +476,8 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
 
         For each dataset in config:
         1. Load dataset metadata (n_classes, original size)
-        2. Run training for baseline_no_cloud (baseline without cloud)
-        3. Run training for no_raw_embedding (remove p_x)
-        4. Run training for full_features (full feature set)
-        5. Run training for cloud_no_raw (cloud without p_x)
-        6. Log all results to CSV report
+        2. Run training for each active feature combination
+        3. Log all results to CSV report
 
         Results are automatically saved after each combination via log_results().
 
@@ -307,13 +488,17 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
             f"### STARTING FEATURE ABLATION EXPERIMENT ###\n"
             f"Experiment: {get_experiment_name()}\n"
             f"Datasets: {config.dataset_config.names}\n"
-            f"Combinations: {[combo.value for combo in self.combinations]}"
+            f"Combinations: {[combo.value for combo in self.combinations]}\n"
+            f"K-Folds: {config.experiment_config.k_folds} "
+            f"({'true K-fold CV' if config.experiment_config.k_folds > 1 else 'single split'})"
         )
 
         for dataset_name in config.dataset_config.names:
             logger.info(f"\n{'#'*80}\n# Dataset: {dataset_name.upper()}\n{'#'*80}")
 
-            report_path = os.path.join(OUTPUT_DIR_PATH, "ablation",dataset_name, "k_report.csv")
+            report_path = os.path.join(
+                OUTPUT_DIR_PATH, "ablation", dataset_name, "k_report.csv"
+            )
             self.set_report_path(report_path)
             logger.info(f"Report path set to {report_path}")
 
@@ -330,14 +515,13 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
                 )
                 n_classes, original_size = 2, (0, 0)
 
-            # Run experiments for all combinations
             for feature_combination in self.combinations:
                 try:
                     self._run_single_combination(
                         dataset_name=dataset_name,
                         feature_combination=feature_combination.value,
                         n_classes=n_classes,
-                        original_size=original_size
+                        original_size=original_size,
                     )
 
                     logger.info(
@@ -345,14 +529,13 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
                     )
 
                 except FileNotFoundError as e:
-                    logger.error(
-                        f"✗ Skipping {feature_combination.value} - {str(e)}"
-                    )
+                    logger.error(f"✗ Skipping {feature_combination.value} — {e}")
                     continue
 
                 except Exception as e:
                     logger.error(
-                        f"✗ Error running {feature_combination.value} for {dataset_name}: {e}"
+                        f"✗ Error running {feature_combination.value} "
+                        f"for {dataset_name}: {e}"
                     )
                     continue
 

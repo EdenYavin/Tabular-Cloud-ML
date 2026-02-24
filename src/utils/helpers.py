@@ -1,7 +1,7 @@
 import pathlib
 import pickle
 import os
-from typing import Generator
+from typing import Generator, Optional
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -43,7 +43,7 @@ def plot_history(history, filename=None, title=None):
     plt.show()
 
 
-def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True, feature_combination=None) -> pathlib.Path:
+def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True, feature_combination=None, fold_idx: Optional[int] = None) -> pathlib.Path:
     rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
     use_cloud_features = "cloud" if (config.cloud_config.names and use_cloud) else "no_cloud"
     cloud_models = "_".join(config.cloud_config.names) if (config.cloud_config.names and use_cloud) else ""
@@ -88,6 +88,10 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True, feature_
                 / use_raw_features / str(n_pred_vectors) / triang_type / triang_features / use_calib_vector /
                     triang_num / feature_combo_dir)
     os.makedirs(path, exist_ok=True)
+    # fold_idx is appended LAST so per-fold caches stay inside the usual path
+    if fold_idx is not None:
+        path = path / f"fold_{fold_idx}"
+        os.makedirs(path, exist_ok=True)
     return path
 
 

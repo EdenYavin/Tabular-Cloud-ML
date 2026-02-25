@@ -79,10 +79,10 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
         logger.info(f"Report path: {report_path}")
 
         self.combinations = [
-            # FEATURE_COMBINATIONS.BASELINE_NO_CLOUD,
-            FEATURE_COMBINATIONS.NO_RAW_EMBEDDING,
-            # FEATURE_COMBINATIONS.FULL_FEATURES,
-            # FEATURE_COMBINATIONS.CLOUD_NO_RAW
+            FEATURE_COMBINATIONS.CLOUD_NO_RAW,
+            # FEATURE_COMBINATIONS.NO_RAW_EMBEDDING,
+            FEATURE_COMBINATIONS.BASELINE_NO_CLOUD,
+            FEATURE_COMBINATIONS.FULL_FEATURES,
         ]
 
     # -------------------------------------------------------------------------

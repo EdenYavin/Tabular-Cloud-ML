@@ -80,7 +80,7 @@ class FeatureAblationExperimentHandler(ExperimentHandler):
 
         self.combinations = [
             FEATURE_COMBINATIONS.CLOUD_NO_RAW,
-            # FEATURE_COMBINATIONS.NO_RAW_EMBEDDING,
+            FEATURE_COMBINATIONS.NO_RAW_EMBEDDING,
             FEATURE_COMBINATIONS.BASELINE_NO_CLOUD,
             FEATURE_COMBINATIONS.FULL_FEATURES,
         ]

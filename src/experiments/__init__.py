@@ -2,5 +2,6 @@ from .increment_evaluation_experiment_handler import IncrementEvalExperimentHand
 from .dataset_creation_experiment import DatasetCreationHandler
 from .model_training_experiment import ModelTrainingExperimentHandler
 from .feature_ablation_experiment import FeatureAblationExperimentHandler
+from .otp_experiment import OTPExperimentHandler
 
-__all__ = ["IncrementEvalExperimentHandler", "DatasetCreationHandler", "ModelTrainingExperimentHandler", "FeatureAblationExperimentHandler"]
+__all__ = ["IncrementEvalExperimentHandler", "DatasetCreationHandler", "ModelTrainingExperimentHandler", "FeatureAblationExperimentHandler", "OTPExperimentHandler"]

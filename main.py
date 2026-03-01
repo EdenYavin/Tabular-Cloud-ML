@@ -2,7 +2,7 @@ from loguru import logger
 import argparse
 from pathlib import Path
 import src.utils.constansts as consts
-from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandler, ModelTrainingExperimentHandler, FeatureAblationExperimentHandler
+from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandler, ModelTrainingExperimentHandler, FeatureAblationExperimentHandler, OTPExperimentHandler
 from src.experiments.model_training_loop import ModelTrainingLoopExperimentHandler
 from src.experiments.training_k_times import KModelTrainingExperimentHandler
 from src.experiments.t_network_training_handler import TNetworkTrainingHandler
@@ -343,6 +343,9 @@ def main():
 
     elif config.experiment_config.to_run == consts.EXPERIMENTS.ABLATION_EXPERIMENT:
         experiment_handler = FeatureAblationExperimentHandler
+
+    elif config.experiment_config.to_run == consts.EXPERIMENTS.OTP_EXPERIMENT:
+        experiment_handler = OTPExperimentHandler
 
     else:
         experiment_handler = ModelTrainingExperimentHandler

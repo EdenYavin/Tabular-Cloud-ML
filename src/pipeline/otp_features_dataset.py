@@ -218,10 +218,6 @@ class OTPFeatureEngineering(FeatureEngineeringPipeline):
 
                 observations.append(observation)
 
-                # Optionally rotate encryptor key (kept for interface parity)
-                if config.encoder_config.rotating_key:
-                    self.encryptor.switch_key()
-
         cloud.__exit__(None, None, None)
 
         logger.info(

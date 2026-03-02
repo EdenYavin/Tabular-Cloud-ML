@@ -210,10 +210,11 @@ class OTPFeatureEngineering(FeatureEngineeringPipeline):
                     observation = np.hstack(sample_features)
                 else:
                     # Fallback if no cloud model configured: use x_mixed itself
-                    logger.warning(
-                        f"[OTPFeatureEngineering] No cloud predictions for "
-                        f"sample {idx}. Falling back to raw mixed vector."
-                    )
+                    if idx == 0:
+                        logger.warning(
+                            f"[OTPFeatureEngineering] No cloud predictions — "
+                            f"falling back to raw mixed vectors for all samples."
+                        )
                     observation = x_mixed
 
                 observations.append(observation)

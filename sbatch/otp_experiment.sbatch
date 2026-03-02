@@ -44,8 +44,8 @@ else
     N_P_FLAG="--number-of-prediction-vector 1"
 fi
 
-if [ -n "$CLOUD_MODEL" ]; then
-    CLOUD_FLAG="--use-cloud-models $CLOUD_MODEL"
+if [ -n "$CLOUD_MODELS" ]; then
+    CLOUD_FLAG="--use-cloud-models $CLOUD_MODELS"
 else
     CLOUD_FLAG=""
 fi

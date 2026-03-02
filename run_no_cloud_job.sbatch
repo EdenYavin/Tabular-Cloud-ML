@@ -115,6 +115,7 @@ python main.py \
     --number-of-prediction-vector "$N_P" \
     --triangulation-choosing "$CHOOSE" \
     --triangulation-samples "$TRIANGULATIONS_NUMBER" \
+    --k-training "$K" \
     --dataset-use-cache
 
 # Check exit code to ensure creation succeeded

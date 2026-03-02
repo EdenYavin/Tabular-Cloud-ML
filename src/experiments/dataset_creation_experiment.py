@@ -11,7 +11,7 @@ from src.pipeline.feature_ablation_dataset import FeatureAblationPipeline
 from src.cloud import CLOUD_MODELS, DEFAULT_CLOUD_OUTPUT_SHAPE
 from src.encryptor import EncryptorFactory
 from src.embeddings import EmbeddingsFactory
-from src.utils.db import RawSplitDBFactory
+from src.utils.db import RawSplitDBFactory, KFoldSplitDBFactory
 from src.dataset import DatasetFactory, RawDataset
 from src.utils.config import config
 from src.experiments.base import ExperimentHandler
@@ -42,16 +42,29 @@ class DatasetCreationHandler(ExperimentHandler):
                 embedding_model = EmbeddingsFactory().get_model(X=raw_dataset.X, y=raw_dataset.y, dataset_name=dataset_name)
                 encryptor = EncryptorFactory.get_model(dataset_name=dataset_name, output_shape=cloud_model_output,)
 
-                X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
-                logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
-                del X_train, y_train
+                k_folds = config.experiment_config.k_folds
+                use_kfold = k_folds > 1
 
-                for n_pred_vectors in tqdm(range(1, self.n_pred_vectors + 1), desc=f"Preparing Dataset {dataset_name}", unit="dataset"):
+                if use_kfold:
+                    k_fold_db = KFoldSplitDBFactory.get_db(raw_dataset, n_splits=k_folds)
+                else:
+                    X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
+                    logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
+                    del X_train, y_train
 
-                    if os.path.exists(get_dataset_path(dataset_name, n_pred_vectors, feature_combination=config.experiment_config.feature_combination) / DATASET_FILE_NAME) and config.dataset_config.use_cache:
-                        logger.info(f"Dataset {get_dataset_path(dataset_name, n_pred_vectors, feature_combination=config.experiment_config.feature_combination)}"
-                                    f" already exists, skipping creation")
-                        continue
+                fold_iter = range(k_folds) if use_kfold else [None]
+
+                for fold_idx in tqdm(fold_iter, total=len(fold_iter) if use_kfold else 1, desc=f"Folds ({k_folds})", leave=False):
+                    if use_kfold:
+                        X_sample, X_test, y_sample, y_test = k_fold_db.get_fold(fold_idx)
+                        logger.debug(f"Fold {fold_idx}: SAMPLE_SIZE {X_sample.shape}, TEST_SIZE: {X_test.shape}")
+
+                    for n_pred_vectors in tqdm(range(1, self.n_pred_vectors + 1), desc=f"Preparing Dataset {dataset_name} (Fold {fold_idx})", unit="dataset"):
+
+                        path = get_dataset_path(dataset_name, n_pred_vectors, feature_combination=config.experiment_config.feature_combination, fold_idx=fold_idx)
+                        if os.path.exists(path / DATASET_FILE_NAME) and config.dataset_config.use_cache:
+                            logger.info(f"Dataset {path} already exists, skipping creation")
+                            continue
 
                     logger.debug(f"Experiment name is {self.experiment_name}, Dataset is {dataset_name}. "
                                  f"#### Number of datasets versions: {n_pred_vectors} ####")
@@ -95,7 +108,6 @@ class DatasetCreationHandler(ExperimentHandler):
                         dataset_creator.create(X_sample, y_sample, X_test, y_test)
                     )
 
-                    path = get_dataset_path(dataset_name, n_pred_vectors, feature_combination=config.experiment_config.feature_combination)
                     os.makedirs(path, exist_ok=True)
 
                     logger.debug("Finished Creating the dataset.\n"

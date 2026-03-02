@@ -114,6 +114,7 @@ python main.py \
     --use-cloud-models $CLOUD_MODEL \
     --triangulation-choosing "$CHOOSE" \
     --triangulation-samples "$TRIANGULATIONS_NUMBER" \
+    --k-training "$K" \
     --dataset-use-cache
 
 # Check exit code to ensure creation succeeded

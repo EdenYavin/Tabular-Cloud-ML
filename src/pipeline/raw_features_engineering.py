@@ -54,14 +54,6 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
          n_samples=config.experiment_config.n_triangulation_samples
         )
 
-        #Define the Calibration Vector (C) ###
-        # We create a vector of ones with the same shape as a single embedding input (latent dim)
-        # This acts as our "Perfect Compass" before distortion.
-        rng = np.random.default_rng(seed=42)
-        calibration_vector = rng.normal(loc=0.5, scale=0.1, size=(1, X.shape[1]))
-        calibration_vector = np.clip(calibration_vector, 0, 1)  # Ensure input is valid
-
-
         # For test data we won't duplicate but encrypt it only once
         predictions_for_baseline = np.array(list())  # Will be used for the baseline, TODO: If needed use it
         cloud = self.cloud_model_manager.__enter__()
@@ -122,20 +114,6 @@ class RawFeaturesEngineering(FeatureEngineeringPipeline):
                         observation = np.hstack([x, triangulation_features])
                     else:
                         observation = np.hstack([triangulation_features])
-
-                    if config.experiment_config.use_calibration_vector:
-                        # ### Encrypt & Embed the Calibration Vector ###
-                        # We encrypt C using the CURRENT key (same as x_tag and y_tag)
-                        # The IIM will see how this 'all-ones' vector got twisted.
-                        # -----------------------------------------------------
-                        c_tag = self.encryptor.encode(calibration_vector)
-                        # Step 1: Scale down to preserve the "peaks"
-                        c_tag = c_tag / config.experiment_config.scaling_factor
-                        # Step 2: Clip only as a final safety net for extreme outliers (infinity/NaN/huge spikes)
-                        c_tag = np.clip(c_tag, 0.0, 1.0)
-
-                        c_tag_emb = self.triangulation_embedding.forward(c_tag)
-                        observation = np.hstack([observation, c_tag_emb.flatten()])
 
 
                     # Add the cloud predictions as features if needed:

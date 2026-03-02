@@ -45,14 +45,6 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
                                                                 n_samples=config.experiment_config.n_triangulation_samples
                                                                 )
 
-        # 2. Prepare Calibration Vectors (Multiple distributions for richer key fingerprint)
-        # Using a fixed seed ensures the "noise pattern" is identical for Train and Test sets
-        calibration_vectors = generate_calibration_vectors(
-            embedding_dim=embeddings.shape[1],
-            distributions=config.experiment_config.calibration_distributions,
-            seed=42
-        )
-
         predictions_for_baseline = np.array(list())
         observations, new_y = [], []
         cloud = self.cloud_model_manager.__enter__()
@@ -106,28 +98,6 @@ class TriangulationFeatureEngineering(FeatureEngineeringPipeline):
                         observation = np.hstack([x, triangulation_features])
                     else:
                         observation = np.hstack([triangulation_features])
-
-                    # --- CALIBRATION VECTORS (Multi-distribution key fingerprint) ---
-                    if config.experiment_config.use_calibration_vector:
-                        calib_embeddings = []
-                        for calib_vec in calibration_vectors:
-                            c_tag = self.encryptor.encode(calib_vec)
-                            c_tag = c_tag / config.experiment_config.scaling_factor
-                            c_tag = np.clip(c_tag, 0.0, 1.0)
-
-                            # Use key encoder if available, otherwise use triangulation embedding
-                            if self.key_encoder_model is not None:
-                                # Key encoder expects batch dimension
-                                c_tag_batched = np.expand_dims(c_tag, axis=0) if c_tag.ndim == 2 else c_tag
-                                c_tag_emb = self.key_encoder_model(c_tag_batched, training=False).numpy()
-                                calib_embeddings.append(c_tag_emb.flatten())
-                            else:
-                                c_tag_emb = self.triangulation_embedding.forward(c_tag)
-                                calib_embeddings.append(c_tag_emb.flatten())
-
-                        # Concatenate all calibration embeddings into a single fingerprint
-                        calibration_fingerprint = np.hstack(calib_embeddings)
-                        observation = np.hstack([observation, calibration_fingerprint])
 
                     # --- CLOUD PREDICTIONS ---
                     if config.cloud_config.names:

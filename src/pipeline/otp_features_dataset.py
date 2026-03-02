@@ -121,7 +121,7 @@ class OTPFeatureEngineering(FeatureEngineeringPipeline):
         # Target shape for the 2-D pad is (H, W) taken from the cloud input
         # _cloud_input_shape is the full input_shape tuple, e.g. (224, 224, 3)
         H, W = self._cloud_input_shape[0], self._cloud_input_shape[1]
-        target_2d = (H, W * 3)  # *3 because expand_matrix stacks 3 channels
+        target_2d = (H, W)  # expand_matrix handles the 3 channel stacking
 
         # Clamp if vector is larger than the target (shouldn't happen for
         # typical tabular datasets, but guard just in case)

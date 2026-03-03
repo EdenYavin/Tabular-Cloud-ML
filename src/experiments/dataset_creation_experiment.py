@@ -43,84 +43,73 @@ class DatasetCreationHandler(ExperimentHandler):
                 encryptor = EncryptorFactory.get_model(dataset_name=dataset_name, output_shape=cloud_model_output,)
 
                 k_folds = config.experiment_config.k_folds
-                use_kfold = k_folds > 1
+                k_fold_db = KFoldSplitDBFactory.get_db(raw_dataset, n_splits=k_folds)
 
-                if use_kfold:
-                    k_fold_db = KFoldSplitDBFactory.get_db(raw_dataset, n_splits=k_folds)
-                else:
-                    X_train, X_test, X_sample, y_train, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
-                    logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TRAIN_SIZE: {X_train.shape}, TEST_SIZE: {X_test.shape}")
-                    del X_train, y_train
-
-                fold_iter = range(k_folds) if use_kfold else [None]
-
-                for fold_idx in tqdm(fold_iter, total=len(fold_iter) if use_kfold else 1, desc=f"Folds ({k_folds})", leave=False):
-                    if use_kfold:
-                        X_sample, X_test, y_sample, y_test = k_fold_db.get_fold(fold_idx)
-                        logger.debug(f"Fold {fold_idx}: SAMPLE_SIZE {X_sample.shape}, TEST_SIZE: {X_test.shape}")
+                for fold_idx in tqdm(range(k_folds), total=k_folds, desc=f"Folds ({k_folds})", leave=False):
+                    X_sample, X_test, y_sample, y_test = k_fold_db.get_fold(fold_idx)
+                    logger.debug(f"Fold {fold_idx}: SAMPLE_SIZE {X_sample.shape}, TEST_SIZE: {X_test.shape}")
 
                     for n_pred_vectors in tqdm(range(1, self.n_pred_vectors + 1), desc=f"Preparing Dataset {dataset_name} (Fold {fold_idx})", unit="dataset"):
 
                         path = get_dataset_path(dataset_name, n_pred_vectors, feature_combination=config.experiment_config.feature_combination, fold_idx=fold_idx)
-                        if os.path.exists(path / DATASET_FILE_NAME) and config.dataset_config.use_cache:
+                        if os.path.exists(path / DATASET_FILE_NAME):
                             logger.info(f"Dataset {path} already exists, skipping creation")
                             continue
 
-                    logger.debug(f"Experiment name is {self.experiment_name}, Dataset is {dataset_name}. "
-                                 f"#### Number of datasets versions: {n_pred_vectors} ####")
+                        logger.debug(f"Experiment name is {self.experiment_name}, Dataset is {dataset_name}. "
+                                     f"#### Number of datasets versions: {n_pred_vectors} ####")
 
-                    if config.experiment_config.feature_combination:
-                        # Feature ablation pipeline for frozen T network experiments
-                        dataset_creator = FeatureAblationPipeline(
-                            dataset_name=dataset_name,
-                            encryptor=encryptor,
-                            embeddings_model=embedding_model,
-                            feature_combination=config.experiment_config.feature_combination,
-                            metadata=raw_dataset.metadata
+                        if config.experiment_config.feature_combination:
+                            # Feature ablation pipeline for frozen T network experiments
+                            dataset_creator = FeatureAblationPipeline(
+                                dataset_name=dataset_name,
+                                encryptor=encryptor,
+                                embeddings_model=embedding_model,
+                                feature_combination=config.experiment_config.feature_combination,
+                                metadata=raw_dataset.metadata
+                            )
+
+                        elif config.experiment_config.use_deepset:
+                            dataset_creator = DeepSetFeatureEngineering(
+                                dataset_name=dataset_name,
+                                encryptor=encryptor,
+                                embeddings_model=embedding_model,
+                                metadata=raw_dataset.metadata
+                            )
+
+                        elif config.experiment_config.n_triangulation_samples > 0 and not config.experiment_config.use_raw:
+                            # Create dataset with triangulations
+                            dataset_creator = TriangulationFeatureEngineering(
+                                dataset_name=dataset_name,
+                                encryptor=encryptor,
+                                embeddings_model=embedding_model,
+                                metadata=raw_dataset.metadata
+                            )
+                        else:
+                            # No need for triangulations
+                            dataset_creator = RawFeaturesEngineering(
+                                dataset_name=dataset_name,
+                                encryptor=encryptor,
+                                embeddings_model=embedding_model,
+                                metadata=raw_dataset.metadata
+                            )
+
+                        dataset, emb_baseline_dataset = (
+                            dataset_creator.create(X_sample, y_sample, X_test, y_test)
                         )
 
-                    elif config.experiment_config.use_deepset:
-                        dataset_creator = DeepSetFeatureEngineering(
-                            dataset_name=dataset_name,
-                            encryptor=encryptor,
-                            embeddings_model=embedding_model,
-                            metadata=raw_dataset.metadata
-                        )
+                        os.makedirs(path, exist_ok=True)
 
-                    elif config.experiment_config.n_triangulation_samples > 0 and not config.experiment_config.use_raw:
-                        # Create dataset with triangulations
-                        dataset_creator = TriangulationFeatureEngineering(
-                            dataset_name=dataset_name,
-                            encryptor=encryptor,
-                            embeddings_model=embedding_model,
-                            metadata=raw_dataset.metadata
-                        )
-                    else:
-                        # No need for triangulations
-                        dataset_creator = RawFeaturesEngineering(
-                            dataset_name=dataset_name,
-                            encryptor=encryptor,
-                            embeddings_model=embedding_model,
-                            metadata=raw_dataset.metadata
-                        )
+                        logger.debug("Finished Creating the dataset.\n"
+                                     f"Saving to {path}")
 
-                    dataset, emb_baseline_dataset = (
-                        dataset_creator.create(X_sample, y_sample, X_test, y_test)
-                    )
+                        with open(path / BASELINE_DATASET_FILE_NAME, "wb") as f:
+                            pickle.dump(emb_baseline_dataset, f)
 
-                    os.makedirs(path, exist_ok=True)
+                        with open(path / DATASET_FILE_NAME, "wb") as f:
+                            pickle.dump(dataset, f)
 
-                    logger.debug("Finished Creating the dataset.\n"
-                                 f"Saving to {path}")
-
-                    with open(path / BASELINE_DATASET_FILE_NAME, "wb") as f:
-                        pickle.dump(emb_baseline_dataset, f)
-
-                    with open(path / DATASET_FILE_NAME, "wb") as f:
-                        pickle.dump(dataset, f)
-
-
-                    del dataset, emb_baseline_dataset
-                    gc.collect()
+                        del dataset, emb_baseline_dataset
+                        gc.collect()
 
 

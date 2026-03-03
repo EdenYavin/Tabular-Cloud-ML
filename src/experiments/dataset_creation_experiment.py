@@ -43,10 +43,17 @@ class DatasetCreationHandler(ExperimentHandler):
                 encryptor = EncryptorFactory.get_model(dataset_name=dataset_name, output_shape=cloud_model_output,)
 
                 k_folds = config.experiment_config.k_folds
-                k_fold_db = KFoldSplitDBFactory.get_db(raw_dataset, n_splits=k_folds)
+
+                if k_folds > 1:
+                    k_fold_db = KFoldSplitDBFactory.get_db(raw_dataset, n_splits=k_folds)
+                    get_fold = k_fold_db.get_fold
+                else:
+                    # k=1 → single train/test split; StratifiedKFold requires n_splits>=2
+                    _, X_test, X_sample, _, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
+                    get_fold = lambda _: (X_sample, X_test, y_sample, y_test)
 
                 for fold_idx in tqdm(range(k_folds), total=k_folds, desc=f"Folds ({k_folds})", leave=False):
-                    X_sample, X_test, y_sample, y_test = k_fold_db.get_fold(fold_idx)
+                    X_sample, X_test, y_sample, y_test = get_fold(fold_idx)
                     logger.debug(f"Fold {fold_idx}: SAMPLE_SIZE {X_sample.shape}, TEST_SIZE: {X_test.shape}")
 
                     for n_pred_vectors in tqdm(range(1, self.n_pred_vectors + 1), desc=f"Preparing Dataset {dataset_name} (Fold {fold_idx})", unit="dataset"):

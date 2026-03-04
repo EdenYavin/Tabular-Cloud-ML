@@ -70,6 +70,7 @@ class EXPERIMENTS(str, enum.Enum):
     T_NETWORK_TRAINING = "t_network_training"
     ABLATION_EXPERIMENT = "ablation_experiment"
     OTP_EXPERIMENT = "otp_experiment"
+    K_FOLD_TRAINING = "k_fold_training"
 
 class FEATURE_COMBINATIONS(str, enum.Enum):
     BASELINE_NO_CLOUD = "baseline_no_cloud"  # [p_x, q_x, T_context]

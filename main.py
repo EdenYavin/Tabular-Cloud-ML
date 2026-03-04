@@ -5,6 +5,7 @@ import src.utils.constansts as consts
 from src.experiments import DatasetCreationHandler, IncrementEvalExperimentHandler, ModelTrainingExperimentHandler, FeatureAblationExperimentHandler, OTPExperimentHandler
 from src.experiments.model_training_loop import ModelTrainingLoopExperimentHandler
 from src.experiments.training_k_times import KModelTrainingExperimentHandler
+from src.experiments.k_fold_training import KFoldTrainingExperimentHandler
 from src.experiments.t_network_training_handler import TNetworkTrainingHandler
 from src.utils.config import config, update_config_from_args
 from src.utils.constansts import EXPERIMENTS, IIM_MODELS, PMLB_DATASETS, REPORT_PATH, OUTPUT_DIR_PATH
@@ -346,6 +347,10 @@ def main():
 
     elif config.experiment_config.to_run == consts.EXPERIMENTS.OTP_EXPERIMENT:
         experiment_handler = OTPExperimentHandler
+
+    elif config.experiment_config.to_run == consts.EXPERIMENTS.K_FOLD_TRAINING:
+        report_path = Path(OUTPUT_DIR_PATH) / "k_report.csv"
+        experiment_handler = KFoldTrainingExperimentHandler
 
     else:
         experiment_handler = ModelTrainingExperimentHandler

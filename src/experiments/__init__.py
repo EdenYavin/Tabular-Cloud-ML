@@ -3,5 +3,6 @@ from .dataset_creation_experiment import DatasetCreationHandler
 from .model_training_experiment import ModelTrainingExperimentHandler
 from .feature_ablation_experiment import FeatureAblationExperimentHandler
 from .otp_experiment import OTPExperimentHandler
+from .k_fold_training import KFoldTrainingExperimentHandler
 
-__all__ = ["IncrementEvalExperimentHandler", "DatasetCreationHandler", "ModelTrainingExperimentHandler", "FeatureAblationExperimentHandler", "OTPExperimentHandler"]
+__all__ = ["IncrementEvalExperimentHandler", "DatasetCreationHandler", "ModelTrainingExperimentHandler", "FeatureAblationExperimentHandler", "OTPExperimentHandler", "KFoldTrainingExperimentHandler"]

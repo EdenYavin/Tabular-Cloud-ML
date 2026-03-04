@@ -17,20 +17,17 @@ from src.utils.constansts import DATASET_FILE_NAME, REPORT_PATH, OUTPUT_DIR_PATH
 from src.utils.helpers import get_t_network_model_path
 
 
-class KModelTrainingExperimentHandler(ExperimentHandler):
-    """
-    Repeated Training: load a single dataset (no folds) and train on it
-    K times to get variance estimates from repeated training runs.
-    """
+class KFoldTrainingExperimentHandler(ExperimentHandler):
 
     def __init__(self, report_path: str = REPORT_PATH):
         super().__init__(get_experiment_name(), report_path=report_path)
 
-    def _collect_datasets(self, dataset_name):
+    def _collect_datasets(self, dataset_name, fold_idx):
+        """Load and concatenate datasets for a specific fold."""
         X_train, y_train = [], []
         data = None
         for folder in range(1, self.n_pred_vectors + 1):
-            path = get_dataset_path(dataset_name, folder) / DATASET_FILE_NAME
+            path = get_dataset_path(dataset_name, folder, fold_idx=fold_idx) / DATASET_FILE_NAME
             logger.info(f"Loading dataset from {path}")
             with open(path, "rb") as f:
                 data = pickle.load(f)
@@ -39,14 +36,20 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
 
         return np.vstack(X_train), np.vstack(y_train), data.test.features, data.test.labels
 
-
-
     def run_experiment(self):
+        """
+        Classic K-Fold Cross Validation: load each fold ONCE, train once per fold,
+        then aggregate results across all K folds.
+        """
 
-        k_trainings = config.experiment_config.k_folds  # number of repeated training runs
+        k_folds = config.experiment_config.k_folds
+        if k_folds <= 1:
+            raise ValueError(
+                f"K-Fold training requires k_folds > 1, got {k_folds}. "
+                f"Use model_training experiment for single-split training."
+            )
 
-        logger.info(f"Training Model Experiment: {get_experiment_name()} "
-                     f"(repeating training {k_trainings} times)")
+        logger.info(f"K-Fold Training Experiment: {get_experiment_name()} with {k_folds} folds")
 
         for dataset_name in config.dataset_config.names:
 
@@ -63,14 +66,14 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                 logger.warning(f"Error loading Dataset {dataset_name}, using default number of classes -> 2")
                 n_classes = 2
 
-
             for model_name in config.iim_config.name:
                 if model_name == IIM_MODELS.TRANSFORMER and config.experiment_config.triangulation_mode == "cos":
                     logger.warning("#### TRANSFORMER CAN NOT WORK WITH COSINE DATASET - SKIPPING ###")
                     continue
 
-                logger.info(f"#### Training model experiment: "
-                            f"Dataset: {dataset_name}, n_pred_vectors: {self.n_pred_vectors} ####\n")
+                logger.info(f"#### K-Fold training: "
+                            f"Dataset: {dataset_name}, n_pred_vectors: {self.n_pred_vectors}, "
+                            f"k_folds: {k_folds} ####\n")
 
                 path = get_dataset_path(dataset_name=dataset_name, n_pred_vectors=self.n_pred_vectors)
 
@@ -78,13 +81,15 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
 
                     test_accs, test_aucs = [], []
 
-                    # Load dataset once — same data for all K runs
-                    X_train, y_train, X_test, y_test = self._collect_datasets(dataset_name=dataset_name)
+                    # Train once per fold — classic K-Fold CV
+                    for fold_idx in tqdm(range(k_folds), total=k_folds, desc="K-Fold CV"):
 
-                    history_path = path / "history.pkl"
-                    plot_path = path / f"{model_name}_{config.experiment_config.to_run}_train_plot.png"
+                        X_train, y_train, X_test, y_test = self._collect_datasets(
+                            dataset_name=dataset_name, fold_idx=fold_idx
+                        )
 
-                    for k_idx in tqdm(range(k_trainings), total=k_trainings, desc="K Trainings"):
+                        history_path = path / f"fold_{fold_idx}" / "history.pkl"
+                        plot_path = path / f"fold_{fold_idx}" / f"{model_name}_{config.experiment_config.to_run}_train_plot.png"
 
                         # Auto-determine T-Network path if freeze is enabled but path not specified
                         pretrained_path = config.experiment_config.pretrained_t_network_path
@@ -106,7 +111,7 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                             pretrained_t_network_path=str(pretrained_path) if pretrained_path else None,
                             freeze_t_network=config.experiment_config.freeze_t_network
                         )
-                        logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} (run {k_idx + 1}/{k_trainings}) ####"
+                        logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} (Fold {fold_idx}) ####"
                                      f" Dataset Shape: Train - {X_train.shape}, Test: {X_test.shape}")
                         internal_model.fit(
                             X=X_train, y=y_train,
@@ -132,7 +137,8 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                             round(float(np.max(test_val_accs)), 4)
                         )
 
-                        del internal_model
+                        # Clean up fold memory
+                        del X_train, y_train, X_test, y_test, internal_model
                         gc.collect()
                         K.clear_session()
 
@@ -144,10 +150,7 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                         k_test_aucs=test_aucs
                     )
 
-                    del X_train, X_test, y_test, y_train
-                    gc.collect()
-                    K.clear_session()
-
+            gc.collect()
+            K.clear_session()
 
         return self.report
-

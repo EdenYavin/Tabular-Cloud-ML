@@ -43,23 +43,28 @@ class DatasetCreationHandler(ExperimentHandler):
                 encryptor = EncryptorFactory.get_model(dataset_name=dataset_name, output_shape=cloud_model_output,)
 
                 k_folds = config.experiment_config.k_folds
+                use_kfold = k_folds > 1
 
-                if k_folds > 1:
+                if use_kfold:
                     k_fold_db = KFoldSplitDBFactory.get_db(raw_dataset, n_splits=k_folds)
-                    get_fold = k_fold_db.get_fold
                 else:
-                    # k=1 → single train/test split; StratifiedKFold requires n_splits>=2
+                    # k=1 → single train/test split (original behaviour)
                     _, X_test, X_sample, _, y_test, y_sample = RawSplitDBFactory.get_db(raw_dataset).get_split()
-                    get_fold = lambda _: (X_sample, X_test, y_sample, y_test)
+                    logger.debug(f"SAMPLE_SIZE {X_sample.shape}, TEST_SIZE: {X_test.shape}")
 
-                for fold_idx in tqdm(range(k_folds), total=k_folds, desc=f"Folds ({k_folds})", leave=False):
-                    X_sample, X_test, y_sample, y_test = get_fold(fold_idx)
-                    logger.debug(f"Fold {fold_idx}: SAMPLE_SIZE {X_sample.shape}, TEST_SIZE: {X_test.shape}")
+                # When k_folds == 1: single iteration with fold_idx=None → datasets in base path
+                # When k_folds > 1:  iterate real folds with fold_idx=0..K-1 → datasets in fold_*/
+                fold_iter = range(k_folds) if use_kfold else [None]
 
-                    for n_pred_vectors in tqdm(range(1, self.n_pred_vectors + 1), desc=f"Preparing Dataset {dataset_name} (Fold {fold_idx})", unit="dataset"):
+                for fold_idx in tqdm(fold_iter, total=len(list(fold_iter)), desc=f"Folds ({k_folds})", leave=False):
+                    if use_kfold:
+                        X_sample, X_test, y_sample, y_test = k_fold_db.get_fold(fold_idx)
+                        logger.debug(f"Fold {fold_idx}: SAMPLE_SIZE {X_sample.shape}, TEST_SIZE: {X_test.shape}")
+
+                    for n_pred_vectors in tqdm(range(1, self.n_pred_vectors + 1), desc=f"Preparing Dataset {dataset_name}{' (Fold ' + str(fold_idx) + ')' if fold_idx is not None else ''}", unit="dataset"):
 
                         path = get_dataset_path(dataset_name, n_pred_vectors, feature_combination=config.experiment_config.feature_combination, fold_idx=fold_idx)
-                        if os.path.exists(path / DATASET_FILE_NAME):
+                        if os.path.exists(path / DATASET_FILE_NAME) and config.dataset_config.use_cache:
                             logger.info(f"Dataset {path} already exists, skipping creation")
                             continue
 

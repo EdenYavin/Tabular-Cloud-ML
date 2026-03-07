@@ -91,25 +91,12 @@ class KFoldTrainingExperimentHandler(ExperimentHandler):
                         history_path = path / f"fold_{fold_idx}" / "history.pkl"
                         plot_path = path / f"fold_{fold_idx}" / f"{model_name}_{config.experiment_config.to_run}_train_plot.png"
 
-                        # Auto-determine T-Network path if freeze is enabled but path not specified
-                        pretrained_path = config.experiment_config.pretrained_t_network_path
-                        if config.experiment_config.freeze_t_network and not pretrained_path:
-                            try:
-                                pretrained_path = get_t_network_model_path(
-                                    dataset_name=dataset_name,
-                                    ensure_exists=True
-                                )
-                                logger.info(f"Auto-determined T-Network path: {pretrained_path}")
-                            except FileNotFoundError as e:
-                                logger.error(str(e))
-                                raise
+                      
 
                         internal_model = InternalInferenceModelFactory().get_model(
                             num_classes=n_classes,
                             input_shape=X_train.shape[1],
                             type=model_name,
-                            pretrained_t_network_path=str(pretrained_path) if pretrained_path else None,
-                            freeze_t_network=config.experiment_config.freeze_t_network
                         )
                         logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} (Fold {fold_idx}) ####"
                                      f" Dataset Shape: Train - {X_train.shape}, Test: {X_test.shape}")

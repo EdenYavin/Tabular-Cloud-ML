@@ -279,6 +279,8 @@ class ExperimentHandler(ABC):
                 config.experiment_config.to_run == EXPERIMENTS.INCREMENT_EVALUATION
                 or
                 config.experiment_config.to_run == EXPERIMENTS.MODEL_TRAINING
+                or
+                config.experiment_config.to_run == EXPERIMENTS.K_FOLD_TRAINING
         ):
             self.save()
 

@@ -151,14 +151,6 @@ def main():
     )
 
     parser.add_argument(
-        "--use-calibration-vector",
-        action="store_true",
-        dest="experiment_use_calibration_vector",
-        default=False,
-        help="Flag to indicate if the calibration vector should be used in the IIM training",
-    )
-
-    parser.add_argument(
         "--scaling-factor",
         type=float,
         dest="experiment_scaling_factor",

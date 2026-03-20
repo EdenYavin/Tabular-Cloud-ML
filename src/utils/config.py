@@ -1,7 +1,6 @@
 import argparse
 
 from pydantic import BaseModel, Field
-from tensorflow.python.keras.saving.saved_model.serialized_attributes import metrics
 
 from src.utils.constansts import (EMBEDDING_TYPES, ENCODERS_TYPES, IIM_MODELS, CLOUD_MODELS, EXPERIMENTS,
                                   HARD_DATASETS, LARGE_DATASETS, ALL_DATASETS,

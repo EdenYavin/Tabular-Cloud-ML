@@ -86,15 +86,6 @@ class OTPExperimentHandler(ExperimentHandler):
             metadata=raw_dataset.metadata,
         )
 
-    def _get_dataset_path(self, dataset_name: str, n_pred: int, fold_idx=None):
-        """Thin wrapper so we can pass fold_idx cleanly."""
-        return get_dataset_path(
-            dataset_name,
-            n_pred,
-            feature_combination="otp",       # keeps OTP cache separate
-            fold_idx=fold_idx,
-        )
-
     def _create_dataset_if_missing(
         self,
         dataset_name: str,
@@ -112,7 +103,12 @@ class OTPExperimentHandler(ExperimentHandler):
         Returns:
             Loaded IIMDataset object.
         """
-        path = self._get_dataset_path(dataset_name, n_pred, fold_idx)
+        path = get_dataset_path(
+            dataset_name,
+            n_pred,
+            otp="otp",       # keeps OTP cache separate
+            fold_idx=fold_idx,
+        )
         dataset_file = path / DATASET_FILE_NAME
 
         if dataset_file.exists() and config.dataset_config.use_cache:
@@ -309,7 +305,7 @@ class OTPExperimentHandler(ExperimentHandler):
                 K.clear_session()
 
             # Save history / plot
-            path = self._get_dataset_path(dataset_name, self.n_pred_vectors)
+            path = get_dataset_path(dataset_name, self.n_pred_vectors)
             internal_model.save_history(path / "otp_history.pkl")
             internal_model.plot_history(path / "otp_train_plot.png")
 

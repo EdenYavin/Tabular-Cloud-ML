@@ -57,14 +57,7 @@ class Config(BaseModel):
             description="Method to construct features: 'concat' (original) or 'diff' (differential) or cos (cosine)",
             default="concat"
         )
-        use_calibration_vector: bool = Field(
-            description="Flag to indicate if the calibration vector should be used in the IIM training",
-            default=False
-        )
-        calibration_distributions: list[str] = Field(
-            description="List of calibration vector distribution types. Options: uniform, gaussian, sparse, bimodal, edges",
-            default=["gaussian"]
-        )
+
         scaling_factor: float = Field(
             description="Scaling factor to scale the encrypted images embedding (for example 1.08 pixel will turn to 0.42)",
             default=5.0
@@ -95,7 +88,6 @@ class Config(BaseModel):
                                                            use_embedding=False,use_raw=False,
                                                            to_run=EXPERIMENTS.DATASET_CREATION,
                                                            triangulation_mode="diff",  # Default to original behavior
-                                                           use_calibration_vector=True
                                                            )
     cloud_config: CloudModelsConfig = CloudModelsConfig(names=[
         # CLOUD_MODELS.EFFICIENTNET, CLOUD_MODELS.MOBILE_NET, CLOUD_MODELS.Xception,

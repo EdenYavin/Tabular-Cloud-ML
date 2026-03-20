@@ -33,21 +33,6 @@ else
     TRIANG_EMB_FLAG=""
 fi
 
-if [ -n "$CALIB_VECTOR" ] && [ "$CALIB_VECTOR" = "1" ];
-then
-    USE_CALIB="--use-calibration-vector"
-else
-    USE_CALIB=""
-fi
-
-# New Logic for Calibration Distributions
-if [ -n "$CALIB_DISTRIBUTIONS" ];
-then
-    CALIB_DISTS_FLAG="--calibration-distributions $CALIB_DISTRIBUTIONS"
-else
-    CALIB_DISTS_FLAG=""
-fi
-
 # Use trained key encoder for feature extraction
 if [ -n "$USE_KEY_ENCODER" ] && [ "$USE_KEY_ENCODER" = "1" ]; then
     KEY_ENCODER_FLAG="--use-key-encoder"
@@ -105,10 +90,8 @@ python main.py \
     --experiment-to-run dataset_creation \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG \
-    $USE_CALIB \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
-    $CALIB_DISTS_FLAG \
     $KEY_ENCODER_FLAG \
     $DEEPSET_FLAG \
     --datasets "$DATASET_NAME" \

@@ -43,7 +43,8 @@ def plot_history(history, filename=None, title=None):
     plt.show()
 
 
-def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True, feature_combination=None, fold_idx: Optional[int] = None) -> pathlib.Path:
+def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True, feature_combination=None,
+                     otp=False, fold_idx: Optional[int] = None) -> pathlib.Path:
     rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
     use_cloud_features = "cloud" if (config.cloud_config.names and use_cloud) else "no_cloud"
     cloud_models = "_".join(config.cloud_config.names) if (config.cloud_config.names and use_cloud) else ""
@@ -62,22 +63,12 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True, feature_
     embedding_model = config.encoder_config.embedding
     triang_features = config.experiment_config.triangulation_mode
 
-    # Include calibration distribution types in path
-    if config.experiment_config.use_calibration_vector:
-        if config.experiment_config.use_key_encoder:
-            use_calib_vector = "key_encoder"
-        else:
-            # Use getattr to be safe in case config isn't fully updated
-            dists = getattr(config.experiment_config, 'calibration_distributions', ['gaussian'])
-            calib_dists = "_".join(sorted(dists))
-            use_calib_vector = f"calib_{calib_dists}"
-    else:
-        use_calib_vector = ""
-
     # Include feature combination identifier if present
     feature_combo_dir = ""
     if feature_combination:
         feature_combo_dir = f"ablation_{feature_combination}"
+
+    otp_dir = "otp" if otp else ""
 
     if config.experiment_config.use_deepset:
         path = (pathlib.Path(OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models /
@@ -85,8 +76,9 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True, feature_
     else:
         path = (pathlib.Path(
             OUTPUT_DIR_PATH) / dataset_name / rotate_dir / use_cloud_features / cloud_models / embedding_model
-                / use_raw_features / str(n_pred_vectors) / triang_type / triang_features / use_calib_vector /
+                / use_raw_features / str(n_pred_vectors) / triang_type / triang_features / otp_dir /
                     triang_num / feature_combo_dir)
+
     os.makedirs(path, exist_ok=True)
     # fold_idx is appended LAST so per-fold caches stay inside the usual path
     if fold_idx is not None:
@@ -103,13 +95,9 @@ def get_experiment_name() -> str:
 
     if config.experiment_config.use_deepset:
         return f"deepset_{use_cloud}"
-    # NEW: Include calibration info in experiment name for logging
-    calib_str = ""
-    if config.experiment_config.use_calibration_vector:
-        dists = getattr(config.experiment_config, 'calibration_distributions', ['gaussian'])
-        calib_str = f"_calib_{'_'.join(sorted(dists))}"
 
-    return f"{use_rotate_key}_{use_embed}_{use_cloud}{use_raw_features}{calib_str}"
+
+    return f"{use_rotate_key}_{use_embed}_{use_cloud}{use_raw_features}"
 
 
 def load_pretrained_t_network(

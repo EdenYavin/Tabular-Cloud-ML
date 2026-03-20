@@ -30,22 +30,6 @@ else
     TRIANG_EMB_FLAG=""
 fi
 
-if [ -n "$CALIB_VECTOR" ] && [ "$CALIB_VECTOR" = "1" ]; then
-    USE_CALIB="--use-calibration-vector"
-else
-    USE_CALIB=""
-fi
-
-# New Logic for Calibration Distributions
-if [ -n "$CALIB_DISTRIBUTIONS" ];
-then
-    # We don't quote $CALIB_DISTRIBUTIONS here inside the string so spaces are preserved correctly
-    # when passed to the flag, but we will quote the whole flag variable in the python call if needed.
-    # However, for sbatch simple expansion is usually safer:
-    CALIB_DISTS_FLAG="--calibration-distributions $CALIB_DISTRIBUTIONS"
-else
-    CALIB_DISTS_FLAG=""
-fi
 
 # Use trained key encoder for feature extraction
 if [ -n "$USE_KEY_ENCODER" ] && [ "$USE_KEY_ENCODER" = "1" ]; then
@@ -134,10 +118,8 @@ python main.py \
     --experiment-to-run model_training \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG \
-    $USE_CALIB \
     $TRIANG_MODE_FLAG \
     $TRIANG_EMB_FLAG \
-    $CALIB_DISTS_FLAG \
     $KEY_ENCODER_FLAG \
     $DEEPSET_FLAG \
     $FREEZE_T_FLAG \

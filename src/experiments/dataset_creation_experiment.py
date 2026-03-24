@@ -64,7 +64,7 @@ class DatasetCreationHandler(ExperimentHandler):
                     for n_pred_vectors in tqdm(range(1, self.n_pred_vectors + 1), desc=f"Preparing Dataset {dataset_name}{' (Fold ' + str(fold_idx) + ')' if fold_idx is not None else ''}", unit="dataset"):
 
                         path = get_dataset_path(dataset_name, n_pred_vectors, feature_combination=config.experiment_config.feature_combination, fold_idx=fold_idx)
-                        if os.path.exists(path / DATASET_FILE_NAME) and config.dataset_config.use_cache:
+                        if os.path.exists(path / DATASET_FILE_NAME):
                             logger.info(f"Dataset {path} already exists, skipping creation")
                             continue
 

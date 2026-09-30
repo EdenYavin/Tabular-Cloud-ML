@@ -48,6 +48,8 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True, feature_
     rotate_dir = "rotate" if config.encoder_config.rotating_key else ""
     use_cloud_features = "cloud" if (config.cloud_config.names and use_cloud) else "no_cloud"
     cloud_models = "_".join(config.cloud_config.names) if (config.cloud_config.names and use_cloud) else ""
+    if cloud_models and config.cloud_config.use_embedding:
+        cloud_models = f"{cloud_models}_penultimate"
 
     use_raw_features = ""
     if config.experiment_config.use_embedding and config.experiment_config.n_triangulation_samples > 0:
@@ -90,6 +92,8 @@ def get_dataset_path(dataset_name: str, n_pred_vectors, use_cloud=True, feature_
 def get_experiment_name() -> str:
     use_embed = "emb" if config.experiment_config.use_embedding else "no_emb"
     use_cloud = "cloud_vec" if config.cloud_config.names else "no_cloud_vec"
+    if config.cloud_config.names and config.cloud_config.use_embedding:
+        use_cloud = "cloud_penultimate_vec"
     use_rotate_key = "rotate_key" if config.encoder_config.rotating_key else "no_rotate_key"
     use_raw_features = "_raw" if config.experiment_config.use_raw else ""
 

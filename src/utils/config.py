@@ -44,6 +44,8 @@ class Config(BaseModel):
         names: list[str] = Field(description="Cloud model to use")
         horizontal_append: bool = Field(default=True, description="A flag to indicate the cloud features will be added to each sample as a horizontal features (i.e. as append as new features to the same sample) "
                                                                     "or vertical (i.e duplicate the sample to N cloud models each with a different cloud features vector")
+        use_embedding: bool = Field(default=False, description="Take the layer before the softmax as the cloud feature vector instead of the class probabilities")
+        use_penultimate_embedding: bool = Field(default=False, description="Take the layer before the softmax as the cloud feature vector instead of the class probabilities")
 
     class ExperimentConfig(BaseModel):
         use_embedding: bool = Field(description="A flag to indicate if the embedding should be used in training the IIM")

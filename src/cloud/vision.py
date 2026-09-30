@@ -27,7 +27,8 @@ import tensorflow as tf
 from keras import regularizers
 from keras.models import load_model
 
-from src.cloud.base import CloudModel, KerasApplicationCloudModel
+from src.cloud.base import CloudModel, KerasApplicationCloudModel, as_embedding_model
+from src.utils.config import config
 from src.utils.constansts import VGG16_CIFAR10_MODEL_PATH, CIFAR_100_VGG16_MODEL_PATH
 
 
@@ -140,7 +141,10 @@ class VGG16Cifar100CloudModel(CloudModel):
         super().__init__(**kwargs)
         self.model = self.get_model()
         self.input_shape = (32, 32, 3)
-        self.output_shape = (1,100)
+        self.output_shape = (1, 100)
+        if config.cloud_config.use_embedding:
+            self.model = as_embedding_model(self.model)
+            self.output_shape = (1, self.model.output_shape[-1])
 
     def fit(self, X_train, y_train, **kwargs):
         pass
@@ -177,7 +181,10 @@ class VGG16Cifer10CloudModel(CloudModel):
         super().__init__(**kwargs)
         self.model = self.get_model()
         self.input_shape = (32, 32, 3)
-        self.output_shape = (1,10)
+        self.output_shape = (1, 10)
+        if config.cloud_config.use_embedding:
+            self.model = as_embedding_model(self.model)
+            self.output_shape = (1, self.model.output_shape[-1])
 
     def fit(self, X_train, y_train, **kwargs):
         pass

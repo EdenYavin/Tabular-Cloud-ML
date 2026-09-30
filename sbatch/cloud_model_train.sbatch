@@ -26,6 +26,12 @@ if [ -n "$DROPOUT" ]; then
 else
     DROPOUT_FLAG=""
 fi
+
+if [ -n "$USE_CLOUD_EMBEDDING" ] && [ "$USE_CLOUD_EMBEDDING" = "1" ]; then
+    CLOUD_EMBEDDING_FLAG="--use-cloud-embedding"
+else
+    CLOUD_EMBEDDING_FLAG=""
+fi
 # -----------------------------------------
 
 # Echo info
@@ -39,6 +45,7 @@ echo "Number of K Iteration $K"
 echo "IIM Models to train $MODELS"
 echo "Dropout Config: $DROPOUT" # Log the mode
 echo "Cloud Models To Use: $CLOUD_MODELS"
+echo "Use Cloud Embedding: $USE_CLOUD_EMBEDDING"
 echo "Triangulation Mode: $TRIANGULATION_MODE"
 echo "Triangulation Embedding: $TRIANG_EMB_FLAG" # Log the mode
 
@@ -53,8 +60,8 @@ which python
 
 if [ -n "$USE_RAW_FEATURES" ] && [ "$USE_RAW_FEATURES" = "1" ]; then
     echo "Raw Features Flag is Turned ON"
-    python main.py --experiment-to-run model_training $DROPOUT_FLAG --encoder-rotating-key --use-raw-features $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG --use-cloud-models $CLOUD_MODELS --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
+    python main.py --experiment-to-run model_training $DROPOUT_FLAG --encoder-rotating-key --use-raw-features $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG $CLOUD_EMBEDDING_FLAG --use-cloud-models $CLOUD_MODELS --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing "$CHOOSE" --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 else
     echo "Raw Features Flag is Turned OFF"
-    python main.py --experiment-to-run model_training $DROPOUT_FLAG --encoder-rotating-key $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG --use-cloud-models $CLOUD_MODELS --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing classes --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
+    python main.py --experiment-to-run model_training $DROPOUT_FLAG --encoder-rotating-key $TRIANG_MODE_FLAG $TRIANG_EMB_FLAG $CLOUD_EMBEDDING_FLAG --use-cloud-models $CLOUD_MODELS --datasets "$DATASET_NAME" --number-of-prediction-vector "$N_P" --iim-name $MODELS --iim-epochs 100 --triangulation-choosing classes --triangulation-samples "$TRIANGULATIONS_NUMBER" --k-training $K
 fi

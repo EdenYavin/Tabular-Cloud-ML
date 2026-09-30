@@ -1,0 +1,23 @@
+export DATASET_NAME="heloc magic mushroom twonorm ring"
+export N_P=1
+export TRIANGULATIONS_NUMBER=2
+export CHOOSE=class
+export TRIANGULATION_MODE=concat
+export TRIANGULATION_EMBEDDING=clip
+export MODELS="lstm dense"
+export DEEPSET=0
+export USE_RAW_FEATURES=0
+export USE_CLOUD_EMBEDDING=1
+export K=3
+
+# No cloud — K-fold CV
+sbatch --job-name="tabml_no_cloud_${DATASET_NAME}_datasize_${N_P}_k_{$K}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CHOOSE}_${MODELS}_FULL_PIPELINE" \
+       --output="tabml_no_cloud_${USE_RAW_FEATURES}_${CLOUD_MODEL}_${DATASET_NAME}_datasize_${N_P}_k_{$K}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CHOOSE}_${MODELS}_FULL_PIPELINE-%j.out" \
+       run_no_cloud_kfold_job.sbatch
+
+# Cloud — K-fold CV
+export CLOUD_MODEL="xception"
+sbatch --job-name="tabml_cloud_${DATASET_NAME}_datasize_${N_P}_k_{$K}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CHOOSE}_${MODELS}_FULL_PIPELINE" \
+       --output="tabml_cloud_${USE_RAW_FEATURES}_${CLOUD_MODEL}_${DATASET_NAME}_datasize_${N_P}_k_{$K}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CHOOSE}_${MODELS}_FULL_PIPELINE-%j.out" \
+       run_cloud_kfold_job.sbatch
+

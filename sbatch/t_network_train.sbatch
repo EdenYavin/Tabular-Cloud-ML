@@ -62,6 +62,13 @@ else
     CLOUD_FLAG=""
 fi
 
+# Use Cloud Embedding (penultimate layer instead of softmax)
+if [ -n "$USE_CLOUD_EMBEDDING" ] && [ "$USE_CLOUD_EMBEDDING" = "1" ]; then
+    CLOUD_EMBEDDING_FLAG="--use-cloud-embedding"
+else
+    CLOUD_EMBEDDING_FLAG=""
+fi
+
 # Use Raw Features
 if [ -n "$USE_RAW_FEATURES" ] && [ "$USE_RAW_FEATURES" = "1" ]; then
     RAW_FEATURES_FLAG="--use-raw-features"
@@ -125,6 +132,7 @@ python main.py \
     $EPOCHS_FLAG \
     $BATCH_SIZE_FLAG \
     $CLOUD_FLAG \
+    $CLOUD_EMBEDDING_FLAG \
     $RAW_FEATURES_FLAG \
     $SCALING_FLAG
 

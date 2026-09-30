@@ -7,7 +7,7 @@ import keras
 import numpy as np
 from sklearn.metrics import accuracy_score, f1_score
 from src.utils.config import config
-from src.cloud.base import CloudModel
+from src.cloud.base import CloudModel, as_embedding_model
 
 
 class NeuralNetCloudModel(CloudModel):
@@ -18,6 +18,9 @@ class NeuralNetCloudModel(CloudModel):
         num_classes = kwargs.get("num_classes", 2)
         self.epochs = config.iim_config.neural_net_config.epochs
         self.models = self.get_model(num_classes)
+        if config.cloud_config.use_embedding:
+            self.models = as_embedding_model(self.models)
+            self.output_shape = (1, self.models.output_shape[-1])
 
     def get_model(self, num_classes):
         # Build the model

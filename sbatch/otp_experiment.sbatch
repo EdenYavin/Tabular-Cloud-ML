@@ -50,6 +50,12 @@ else
     CLOUD_FLAG=""
 fi
 
+if [ -n "$USE_CLOUD_EMBEDDING" ] && [ "$USE_CLOUD_EMBEDDING" = "1" ]; then
+    CLOUD_EMBEDDING_FLAG="--use-cloud-embedding"
+else
+    CLOUD_EMBEDDING_FLAG=""
+fi
+
 if [ -n "$USE_RAW_FEATURES" ] && [ "$USE_RAW_FEATURES" = "1" ]; then
     RAW_FEATURES_FLAG="--use-raw-features"
 else
@@ -96,6 +102,7 @@ echo "  N_P (Pred Vectors): $N_P"
 echo "  K-Folds: ${K_FOLDS:-1}"
 echo "  IIM Epochs: ${IIM_EPOCHS:-100}"
 echo "  Use Raw Features: ${USE_RAW_FEATURES:-0}"
+echo "  Use Cloud Embedding: ${USE_CLOUD_EMBEDDING:-0}"
 echo "==============================================="
 echo ""
 
@@ -129,6 +136,7 @@ python main.py \
     $TRIANG_SAMPLES_FLAG \
     $N_P_FLAG \
     $CLOUD_FLAG \
+    $CLOUD_EMBEDDING_FLAG \
     $EPOCHS_FLAG \
     $K_FOLDS_FLAG \
     $IIM_NAME_FLAG \

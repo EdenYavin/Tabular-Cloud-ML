@@ -1,0 +1,217 @@
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/ring/rotate/cloud/xception_inception_efficientnet_densenet/1/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Downloads/cloud/ring/xception_inception_efficientnet_densenet/1/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/mushroom/rotate/cloud/xception_inception_efficientnet_densenet/1/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Downloads/cloud/mushroom/xception_inception_efficientnet_densenet/1/classes
+
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/ring/rotate/cloud/xception/9/kmeans/lstm_model_training_train_plot.png /Users/eden.yavin/Downloads/cloud/ring/9/kmeans
+
+# ------- MUSHROOM -------- #
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/mushroom/k_report.csv /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/mushroom
+
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/mushroom/rotate/cloud/xception/raw/1/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/mushroom/raw/xception/1/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/mushroom/rotate/cloud/xception/raw/2/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/mushroom/raw/xception/2/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/mushroom/rotate/cloud/xception/raw/3/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/mushroom/raw/xception/3/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/mushroom/rotate/no_cloud/raw/1/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/no_cloud/mushroom/raw/1/classes
+
+
+# -------- RING ------------ #
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/ring/k_report.csv /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/ring
+
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/ring/rotate/cloud/xception/triangulation_and_raw/1/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/ring/raw/xception/1/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/ring/rotate/no_cloud/raw/1/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/no_cloud/ring/raw/1/classes
+
+# -------- TWONORM ------------ #
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/twonorm/k_report.csv /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/twonorm
+
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/twonorm/rotate/cloud/xception/raw/1/kmeans/2/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/twonorm/raw/xception/kmeans/1
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/twonorm/rotate/cloud/xception/raw/2/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/twonorm/raw/xception/2/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/twonorm/rotate/cloud/xception/raw/3/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/twonorm/raw/xception/3/classes
+
+# -------- ADULT ------------ #
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/k_report_adult.csv /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/
+
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/twonorm/rotate/cloud/xception/raw/1/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/twonorm/raw/xception/1/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/twonorm/rotate/cloud/xception/raw/2/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/twonorm/raw/xception/2/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/twonorm/rotate/cloud/xception/raw/3/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/twonorm/raw/xception/3/classes
+
+# -------- HELOC ------------ #
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/heloc/k_report.csv /Users/eden.y/Projects/Tabular-Cloud-ML/output/heloc
+
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/k_report_heloc.csv /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/
+
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/heloc/rotate/cloud/xception/triangulation_and_raw/1/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/heloc/triangulation_and_raw/xception/1/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/heloc/rotate/cloud/xception_inception_efficientnet/triangulation_and_raw/1/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/heloc/triangulation_and_raw/xception_inception_efficientnet/1/classes
+
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/heloc/rotate/cloud/xception/triangulation_and_raw/2/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/heloc/triangulation_and_raw/xception/2/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/heloc/rotate/cloud/xception/triangulation_and_raw/3/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/cloud/heloc/triangulation_and_raw/xception/3/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/heloc/rotate/no_cloud/triangulation_and_raw/1/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/no_cloud/heloc/triangulation_and_raw/1/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/heloc/rotate/no_cloud/triangulation_and_raw/2/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/no_cloud/heloc/triangulation_and_raw/2/classes
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/heloc/rotate/no_cloud/triangulation_and_raw/3/classes/lstm_model_training_train_plot.png /Users/eden.yavin/Projects/Tabular-Cloud-ML/output/no_cloud/heloc/triangulation_and_raw/3/classes
+
+
+# -------- MAGIC ------------ #
+scp edenyav@slurm.bgu.ac.il:/home/edenyav/Tabular-Cloud-ML/output/magic/k_report.csv /Users/eden.y/Projects/Tabular-Cloud-ML/output/magic
+
+
+# -------- GENERAL ----------- #
+sinteractive --time 0-10:00:00 --gpu 1
+ssh edenyav@slurm.bgu.ac.il
+
+
+cd Tabular-Cloud-ML/
+conda activate tabml
+git pull
+python main.py --experiment-to-run model_training --encoder-rotating-key --use-raw-features --datasets ring --number-of-prediction-vector 1 --use-cloud-models xception --iim-name lstm --iim-epochs 100 --triangulation-choosing classes --triangulation-samples 2 --k-training 3
+
+
+----
+export DATASET_NAME=heloc
+export N_P=1
+export TRIANGULATIONS_NUMBER=5
+export CHOOSE=gfps
+export TRIANGULATION_MODE=diff
+export TRIANGULATION_EMBEDDING=dino
+export CLOUD_MODEL="xception"
+export MODELS="deepset"
+export K=5
+export DEEPSET=1
+export FREEZE_T_NETWORK=1
+export USE_RAW_FEATURES=0
+export USE_CLOUD_EMBEDDING=1 # Set to 1 to use layer before softmax (penultimate layer embedding) instead of softmax classification vector
+
+
+sbatch --job-name="tabml_cloud_${CLOUD_MODEL}_${DATASET_NAME}_datasize_${N_P}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CHOOSE}_${MODELS}_FULL_PIPELINE" \
+       --output="tabml_cloud_${USE_RAW_FEATURES}_${CLOUD_MODEL}_${DATASET_NAME}_datasize_${N_P}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CHOOSE}_${MODELS}_FULL_PIPELINE-%j.out" \
+       run_cloud_job.sbatch
+
+# =============================================================================
+# T NETWORK WITH SLURM (If you have cluster access)
+# =============================================================================
+
+export DATASET_NAME="mushroom twonorm ring magic"
+export TRIANGULATION_MODE=diff
+export TRIANGULATION_EMBEDDING=dino
+export CHOOSE="gfps"
+export TRIANGULATIONS_NUMBER=5
+export EPOCHS=100
+export USE_RAW_FEATURES=0
+sbatch --job-name="t_network_${DATASET_NAME}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}" \
+     --output="t_network_${DATASET_NAME}-%j.out" \
+     sbatch/t_network_train.sbatch
+----------------
+## DEEPSET TRAINING LOOP
+
+export DATASET_NAME=heloc
+export TRIANGULATION_EMBEDDING=dino
+export CHOOSE="gfps"
+export TRIANGULATIONS_NUMBER=5
+export USE_RAW_FEATURES=0
+export MODELS="deepset"
+export N_P=1
+export K=3
+export DEEPSET=1
+
+sbatch --job-name="tabml_no_cloud_${DATASET_NAME}_datasize_${N_P}_deepset_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CHOOSE}_${MODELS}_FULL_PIPELINE" \
+       --output="tabml_no_cloud_${USE_RAW_FEATURES}_${DATASET_NAME}_datasize_${N_P}_deepset_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CHOOSE}_${MODELS}_FULL_PIPELINE-%j.out" \
+       run_no_cloud_job.sbatch
+
+
+export CLOUD_MODEL="xception"
+
+
+sbatch --job-name="tabml_cloud_${CLOUD_MODEL}_${DATASET_NAME}_datasize_${N_P}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CHOOSE}_${MODELS}_FULL_PIPELINE" \
+       --output="tabml_cloud_${USE_RAW_FEATURES}_${CLOUD_MODEL}_${DATASET_NAME}_datasize_${N_P}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CHOOSE}_${MODELS}_FULL_PIPELINE-%j.out" \
+       run_cloud_job.sbatch
+
+
+
+----------------
+## DATASET CREATION
+
+export DATASET_NAME=twonorm
+export TRIANGULATION_MODE=cos
+export TRIANGULATION_EMBEDDING=dino
+export EXPERIMENT_NAME=dataset_creation
+export NUMBER_OF_DATASETS=1
+export CHOOSE="kmeans"
+export TRIANGULATIONS_NUMBER=5
+export USE_RAW_FEATURES=1
+export MODELS="lstm gated entropy_aware"
+export CLOUD_MODEL="convnext"
+
+sbatch --job-name=tabml_${DATASET_NAME}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${EXPERIMENT_NAME}_${CHOOSE// /_} \
+       --output=tabml_${DATASET_NAME}_${TRIANGULATION_EMBEDDING}_${TRIANGULATIONS_NUMBER}_${TRIANGULATION_MODE}_${EXPERIMENT_NAME}_no_cloud_${CHOOSE// /_}-%j.out \
+       run_no_cloud_job.sbatch
+
+sbatch --job-name=tabml_${DATASET_NAME}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${EXPERIMENT_NAME}_${CHOOSE// /_} \
+       --output=tabml_${DATASET_NAME}_${TRIANGULATION_EMBEDDING}_${TRIANGULATIONS_NUMBER}_${TRIANGULATION_MODE}_${EXPERIMENT_NAME}_cloud_xception_${CHOOSE// /_}-%j.out \
+       run_cloud_job.sbatch
+-------------------
+## TRAINING
+
+export DATASET_NAME=heloc
+export TRIANGULATION_MODE=diff
+export TRIANGULATION_EMBEDDING=dino
+export EXPERIMENT_NAME=model_training
+export N_P=1
+export K=3
+export CHOOSE="kmeans"
+export TRIANGULATIONS_NUMBER=2
+export MODELS="entropy_aware gated"
+export USE_RAW_FEATURES=0
+export DROPOUT=0
+export CLOUD_MODELS="convnext xception"
+
+sbatch --job-name="tabml_${DATASET_NAME}_${MODELS}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${EXPERIMENT_NAME}_${CHOOSE// /_}_${N_P}" \
+       --output="tabml_${DATASET_NAME}_${MODELS}_${TRIANGULATION_EMBEDDING}_${TRIANGULATIONS_NUMBER}_${TRIANGULATION_MODE}_${EXPERIMENT_NAME}_no_cloud_${CHOOSE// /_}_${N_P}-%j.out" \
+       ./sbatch/no_cloud_model_train.sbatch
+
+
+sbatch --job-name="tabml_${DATASET_NAME}_${MODELS}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${EXPERIMENT_NAME}_${CHOOSE// /_}_${N_P}" \
+       --output="tabml_${DATASET_NAME}_${MODELS}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${EXPERIMENT_NAME}_cloud_${CLOUD_MODELS}_${CHOOSE// /_}_${N_P}-%j.out" \
+       ./sbatch/cloud_model_train.sbatch
+
+-------------------
+## TRAINING **ONLY CLOUD FEATURES**
+
+DATASET_NAME=mushroom \
+sbatch --job-name=tabml_mushroom_only_cloud_feautres \
+       --output=tabml_mushroom_only_cloud_feautres-%j.out \
+       only_cloud_model_train.sbatch
+
+-------------------
+## FEATURE ABLATION EXPERIMENT (Frozen T Network)
+
+# T network will be loaded from default path (based on dataset/config)
+# To override, export PRETRAINED_T_NETWORK_PATH=/path/to/your/t_network.keras
+
+export DATASET_NAME="mushroom heloc ring magic twonorm"
+export TRIANGULATION_MODE=diff
+export TRIANGULATION_EMBEDDING=dino
+export CHOOSE="gfps"
+export TRIANGULATIONS_NUMBER=5
+export N_P=1
+export K_FOLDS=10
+export CLOUD_MODELS="xception mobile_net convnext"
+export USE_RAW_FEATURES=0
+export MODELS="deepset"
+export IIM_NAME=lstm
+sbatch --job-name="ablation_${DATASET_NAME}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CLOUD_MODELS}" \
+   --output="ablation_${DATASET_NAME}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CLOUD_MODELS}-%j.out" \
+   ./sbatch/ablation_experiment.sbatch
+
+-------------------
+## OTP EXPERIMENT
+
+export DATASET_NAME="mushroom heloc ring magic twonorm"
+export TRIANGULATION_MODE=diff
+export TRIANGULATION_EMBEDDING=dino
+export CHOOSE="gfps"
+export TRIANGULATIONS_NUMBER=5
+export N_P=1
+export K_FOLDS=10
+export CLOUD_MODELS="xception mobile_net convnext"
+export USE_RAW_FEATURES=0
+export MODELS="deepset"
+export IIM_NAME=lstm
+sbatch --job-name="otp_${DATASET_NAME}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CLOUD_MODELS}" \
+   --output="otp_${DATASET_NAME}_${TRIANGULATION_EMBEDDING}_${TRIANGULATION_MODE}_${TRIANGULATIONS_NUMBER}_${CLOUD_MODELS}-%j.out" \
+   ./sbatch/otp_experiment.sbatch

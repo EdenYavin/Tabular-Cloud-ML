@@ -1,9 +1,37 @@
 from abc import abstractmethod, ABC
 from sklearn.metrics import accuracy_score, f1_score
 import tensorflow as tf
+from keras import Model
+try:
+    from keras.api.layers import GlobalAveragePooling2D, Flatten
+except ModuleNotFoundError:
+    try:
+        from keras.src.layers import GlobalAveragePooling2D, Flatten
+    except ModuleNotFoundError:
+        from keras.layers import GlobalAveragePooling2D, Flatten
 
-
+from src.utils.config import config
 from src.utils.constansts import CONFIG_CLOUD_MODELS_TOKEN
+
+
+def as_embedding_model(model):
+    """
+    Extract the layer before softmax output as an embedding/feature vector model.
+    Ensures that the output is a flat 2D tensor (batch_size, feature_dim).
+    If the penultimate layer output is 4D (spatial tensor), applies GlobalAveragePooling2D.
+    If it is 3D or higher, applies Flatten.
+    """
+    try:
+        penultimate = model.layers[-1].input
+    except Exception:
+        penultimate = model.layers[-2].output
+
+    if len(penultimate.shape) == 4:
+        penultimate = GlobalAveragePooling2D()(penultimate)
+    elif len(penultimate.shape) > 2:
+        penultimate = Flatten()(penultimate)
+
+    return Model(inputs=model.inputs, outputs=penultimate)
 
 
 class CloudModel:
@@ -53,6 +81,13 @@ class KerasApplicationCloudModel(ABC):
         self.output_shape = (1, 1000)
         self.preprocess_input = kwargs.get("preprocess_input")
         self.model = self.get_model()
+        if config.cloud_config.use_embedding:
+            self.model = self._as_embedding_model(self.model)
+            self.output_shape = (1, self.model.output_shape[-1])
+
+    @staticmethod
+    def _as_embedding_model(model):
+        return as_embedding_model(model)
 
     @abstractmethod
     def get_model(self):

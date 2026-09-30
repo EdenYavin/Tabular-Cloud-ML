@@ -146,6 +146,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--use-cloud-embedding",
+        dest="cloud_use_embedding",
+        action="store_true",
+        help="Use the cloud model's penultimate layer embedding instead of its softmax output as the cloud features."
+    )
+
+    parser.add_argument(
         "--use-horizontal-cloud-features",
         type=bool,
         default=True,

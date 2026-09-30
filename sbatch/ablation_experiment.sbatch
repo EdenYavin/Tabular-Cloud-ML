@@ -56,6 +56,13 @@ else
     CLOUD_FLAG=""
 fi
 
+# Use Cloud Embedding (penultimate layer instead of softmax)
+if [ -n "$USE_CLOUD_EMBEDDING" ] && [ "$USE_CLOUD_EMBEDDING" = "1" ]; then
+    CLOUD_EMBEDDING_FLAG="--use-cloud-embedding"
+else
+    CLOUD_EMBEDDING_FLAG=""
+fi
+
 # Use Raw Features
 if [ -n "$USE_RAW_FEATURES" ] && [ "$USE_RAW_FEATURES" = "1" ]; then
     RAW_FEATURES_FLAG="--experiment-use-raw"
@@ -158,6 +165,7 @@ python main.py \
     $T_NETWORK_PATH_FLAG \
     $FREEZE_T_FLAG \
     $CLOUD_FLAG \
+    $CLOUD_EMBEDDING_FLAG \
     $EPOCHS_FLAG \
     $K_FOLDS_FLAG \
     $IIM_NAME_FLAG \

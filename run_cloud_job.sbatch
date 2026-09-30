@@ -83,6 +83,13 @@ echo "----------------------------------------------------------------"
 echo "STARTING STEP 1: DATASET CREATION"
 echo "----------------------------------------------------------------"
 
+# Use Cloud Embedding (penultimate layer instead of softmax)
+if [ -n "$USE_CLOUD_EMBEDDING" ] && [ "$USE_CLOUD_EMBEDDING" = "1" ]; then
+    CLOUD_EMBEDDING_FLAG="--use-cloud-embedding"
+else
+    CLOUD_EMBEDDING_FLAG=""
+fi
+
 python main.py \
     --experiment-to-run dataset_creation \
     --encoder-rotating-key \
@@ -96,6 +103,7 @@ python main.py \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \
+    $CLOUD_EMBEDDING_FLAG \
     --triangulation-choosing "$CHOOSE" \
     --triangulation-samples "$TRIANGULATIONS_NUMBER" \
     --k-training "$K" \
@@ -127,6 +135,7 @@ python main.py \
     --datasets "$DATASET_NAME" \
     --number-of-prediction-vector "$N_P" \
     --use-cloud-models $CLOUD_MODEL \
+    $CLOUD_EMBEDDING_FLAG \
     --iim-name $MODELS \
     --iim-epochs 100 \
     --k-training "$K" \

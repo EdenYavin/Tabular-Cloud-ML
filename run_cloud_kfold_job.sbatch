@@ -79,10 +79,12 @@ echo "Use Deepset: $DEEPSET"
 echo "Freeze T-Network: $FREEZE_T_NETWORK"
 echo "T-Network Path: ${PRETRAINED_T_NETWORK_PATH:-auto}"
 module load anaconda
-eval "$(conda shell.bash hook 2>/dev/null)" || true
-source activate tabml 2>/dev/null || conda activate tabml 2>/dev/null || export PATH="/home/edenyav/.conda/envs/tabml/bin:$PATH"
-echo "Active Conda Env: ${CONDA_DEFAULT_ENV:-tabml}"
-echo "Using Python: $(which python)"
+
+PYTHON="/home/edenyav/.conda/envs/tabml/bin/python"
+
+echo "Using Python: $PYTHON"
+"$PYTHON" --version
+"$PYTHON" -c "import loguru; print('loguru:', loguru.__version__)"
 export TF_XLA_FLAGS=--tf_xla_auto_jit=0
 
 # ==========================================
@@ -99,7 +101,7 @@ else
     CLOUD_EMBEDDING_FLAG=""
 fi
 
-python main.py \
+"$PYTHON" main.py \
     --experiment-to-run dataset_creation \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG \
@@ -129,7 +131,7 @@ echo "----------------------------------------------------------------"
 echo "STARTING STEP 2: K-FOLD TRAINING (each fold trained once)"
 echo "----------------------------------------------------------------"
 
-python main.py \
+"$PYTHON" main.py \
     --experiment-to-run k_fold_training \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG \

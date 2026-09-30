@@ -73,7 +73,10 @@ echo "Use Deepset: $DEEPSET"
 echo "Freeze T-Network: $FREEZE_T_NETWORK"
 echo "T-Network Path: ${PRETRAINED_T_NETWORK_PATH:-auto}"
 module load anaconda
-source activate tabml
+eval "$(conda shell.bash hook 2>/dev/null)" || true
+source activate tabml 2>/dev/null || conda activate tabml 2>/dev/null || export PATH="/home/edenyav/.conda/envs/tabml/bin:$PATH"
+echo "Active Conda Env: ${CONDA_DEFAULT_ENV:-tabml}"
+echo "Using Python: $(which python)"
 export TF_XLA_FLAGS=--tf_xla_auto_jit=0
 
 # ==========================================

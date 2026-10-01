@@ -19,18 +19,18 @@ from src.utils.helpers import get_t_network_model_path
 
 class KModelTrainingExperimentHandler(ExperimentHandler):
     """
-    Repeated Training: load a single dataset (no folds) and train on it
-    K times to get variance estimates from repeated training runs.
+    K-Fold Training: load the per-fold datasets created by DatasetCreationHandler
+    and train/evaluate once per fold (true K-fold cross-validation).
     """
 
     def __init__(self, report_path: str = REPORT_PATH):
         super().__init__(get_experiment_name(), report_path=report_path)
 
-    def _collect_datasets(self, dataset_name):
+    def _collect_datasets(self, dataset_name, fold_idx=None):
         X_train, y_train = [], []
         data = None
         for folder in range(1, self.n_pred_vectors + 1):
-            path = get_dataset_path(dataset_name, folder) / DATASET_FILE_NAME
+            path = get_dataset_path(dataset_name, folder, fold_idx=fold_idx) / DATASET_FILE_NAME
             logger.info(f"Loading dataset from {path}")
             with open(path, "rb") as f:
                 data = pickle.load(f)
@@ -43,10 +43,12 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
 
     def run_experiment(self):
 
-        k_trainings = config.experiment_config.k_folds  # number of repeated training runs
+        k_folds = config.experiment_config.k_folds
+        use_kfold = k_folds > 1
+        fold_iter = range(k_folds) if use_kfold else [None]
 
         logger.info(f"Training Model Experiment: {get_experiment_name()} "
-                     f"(repeating training {k_trainings} times)")
+                     f"({'running ' + str(k_folds) + ' folds' if use_kfold else 'single split'})")
 
         for dataset_name in config.dataset_config.names:
 
@@ -72,70 +74,72 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                 logger.info(f"#### Training model experiment: "
                             f"Dataset: {dataset_name}, n_pred_vectors: {self.n_pred_vectors} ####\n")
 
-                path = get_dataset_path(dataset_name=dataset_name, n_pred_vectors=self.n_pred_vectors)
+                test_accs, test_aucs = [], []
 
-                if path.exists():
+                for fold_idx in tqdm(fold_iter, total=k_folds if use_kfold else 1, desc="K Folds"):
 
-                    test_accs, test_aucs = [], []
+                    path = get_dataset_path(dataset_name=dataset_name, n_pred_vectors=self.n_pred_vectors, fold_idx=fold_idx)
 
-                    # Load dataset once — same data for all K runs
-                    X_train, y_train, X_test, y_test = self._collect_datasets(dataset_name=dataset_name)
+                    if not path.exists():
+                        logger.warning(f"Dataset path {path} does not exist, skipping fold {fold_idx}")
+                        continue
+
+                    X_train, y_train, X_test, y_test = self._collect_datasets(dataset_name=dataset_name, fold_idx=fold_idx)
 
                     history_path = path / "history.pkl"
                     plot_path = path / f"{model_name}_{config.experiment_config.to_run}_train_plot.png"
 
-                    for k_idx in tqdm(range(k_trainings), total=k_trainings, desc="K Trainings"):
+                    # Auto-determine T-Network path if freeze is enabled but path not specified
+                    pretrained_path = config.experiment_config.pretrained_t_network_path
+                    if config.experiment_config.freeze_t_network and not pretrained_path:
+                        try:
+                            pretrained_path = get_t_network_model_path(
+                                dataset_name=dataset_name,
+                                ensure_exists=True
+                            )
+                            logger.info(f"Auto-determined T-Network path: {pretrained_path}")
+                        except FileNotFoundError as e:
+                            logger.error(str(e))
+                            raise
 
-                        # Auto-determine T-Network path if freeze is enabled but path not specified
-                        pretrained_path = config.experiment_config.pretrained_t_network_path
-                        if config.experiment_config.freeze_t_network and not pretrained_path:
-                            try:
-                                pretrained_path = get_t_network_model_path(
-                                    dataset_name=dataset_name,
-                                    ensure_exists=True
-                                )
-                                logger.info(f"Auto-determined T-Network path: {pretrained_path}")
-                            except FileNotFoundError as e:
-                                logger.error(str(e))
-                                raise
+                    internal_model = InternalInferenceModelFactory().get_model(
+                        num_classes=n_classes,
+                        input_shape=X_train.shape[1],
+                        type=model_name,
+                        pretrained_t_network_path=str(pretrained_path) if pretrained_path else None,
+                        freeze_t_network=config.experiment_config.freeze_t_network
+                    )
+                    logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} (fold {fold_idx}) ####"
+                                 f" Dataset Shape: Train - {X_train.shape}, Test: {X_test.shape}")
+                    internal_model.fit(
+                        X=X_train, y=y_train,
+                        validation_data=(X_test, y_test),
+                    )
 
-                        internal_model = InternalInferenceModelFactory().get_model(
-                            num_classes=n_classes,
-                            input_shape=X_train.shape[1],
-                            type=model_name,
-                            pretrained_t_network_path=str(pretrained_path) if pretrained_path else None,
-                            freeze_t_network=config.experiment_config.freeze_t_network
-                        )
-                        logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} (run {k_idx + 1}/{k_trainings}) ####"
-                                     f" Dataset Shape: Train - {X_train.shape}, Test: {X_test.shape}")
-                        internal_model.fit(
-                            X=X_train, y=y_train,
-                            validation_data=(X_test, y_test),
-                        )
+                    internal_model.save_history(history_path)
+                    internal_model.plot_history(plot_path)
 
-                        internal_model.save_history(history_path)
-                        internal_model.plot_history(plot_path)
+                    if "val_auc" in internal_model.history.history:
+                        test_auc = internal_model.history.history["val_auc"]
+                    elif "val_auc_1" in internal_model.history.history:
+                        test_auc = internal_model.history.history["val_auc_1"]
+                    else:
+                        test_auc = [0.0]
 
-                        if "val_auc" in internal_model.history.history:
-                            test_auc = internal_model.history.history["val_auc"]
-                        elif "val_auc_1" in internal_model.history.history:
-                            test_auc = internal_model.history.history["val_auc_1"]
-                        else:
-                            test_auc = [0.0]
+                    test_val_accs = internal_model.history.history.get("val_accuracy", [0.0])
 
-                        test_val_accs = internal_model.history.history.get("val_accuracy", [0.0])
+                    test_aucs.append(
+                        round(float(np.max(test_auc)), 4)
+                    )
+                    test_accs.append(
+                        round(float(np.max(test_val_accs)), 4)
+                    )
 
-                        test_aucs.append(
-                            round(float(np.max(test_auc)), 4)
-                        )
-                        test_accs.append(
-                            round(float(np.max(test_val_accs)), 4)
-                        )
+                    del internal_model, X_train, X_test, y_test, y_train
+                    gc.collect()
+                    K.clear_session()
 
-                        del internal_model
-                        gc.collect()
-                        K.clear_session()
-
+                if test_accs:
                     self.log_k_results(
                         dataset_name=dataset_name,
                         cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
@@ -143,10 +147,6 @@ class KModelTrainingExperimentHandler(ExperimentHandler):
                         k_test_accuracies=test_accs,
                         k_test_aucs=test_aucs
                     )
-
-                    del X_train, X_test, y_test, y_train
-                    gc.collect()
-                    K.clear_session()
 
 
         return self.report

@@ -82,7 +82,11 @@ echo "Freeze T-Network: $FREEZE_T_NETWORK"
 echo "T-Network Path: ${PRETRAINED_T_NETWORK_PATH:-auto}"
 
 module load anaconda
-source activate tabml
+PYTHON="/home/edenyav/.conda/envs/tabml/bin/python"
+
+echo "Using Python: $PYTHON"
+"$PYTHON" --version
+
 export TF_XLA_FLAGS=--tf_xla_auto_jit=0
 
 # ==========================================
@@ -93,7 +97,7 @@ echo "STARTING STEP 1: DATASET CREATION (K-Fold)"
 echo "----------------------------------------------------------------"
 
 # NOTE: Ensure no spaces exist after the backslashes (\) below
-python main.py \
+"$PYTHON" main.py \
     --experiment-to-run dataset_creation \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG \
@@ -122,7 +126,7 @@ echo "STARTING STEP 2: K-FOLD TRAINING (each fold trained once)"
 echo "----------------------------------------------------------------"
 
 # NOTE: Ensure no spaces exist after the backslashes (\) below
-python main.py \
+"$PYTHON" main.py \
     --experiment-to-run k_fold_training \
     --encoder-rotating-key \
     $RAW_FEATURES_FLAG \

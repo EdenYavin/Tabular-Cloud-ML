@@ -75,60 +75,61 @@ class KFoldTrainingExperimentHandler(ExperimentHandler):
                             f"Dataset: {dataset_name}, n_pred_vectors: {self.n_pred_vectors}, "
                             f"k_folds: {k_folds} ####\n")
 
-                path = get_dataset_path(dataset_name=dataset_name, n_pred_vectors=self.n_pred_vectors)
+                test_accs, test_aucs = [], []
 
-                if path.exists():
+                # Train once per fold — classic K-Fold CV
+                for fold_idx in tqdm(range(k_folds), total=k_folds, desc="K-Fold CV"):
 
-                    test_accs, test_aucs = [], []
+                    path = get_dataset_path(dataset_name=dataset_name, n_pred_vectors=self.n_pred_vectors, fold_idx=fold_idx)
 
-                    # Train once per fold — classic K-Fold CV
-                    for fold_idx in tqdm(range(k_folds), total=k_folds, desc="K-Fold CV"):
+                    if not path.exists():
+                        logger.warning(f"Dataset path {path} does not exist, skipping fold {fold_idx}")
+                        continue
 
-                        X_train, y_train, X_test, y_test = self._collect_datasets(
-                            dataset_name=dataset_name, fold_idx=fold_idx
-                        )
+                    X_train, y_train, X_test, y_test = self._collect_datasets(
+                        dataset_name=dataset_name, fold_idx=fold_idx
+                    )
 
-                        history_path = path / f"fold_{fold_idx}" / "history.pkl"
-                        plot_path = path / f"fold_{fold_idx}" / f"{model_name}_{config.experiment_config.to_run}_train_plot.png"
+                    history_path = path / "history.pkl"
+                    plot_path = path / f"{model_name}_{config.experiment_config.to_run}_train_plot.png"
 
-                      
+                    internal_model = InternalInferenceModelFactory().get_model(
+                        num_classes=n_classes,
+                        input_shape=X_train.shape[1],
+                        type=model_name,
+                    )
+                    logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} (Fold {fold_idx}) ####"
+                                 f" Dataset Shape: Train - {X_train.shape}, Test: {X_test.shape}")
+                    internal_model.fit(
+                        X=X_train, y=y_train,
+                        validation_data=(X_test, y_test),
+                    )
 
-                        internal_model = InternalInferenceModelFactory().get_model(
-                            num_classes=n_classes,
-                            input_shape=X_train.shape[1],
-                            type=model_name,
-                        )
-                        logger.debug(f"#### EVALUATING INTERNAL MODEL {model_name} (Fold {fold_idx}) ####"
-                                     f" Dataset Shape: Train - {X_train.shape}, Test: {X_test.shape}")
-                        internal_model.fit(
-                            X=X_train, y=y_train,
-                            validation_data=(X_test, y_test),
-                        )
+                    internal_model.save_history(history_path)
+                    internal_model.plot_history(plot_path)
 
-                        internal_model.save_history(history_path)
-                        internal_model.plot_history(plot_path)
+                    if "val_auc" in internal_model.history.history:
+                        test_auc = internal_model.history.history["val_auc"]
+                    elif "val_auc_1" in internal_model.history.history:
+                        test_auc = internal_model.history.history["val_auc_1"]
+                    else:
+                        test_auc = [0.0]
 
-                        if "val_auc" in internal_model.history.history:
-                            test_auc = internal_model.history.history["val_auc"]
-                        elif "val_auc_1" in internal_model.history.history:
-                            test_auc = internal_model.history.history["val_auc_1"]
-                        else:
-                            test_auc = [0.0]
+                    test_val_accs = internal_model.history.history.get("val_accuracy", [0.0])
 
-                        test_val_accs = internal_model.history.history.get("val_accuracy", [0.0])
+                    test_aucs.append(
+                        round(float(np.max(test_auc)), 4)
+                    )
+                    test_accs.append(
+                        round(float(np.max(test_val_accs)), 4)
+                    )
 
-                        test_aucs.append(
-                            round(float(np.max(test_auc)), 4)
-                        )
-                        test_accs.append(
-                            round(float(np.max(test_val_accs)), 4)
-                        )
+                    # Clean up fold memory
+                    del X_train, y_train, X_test, y_test, internal_model
+                    gc.collect()
+                    K.clear_session()
 
-                        # Clean up fold memory
-                        del X_train, y_train, X_test, y_test, internal_model
-                        gc.collect()
-                        K.clear_session()
-
+                if test_accs:
                     self.log_k_results(
                         dataset_name=dataset_name,
                         cloud_models_names=str([cloud_model for cloud_model in config.cloud_config.names]),
